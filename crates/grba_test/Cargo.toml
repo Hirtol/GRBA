@@ -3,10 +3,17 @@ name = "grba_test"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [features]
 
 
 [dependencies]
+log = "0.4.14"
+simplelog = "0.11.2"
+anyhow = "1.0.53"
+clap = "3.0.10"
 grba_core = {path = "../grba_core"}
+crossbeam = "0.8.0"
+rayon = "1.5.1"
+image = "0.23.14"
+
+
