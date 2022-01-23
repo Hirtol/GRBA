@@ -1,0 +1,22 @@
+# Build dependencies with full release optimizations in debug builds since they'll rarely change
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 0
+incremental = true
+debug = 1
+
+[profile.release]
+incremental = true
+
+[profile.perf]
+inherits = "release"
+lto = true
+codegen-units = 1
+
+
+[workspace]
+resolver = "2"
+members = ["crates/grba_core", "crates/grba_front", "crates/grba_test"]
+default-members = ["crates/grba_front"]
