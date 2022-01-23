@@ -7,7 +7,7 @@ edition = "2021"
 
 
 [dev-dependencies]
-criterion = "0.3.3"
+criterion = "0.3.5"
 
 [dependencies]
 # Emulation Development
@@ -20,4 +20,6 @@ log = "0.4.14"
 profiling = "1.0.5"
 serde = { version = "1.0.135", features = ["derive"] }
 
-
+[[bench]]
+name = "scheduler"
+harness = false

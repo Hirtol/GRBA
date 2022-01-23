@@ -9,7 +9,7 @@ pub struct Scheduler {
     /// The current emulation time, expressed in clock cycles.
     pub current_time: EmuTime,
     /// The queue of events to be processed.
-    /// The head of the queue is the next event to be processed.
+    /// The back of the queue is the next event to be processed.
     event_queue: tinyvec::ArrayVec<[Event; 20]>,
 }
 
@@ -54,7 +54,7 @@ impl Scheduler {
     /// Removes the first event that matches the given tag.
     /// Has an early stop compared to [Self::remove_event]
     pub fn remove_first_event(&mut self, tag: EventTag) {
-        for i in 0..self.event_queue.len() {
+        for i in (0..self.event_queue.len()).rev() {
             if self.event_queue[i].tag == tag {
                 self.event_queue.remove(i);
                 return;
@@ -207,7 +207,8 @@ mod tests {
         scheduler.schedule_event(EventTag::HBlank, EmuTime(10));
         scheduler.schedule_event(EventTag::VBlank, EmuTime(0));
         scheduler.schedule_event(EventTag::VBlank, EmuTime(15));
-        // First event should be popped
+
+        // First VBlank should be popped
         assert_eq!(
             scheduler.pop_current(),
             Some(Event {
@@ -215,6 +216,7 @@ mod tests {
                 timestamp: EmuTime(0)
             })
         );
+
         // Should now skip to HBlank event
         scheduler.skip_to_next_event();
         assert_eq!(
@@ -224,6 +226,7 @@ mod tests {
                 timestamp: EmuTime(10)
             })
         );
+
         // Last VBlank
         scheduler.skip_to_next_event();
         assert_eq!(
