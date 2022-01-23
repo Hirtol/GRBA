@@ -12,9 +12,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Install ALSA dev
+        run: |
+          sudo apt-get install libasound2-dev
+
       - uses: actions/checkout@master
 
-      - uses: actions-rs/toolchain@v1
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
         id: rust-toolchain
         with:
           toolchain: stable
