@@ -10,11 +10,23 @@ default = []
 profiling-tracy = ["profiling/profile-with-tracy", "tracy-client"]
 
 [dependencies]
+# General Dependencies
+log = "0.4.11"
+simplelog = "0.8.0"
+anyhow = "1.0.32"
+crossbeam = "0.8.0"
 
 # Core Dependencies
 grba_core = {path = "../grba_core"}
 bincode = "1.3.3"
 serde = "1.0.135"
+
+# Frontend
+pixels = "0.9.0"
+cpal = "0.13.4"
+egui = "0.16.1"
+clap = "3.0.10"
+winit = "0.26.1"
 
 # Profiling
 profiling = "1.0.5"
