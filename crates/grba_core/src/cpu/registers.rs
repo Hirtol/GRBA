@@ -21,6 +21,8 @@ pub enum State {
     Thumb = 0b1,
 }
 
+/// The mode the CPU can find itself in.
+/// Triggered by different exceptions.
 #[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
 pub enum Mode {
     User = 0b10000,
@@ -32,9 +34,9 @@ pub enum Mode {
     System = 0b11111,
 }
 
-#[derive(Debug)]
 /// Contains all CPU registers.
 /// More Info: [Here](https://problemkaputt.de/gbatek.htm#armcpuregisterset)
+#[derive(Debug)]
 pub struct Registers {
     /// R0-R12 Registers (General Purpose Registers).
     /// These thirteen registers may be used for whatever general purposes.
@@ -200,7 +202,6 @@ mod tests {
     #[test]
     fn psr_test() {
         let cpsr = PSR::from(0b1101_0000_0000_0000_0000_0000_1011_0000);
-        // let test: u32 = cpsr.into();
         println!("{:?}", cpsr);
 
         assert!(cpsr.sign());
