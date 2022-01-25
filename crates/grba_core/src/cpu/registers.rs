@@ -203,15 +203,15 @@ impl PSR {
 
     pub fn as_raw(&self) -> u32 {
         let mut result = self.reserved;
-        result &= (self.sign as u32) << 31;
-        result &= (self.zero as u32) << 30;
-        result &= (self.carry as u32) << 29;
-        result &= (self.overflow as u32) << 28;
+        result |= (self.sign as u32) << 31;
+        result |= (self.zero as u32) << 30;
+        result |= (self.carry as u32) << 29;
+        result |= (self.overflow as u32) << 28;
 
-        result &= (self.irq_disable as u32) << 7;
-        result &= (self.fiq_disable as u32) << 6;
-        result &= (self.state as u32) << 5;
-        result &= self.mode as u32;
+        result |= (self.irq_disable as u32) << 7;
+        result |= (self.fiq_disable as u32) << 6;
+        result |= (self.state as u32) << 5;
+        result |= self.mode as u32;
         result
     }
 }
@@ -222,7 +222,8 @@ mod tests {
 
     #[test]
     fn psr_test() {
-        let cpsr = PSR::from(0b1101_0000_0000_0000_0000_0000_1011_0000);
+        let value = 0b1101_0000_0000_0000_0000_0000_1011_0000;
+        let cpsr = PSR::from(value);
         println!("{:?}", cpsr);
 
         assert!(cpsr.sign());
@@ -234,5 +235,6 @@ mod tests {
         assert!(!cpsr.fiq_disable());
         assert_eq!(cpsr.mode(), Mode::User);
         assert_eq!(cpsr.state(), super::State::Thumb);
+        assert_eq!(cpsr.as_raw(), value);
     }
 }
