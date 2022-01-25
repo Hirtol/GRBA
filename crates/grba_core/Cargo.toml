@@ -8,9 +8,12 @@ criterion = "0.3.5"
 
 [dependencies]
 # Emulation Development
-modular-bitfield = "0.11.2"
+#modular-bitfield = "0.11.2"
+bitfield = "0.13.2"
 blip_buf = {git="https://github.com/mvdnes/blip_buf-rs"}
 tinyvec = "1.5.1"
+num-traits = "0.2"
+num-derive = "0.3"
 
 # Profiling / Logging
 log = "0.4.14"
