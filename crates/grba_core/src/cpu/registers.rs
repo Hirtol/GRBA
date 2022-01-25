@@ -1,38 +1,12 @@
-pub type RegisterBank<const N: usize> = [u32; N];
 use crate::utils::check_bit;
 use num_traits::FromPrimitive;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
-pub enum State {
-    /// 32 Bit opcodes.
-    ///
-    /// Benefits:
-    /// * Each single opcode provides more functionality, resulting
-    ///    in faster execution when using a 32bit bus memory system
-    ///    (such like opcodes stored in GBA Work RAM).
-    ///  * All registers R0-R15 can be accessed directly.
-    ///
-    /// Downsides:
-    /// * Not so fast when using 16bit memory system
-    ///    (but it still works though).
-    ///  * Program code occupies more memory space.
-    Arm = 0b0,
-    /// 16 Bit opcodes
-    Thumb = 0b1,
-}
+/// A `RegisterBank` contains the value of registers for all different modes.
+/// Which modes are actually available depends on the register
+pub type RegisterBank<const N: usize> = [u32; N];
 
-/// The mode the CPU can find itself in.
-/// Triggered by different exceptions.
-#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
-pub enum Mode {
-    User = 0b10000,
-    FIQ = 0b10001,
-    IRQ = 0b10010,
-    Supervisor = 0b10011,
-    Abort = 0b10111,
-    Undefined = 0b11011,
-    System = 0b11111,
-}
+/// A `SpsrBank` contains the value of the SPSR for all different modes.
+pub type SpsrBank = RegisterBank<5>;
 
 /// Contains all CPU registers.
 /// More Info: [Here](https://problemkaputt.de/gbatek.htm#armcpuregisterset)
@@ -52,7 +26,7 @@ pub struct Registers {
     pub cpsr: PSR,
     /// Old CPSR prior to the current exception-mode being called.
     pub spsr: PSR,
-    pub spsr_bank: RegisterBank<5>,
+    pub spsr_bank: SpsrBank,
 
     // Storage banks for the different modes the CPU can be in
     pub r8_bank: RegisterBank<2>,
@@ -62,6 +36,53 @@ pub struct Registers {
     pub r12_bank: RegisterBank<2>,
     pub r13_bank: RegisterBank<6>,
     pub r14_bank: RegisterBank<6>,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
+pub enum State {
+    /// 32 Bit opcodes.
+    Arm = 0b0,
+    /// 16 Bit opcodes
+    Thumb = 0b1,
+}
+
+/// The mode the CPU can find itself in.
+/// Triggered by different exceptions.
+#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
+pub enum Mode {
+    User = 0b10000,
+    FIQ = 0b10001,
+    IRQ = 0b10010,
+    Supervisor = 0b10011,
+    Abort = 0b10111,
+    Undefined = 0b11011,
+    System = 0b11111,
+}
+
+impl Mode {
+    /// Converts the current mode to an index for a [RegisterBank]
+    pub const fn to_bank_index(self) -> usize {
+        match self {
+            Mode::User | Mode::System => 0,
+            Mode::FIQ => 1,
+            Mode::IRQ => 4,
+            Mode::Supervisor => 2,
+            Mode::Abort => 3,
+            Mode::Undefined => 5,
+        }
+    }
+
+    /// Converts the mode to an index for a [SpsrBank]
+    pub const fn to_spsr_index(self) -> usize {
+        match self {
+            Mode::User | Mode::System => panic!("Cannot get SPSR for User/System mode"),
+            Mode::FIQ => 0,
+            Mode::IRQ => 3,
+            Mode::Supervisor => 1,
+            Mode::Abort => 2,
+            Mode::Undefined => 4,
+        }
+    }
 }
 
 /// Program Status Register, used in the CPSR and SPSR registers.
