@@ -3,6 +3,10 @@ name = "grba_core"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+cpu-logging = []
+
 [dev-dependencies]
 criterion = "0.3.5"
 

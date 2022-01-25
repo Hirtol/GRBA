@@ -38,6 +38,41 @@ pub struct Registers {
     pub r14_bank: RegisterBank<6>,
 }
 
+impl Registers {
+    pub fn new() -> Registers {
+        Registers {
+            general_purpose: [0; 16],
+            cpsr: PSR::new(),
+            spsr: PSR::new(),
+            spsr_bank: [0; 5],
+            r8_bank: [0; 2],
+            r9_bank: [0; 2],
+            r10_bank: [0; 2],
+            r11_bank: [0; 2],
+            r12_bank: [0; 2],
+            r13_bank: [0; 6],
+            r14_bank: [0; 6],
+        }
+    }
+
+    #[inline(always)]
+    pub fn pc(&self) -> u32 {
+        self.general_purpose[15]
+    }
+
+    #[inline(always)]
+    pub fn advance_pc(&mut self) {
+        match self.cpsr.state() {
+            State::Arm => {
+                self.general_purpose[15] += 4;
+            }
+            State::Thumb => {
+                self.general_purpose[15] += 2;
+            }
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
 pub enum State {
     /// 32 Bit opcodes.
@@ -133,70 +168,87 @@ impl PSR {
         }
     }
 
+    #[inline(always)]
     pub fn from_raw(raw: u32) -> PSR {
         PSR::from(raw)
     }
 
+    #[inline(always)]
     pub fn sign(&self) -> bool {
         self.sign
     }
 
+    #[inline(always)]
     pub fn zero(&self) -> bool {
         self.zero
     }
 
+    #[inline(always)]
     pub fn carry(&self) -> bool {
         self.carry
     }
 
+    #[inline(always)]
     pub fn overflow(&self) -> bool {
         self.overflow
     }
 
+    #[inline(always)]
     pub fn irq_disable(&self) -> bool {
         self.irq_disable
     }
 
+    #[inline(always)]
     pub fn fiq_disable(&self) -> bool {
         self.fiq_disable
     }
 
+    #[inline(always)]
     pub fn state(&self) -> State {
         self.state
     }
 
+    #[inline(always)]
     pub fn mode(&self) -> Mode {
         self.mode
     }
 
+    #[inline(always)]
     pub fn set_sign(&mut self, value: bool) {
         self.sign = value;
     }
 
+    #[inline(always)]
     pub fn set_zero(&mut self, value: bool) {
         self.zero = value;
     }
 
+    #[inline(always)]
     pub fn set_carry(&mut self, value: bool) {
         self.carry = value;
     }
 
+    #[inline(always)]
     pub fn set_overflow(&mut self, value: bool) {
         self.overflow = value;
     }
 
+    #[inline(always)]
     pub fn set_irq_disable(&mut self, value: bool) {
         self.irq_disable = value;
     }
 
+    #[inline(always)]
     pub fn set_fiq_disable(&mut self, value: bool) {
         self.fiq_disable = value;
     }
 
+    #[inline(always)]
     pub fn set_state(&mut self, value: State) {
         self.state = value;
     }
 
+    #[inline(always)]
     pub fn set_mode(&mut self, value: Mode) {
         self.mode = value;
     }
