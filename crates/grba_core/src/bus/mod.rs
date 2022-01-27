@@ -36,6 +36,7 @@ impl Bus {
 
     pub fn write_16(&self, addr: u32, data: u16) {}
 
+    #[inline(always)]
     fn get_mem_range(addr: u32) -> u32 {
         addr << 24
     }

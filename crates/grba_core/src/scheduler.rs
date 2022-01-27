@@ -64,10 +64,7 @@ impl Scheduler {
 
     /// Schedule the provided event at the absolute time `when`.
     pub fn schedule_event(&mut self, tag: EventTag, when: EmuTime) {
-        self.add_event(Event {
-            tag,
-            timestamp: when,
-        });
+        self.add_event(Event { tag, timestamp: when });
     }
 
     /// Schedule the provided event, at the absolute time `when + current_time`.
@@ -134,7 +131,7 @@ impl Default for Event {
 }
 
 /// Represents a certain point in time, expressed in emulator clock cycles.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd, Default, serde::Serialize, serde::Deserialize)]
 #[repr(transparent)]
 pub struct EmuTime(pub u64);
 
@@ -213,7 +210,7 @@ mod tests {
             scheduler.pop_current(),
             Some(Event {
                 tag: VBlank,
-                timestamp: EmuTime(0)
+                timestamp: EmuTime(0),
             })
         );
 
@@ -223,7 +220,7 @@ mod tests {
             scheduler.pop_current(),
             Some(Event {
                 tag: HBlank,
-                timestamp: EmuTime(10)
+                timestamp: EmuTime(10),
             })
         );
 
@@ -233,7 +230,7 @@ mod tests {
             scheduler.pop_current(),
             Some(Event {
                 tag: VBlank,
-                timestamp: EmuTime(15)
+                timestamp: EmuTime(15),
             })
         );
 
