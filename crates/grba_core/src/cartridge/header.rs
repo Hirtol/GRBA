@@ -18,8 +18,6 @@ pub struct CartridgeHeader {
     game_title: String,
     /// Uppercase ASCII, max `4` characters
     game_code: String,
-    /// The game region
-    region: Region,
     /// Uppercase ASCII, max `2` characters
     maker_code: String,
     /// (00h for current GBA models)
@@ -39,17 +37,35 @@ impl CartridgeHeader {
     ///
     /// * `rom` - The ROM data to parse. Should be the full file's binary contents.
     pub fn new(rom: &[u8]) -> Self {
-        let (game_code, region) = parse_game_code(rom);
+        let (calculated_chksum, read_chksum) = (Self::calculate_checksum(rom), parse_complement_checksum(rom));
+
+        if calculated_chksum != read_chksum {
+            log::warn!(
+                "Checksum mismatch! Calculated: {}, Read: {}, continuing Cartridge load...",
+                calculated_chksum,
+                read_chksum
+            );
+        }
+
         Self {
             game_title: parse_title(rom),
-            game_code,
-            region,
+            game_code: parse_game_code(rom),
             maker_code: parse_maker_code(rom),
             main_unit_code: parse_main_unit_code(rom),
             device_type: parse_device_type(rom),
             software_version: parse_software_version(rom),
-            complement_checksum: parse_complement_checksum(rom),
+            complement_checksum: read_chksum,
         }
+    }
+
+    pub fn region(&self) -> Option<Region> {
+        parse_region(&self.game_code)
+    }
+
+    fn calculate_checksum(rom: &[u8]) -> u8 {
+        let checksum = rom[0xA0..0xBC].iter().fold(0u8, |acc, &i| acc.wrapping_sub(i));
+
+        checksum.wrapping_sub(0x19)
     }
 }
 
@@ -62,21 +78,14 @@ mod parsing {
             .to_string()
     }
 
-    pub fn parse_game_code(rom: &[u8]) -> (String, Region) {
-        let full_code = String::from_utf8_lossy(&rom[0xAC..0xB0])
+    pub fn parse_game_code(rom: &[u8]) -> String {
+        String::from_utf8_lossy(&rom[0xAC..0xB0])
             .trim_matches(char::from(0))
-            .to_string();
-
-        let region = parse_region(&full_code);
-        (full_code, region)
+            .to_string()
     }
 
-    fn parse_region(game_code: &str) -> Region {
-        match game_code
-            .chars()
-            .nth(3)
-            .expect("Game code should have at least 4 characters")
-        {
+    pub fn parse_region(game_code: &str) -> Option<Region> {
+        match game_code.chars().nth(3)? {
             'J' => Region::Japan,
             'P' => Region::Europe,
             'F' => Region::French,
@@ -89,6 +98,7 @@ mod parsing {
                 Region::Japan
             }
         }
+        .into()
     }
 
     pub fn parse_maker_code(rom: &[u8]) -> String {

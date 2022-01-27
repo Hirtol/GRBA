@@ -1,3 +1,4 @@
+use crate::emulator::MemoryAddress;
 use std::fmt::{Debug, Formatter};
 
 /// 3 cycles for access for u8, u16.
@@ -27,17 +28,17 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    pub fn read_board(&self, addr: u32) -> u8 {
+    pub fn read_board(&self, addr: MemoryAddress) -> u8 {
         self.board[Self::board_addr_to_index(addr)]
     }
 
     #[inline(always)]
-    pub fn read_chip(&self, addr: u32) -> u8 {
+    pub fn read_chip(&self, addr: MemoryAddress) -> u8 {
         self.chip[Self::chip_addr_to_index(addr)]
     }
 
     #[inline(always)]
-    pub fn read_board_16(&self, addr: u32) -> u16 {
+    pub fn read_board_16(&self, addr: MemoryAddress) -> u16 {
         let addr = Self::board_addr_to_index(addr);
         let low = self.board[addr];
         let high = self.board[addr + 1];
@@ -45,7 +46,7 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    pub fn read_chip_16(&self, addr: u32) -> u16 {
+    pub fn read_chip_16(&self, addr: MemoryAddress) -> u16 {
         let addr = Self::chip_addr_to_index(addr);
         let low = self.chip[addr];
         let high = self.chip[addr + 1];
@@ -53,7 +54,7 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    pub fn read_board_32(&self, addr: u32) -> u32 {
+    pub fn read_board_32(&self, addr: MemoryAddress) -> u32 {
         let addr = Self::board_addr_to_index(addr);
         let low = self.board[addr];
         let mid = self.board[addr + 1];
@@ -63,7 +64,7 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    pub fn read_chip_32(&self, addr: u32) -> u32 {
+    pub fn read_chip_32(&self, addr: MemoryAddress) -> u32 {
         let addr = Self::chip_addr_to_index(addr);
         let low = self.chip[addr];
         let mid = self.chip[addr + 1];
@@ -73,17 +74,17 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    pub fn write_board(&mut self, addr: u32, value: u8) {
+    pub fn write_board(&mut self, addr: MemoryAddress, value: u8) {
         self.board[Self::board_addr_to_index(addr)] = value;
     }
 
     #[inline(always)]
-    pub fn write_chip(&mut self, addr: u32, value: u8) {
+    pub fn write_chip(&mut self, addr: MemoryAddress, value: u8) {
         self.chip[Self::chip_addr_to_index(addr)] = value;
     }
 
     #[inline(always)]
-    pub fn write_board_16(&mut self, addr: u32, value: u16) {
+    pub fn write_board_16(&mut self, addr: MemoryAddress, value: u16) {
         let addr = Self::board_addr_to_index(addr);
         let bytes = value.to_le_bytes();
         self.board[addr] = bytes[0];
@@ -91,7 +92,7 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    pub fn write_chip_16(&mut self, addr: u32, value: u16) {
+    pub fn write_chip_16(&mut self, addr: MemoryAddress, value: u16) {
         let addr = Self::chip_addr_to_index(addr);
         let bytes = value.to_le_bytes();
         self.chip[addr] = bytes[0];
@@ -99,7 +100,7 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    pub fn write_board_32(&mut self, addr: u32, value: u32) {
+    pub fn write_board_32(&mut self, addr: MemoryAddress, value: u32) {
         let addr = Self::board_addr_to_index(addr);
         let bytes = value.to_le_bytes();
         self.board[addr] = bytes[0];
@@ -109,7 +110,7 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    pub fn write_chip_32(&mut self, addr: u32, value: u32) {
+    pub fn write_chip_32(&mut self, addr: MemoryAddress, value: u32) {
         let addr = Self::chip_addr_to_index(addr);
         let bytes = value.to_le_bytes();
         self.chip[addr] = bytes[0];
@@ -119,13 +120,13 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    fn board_addr_to_index(addr: u32) -> usize {
+    fn board_addr_to_index(addr: MemoryAddress) -> usize {
         // Accesses are mirrored across the range 0x0203_FFFF - 0x0200_0000
         addr as usize & (ON_BOARD_RAM_END - ON_BOARD_RAM_START)
     }
 
     #[inline(always)]
-    fn chip_addr_to_index(addr: u32) -> usize {
+    fn chip_addr_to_index(addr: MemoryAddress) -> usize {
         // Accesses are mirrored across the range 0x03007FFF - 0x03000000
         addr as usize & (ON_CHIP_RAM_END - ON_CHIP_RAM_START)
     }

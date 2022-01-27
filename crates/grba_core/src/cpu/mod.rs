@@ -3,6 +3,10 @@ use crate::cpu::registers::Registers;
 use registers::{Mode, State};
 mod registers;
 
+//TODO Timings:
+// * Gamepak fetching and prefetching?
+// * Instruction timings
+
 #[derive(Debug)]
 pub struct CPU {
     registers: Registers,
