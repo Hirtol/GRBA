@@ -21,11 +21,15 @@ serde = "1.0.135"
 memmap2 = "0.5.2"
 
 # Frontend
-pixels = "0.9.0"
-cpal = "0.13.4"
-egui = "0.16.1"
 clap = "3.0.10"
+cpal = "0.13.4"
 winit = "0.26.1"
+winit_input_helper = "0.11.0"
+pixels = "0.9.0"
+egui = "0.16.1"
+egui_wgpu_backend = "0.16.0"
+egui-winit = "0.16.0"
+
 
 # Profiling
 profiling = "1.0.5"

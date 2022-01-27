@@ -1,2 +1,2 @@
-pub const DISPLAY_WIDTH: usize = 240;
-pub const DISPLAY_HEIGHT: usize = 160;
+pub const DISPLAY_WIDTH: u32 = 240;
+pub const DISPLAY_HEIGHT: u32 = 160;
