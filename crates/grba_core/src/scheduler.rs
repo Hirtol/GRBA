@@ -1,5 +1,6 @@
+use binary_heap_plus::{BinaryHeap, MinComparator};
+use std::cmp::Ordering;
 use std::ops::{Add, AddAssign, Sub};
-use std::ptr;
 
 const MAX_EVENTS: usize = 20;
 
@@ -12,29 +13,24 @@ pub struct Scheduler {
     /// The queue of events to be processed.
     /// The back of the queue is the next event to be processed.
     // event_queue: tinyvec::ArrayVec<[Event; 20]>,
-    event_queue: [Event; MAX_EVENTS],
-    event_queue_len: usize,
+    event_queue: BinaryHeap<Event, MinComparator>,
 }
 
 impl Scheduler {
     pub fn new() -> Self {
         Scheduler {
             current_time: 0.into(),
-            event_queue: [Event::default(); MAX_EVENTS],
-            event_queue_len: 0,
+            event_queue: BinaryHeap::with_capacity_min(MAX_EVENTS),
         }
-    }
-
-    /// The complete event queue
-    pub fn event_queue(&self) -> &[Event] {
-        &self.event_queue[0..self.event_queue_len]
     }
 
     /// Set the current time to the next closest event.
     #[inline]
     pub fn skip_to_next_event(&mut self) {
-        if self.event_queue_len != 0 {
-            self.current_time = self.event_queue[self.event_queue_len - 1].timestamp;
+        if let Some(ev) = self.event_queue.peek() {
+            // We need the modulo 4, since events could be scheduled at times when they're
+            // not aligned on proper t-cycle boundaries.
+            self.current_time = ev.timestamp;
         }
     }
 
@@ -42,16 +38,14 @@ impl Scheduler {
     ///
     /// The event is removed from the scheduler.
     #[inline]
+    #[profiling::function]
     pub fn pop_current(&mut self) -> Option<Event> {
-        if self.event_queue_len == 0 {
-            return None;
-        }
-        let index = self.event_queue_len - 1;
-        let ev = self.event_queue[index];
-
-        if ev.timestamp <= self.current_time {
-            self.event_queue_len = index;
-            Some(ev)
+        if self
+            .event_queue
+            .peek()
+            .map_or(false, |ev| ev.timestamp <= self.current_time)
+        {
+            self.event_queue.pop()
         } else {
             None
         }
@@ -59,22 +53,14 @@ impl Scheduler {
 
     /// Remove all events with the given tag
     pub fn remove_event(&mut self, tag: EventTag) {
-        for i in 0..self.event_queue_len {
-            if self.event_queue[i].tag == tag {
-                self.remove_event_unsafe(i);
-            }
-        }
+        let mut current_vec = std::mem::replace(&mut self.event_queue, BinaryHeap::new_min()).into_vec();
+        current_vec.retain(|e| e.tag != tag);
+        self.event_queue = BinaryHeap::from_vec(current_vec);
     }
 
-    /// Removes the first event that matches the given tag.
-    /// Has an early stop compared to [Self::remove_event]
-    pub fn remove_first_event(&mut self, tag: EventTag) {
-        for i in (0..self.event_queue_len).rev() {
-            if self.event_queue[i].tag == tag {
-                self.remove_event_unsafe(i);
-                return;
-            }
-        }
+    /// Clears all scheduled events.
+    pub fn clear_events(&mut self) {
+        self.event_queue.clear();
     }
 
     /// Schedule the provided event at the absolute time `when`.
@@ -94,54 +80,9 @@ impl Scheduler {
     ///
     /// The events are laid out from back to front, based on their timestamp. (Earlier is at back of array)
     #[inline(always)]
+    #[profiling::function]
     fn add_event(&mut self, event: Event) {
-        if self.event_queue_len == 0 {
-            self.event_queue[0] = event;
-            self.event_queue_len += 1;
-        } else {
-            let current_index = self.event_queue_len - 1;
-            for i in (0..self.event_queue_len).rev() {
-                if event.timestamp <= self.event_queue[i].timestamp {
-                    if i == current_index {
-                        self.event_queue[i + 1] = event;
-                        self.event_queue_len += 1;
-                    } else {
-                        self.insert_event(i + 1, event);
-                    }
-
-                    return;
-                }
-            }
-
-            // Insert at the 'back' (due to our backwards layout this is the front).
-            self.insert_event(0, event);
-        }
-    }
-
-    fn insert_event(&mut self, index: usize, event: Event) {
-        unsafe {
-            let p = self.event_queue.as_mut_ptr().add(index);
-            // Shift everything over to make space. (Duplicating the
-            // `index`th element into two consecutive places.)
-            ptr::copy(p, p.offset(1), self.event_queue_len - index);
-            // Write it in, overwriting the first copy of the `index`th
-            // element.
-            ptr::write(p, event);
-
-            self.event_queue_len += 1;
-        }
-    }
-
-    fn remove_event_unsafe(&mut self, index: usize) {
-        unsafe {
-            // the place we are taking from.
-            let ptr = self.event_queue.as_mut_ptr().add(index);
-
-            // Shift everything down to fill in that spot.
-            ptr::copy(ptr.offset(1), ptr, self.event_queue_len - index - 1);
-
-            self.event_queue_len -= 1;
-        }
+        self.event_queue.push(event);
     }
 }
 
@@ -160,7 +101,7 @@ pub enum EventTag {
     HBlank,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq)]
 pub struct Event {
     pub tag: EventTag,
     pub timestamp: EmuTime,
@@ -172,6 +113,24 @@ impl Default for Event {
             tag: EventTag::Exit,
             timestamp: EmuTime(u64::MAX),
         }
+    }
+}
+
+impl core::cmp::PartialEq for Event {
+    fn eq(&self, other: &Self) -> bool {
+        self.timestamp == other.timestamp
+    }
+}
+
+impl core::cmp::PartialOrd for Event {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.timestamp.partial_cmp(&other.timestamp)
+    }
+}
+
+impl core::cmp::Ord for Event {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.timestamp.cmp(&other.timestamp)
     }
 }
 
