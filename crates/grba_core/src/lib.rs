@@ -1,4 +1,5 @@
 mod bus;
+mod cartridge;
 mod cpu;
 pub mod emulator;
 mod ppu;
