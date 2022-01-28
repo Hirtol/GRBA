@@ -15,7 +15,7 @@ jobs:
       - name: Install ALSA dev
         run: |
           sudo apt update
-          sudo apt-get install libasound2-dev libx11-xcb-dev
+          sudo apt-get install libasound2-dev
 
       - uses: actions/checkout@master
 
