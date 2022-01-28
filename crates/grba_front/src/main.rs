@@ -28,12 +28,9 @@ fn main() {
     let mut input = winit_input_helper::WinitInputHelper::new();
 
     let mut renderer = Renderer::new(&event_loop, RendererOptions::default()).unwrap();
-    let mut now = Instant::now();
-
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
-        println!("Event: {:?} - {:#?}", event, now.elapsed());
-        now = Instant::now();
+
         // Handle input events
         if input.update(&event) {
             // Close events
