@@ -2,3 +2,4 @@
 .idea/
 roms/
 docs/debugger
+.cargo/

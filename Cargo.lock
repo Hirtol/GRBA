@@ -1017,6 +1017,7 @@ dependencies = [
  "serde",
  "simplelog 0.8.0",
  "tracy-client",
+ "wgpu",
  "winit",
  "winit_input_helper",
 ]

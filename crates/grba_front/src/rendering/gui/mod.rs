@@ -4,7 +4,7 @@ use pixels::{wgpu, PixelsContext};
 use winit::window::Window;
 
 /// Manages all state required for rendering egui over `Pixels`.
-pub(crate) struct Framework {
+pub struct Framework {
     // State for egui.
     egui_ctx: CtxRef,
     egui_state: egui_winit::State,

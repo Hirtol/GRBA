@@ -1,7 +1,12 @@
+use crate::rendering::{Renderer, RendererOptions};
+use egui_wgpu_backend::wgpu::{PresentMode, TextureFormat};
 use grba_core::cartridge::{Cartridge, CARTRIDGE_SRAM_START};
 use log::LevelFilter;
-use pixels::{Pixels, SurfaceTexture};
+use pixels::wgpu::{Backends, PowerPreference, RequestAdapterOptions};
+use pixels::{wgpu, Pixels, PixelsBuilder, SurfaceTexture};
 use std::fs::read;
+use std::thread;
+use std::time::{Duration, Instant};
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -10,38 +15,25 @@ use winit::window::WindowBuilder;
 pub const WIDTH: u32 = 640;
 pub const HEIGHT: u32 = 480;
 
-mod gui;
+mod rendering;
 
 fn main() {
     let cfg = simplelog::ConfigBuilder::new()
         .add_filter_allow_str("grba_front")
         .build();
-    println!("Hey");
+
     simplelog::SimpleLogger::init(LevelFilter::Trace, cfg).unwrap();
 
     let event_loop = EventLoop::new();
     let mut input = winit_input_helper::WinitInputHelper::new();
-    let window = {
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        WindowBuilder::new()
-            .with_title("GRBA")
-            .with_inner_size(size)
-            .with_min_inner_size(size)
-            .build(&event_loop)
-            .unwrap()
-    };
 
-    let (mut pixels, mut framework) = {
-        let window_size = window.inner_size();
-        let scale_factor = window.scale_factor() as f32;
-        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        let pixels = Pixels::new(grba_core::DISPLAY_WIDTH, grba_core::DISPLAY_HEIGHT, surface_texture).unwrap();
-        let framework = gui::Framework::new(window_size.width, window_size.height, scale_factor, &pixels);
-
-        (pixels, framework)
-    };
+    let mut renderer = Renderer::new(&event_loop, RendererOptions::default()).unwrap();
+    let mut now = Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
+        *control_flow = ControlFlow::Poll;
+        println!("Event: {:?} - {:#?}", event, now.elapsed());
+        now = Instant::now();
         // Handle input events
         if input.update(&event) {
             // Close events
@@ -49,45 +41,18 @@ fn main() {
                 *control_flow = ControlFlow::Exit;
                 return;
             }
-
-            // Update the scale factor
-            if let Some(scale_factor) = input.scale_factor() {
-                framework.scale_factor(scale_factor);
-            }
-
-            // Resize the window
-            if let Some(size) = input.window_resized() {
-                pixels.resize_surface(size.width, size.height);
-                framework.resize(size.width, size.height);
-            }
-
-            // Update internal state and request a redraw
-            window.request_redraw();
+            // Update renderer state and request new frame.
+            renderer.after_window_update(&input);
         }
 
         match event {
             Event::WindowEvent { event, .. } => {
                 // Update egui inputs
-                framework.handle_event(&event);
+                renderer.framework.handle_event(&event);
             }
             // Draw the current frame
             Event::RedrawRequested(_) => {
-                // Draw the world
-                // pixels.get_frame()
-
-                // Prepare egui
-                framework.prepare(&window);
-
-                // Render everything together
-                let render_result = pixels.render_with(|encoder, render_target, context| {
-                    // Render the world texture
-                    context.scaling_renderer.render(encoder, render_target);
-
-                    // Render egui
-                    framework.render(encoder, render_target, context)?;
-
-                    Ok(())
-                });
+                let render_result = renderer.render_pixels(&[255; grba_core::FRAMEBUFFER_SIZE]);
 
                 // Basic error handling
                 if render_result.is_err() {
