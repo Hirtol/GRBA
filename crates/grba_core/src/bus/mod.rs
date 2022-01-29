@@ -1,15 +1,21 @@
+use crate::cartridge::Cartridge;
 use crate::emulator::MemoryAddress;
+use crate::scheduler::Scheduler;
 
 mod ram;
 
 pub struct Bus {
     ram: ram::WorkRam,
+    rom: Cartridge,
+    scheduler: Scheduler,
 }
 
 impl Bus {
-    pub fn new() -> Self {
+    pub fn new(rom: Cartridge) -> Self {
         Self {
             ram: ram::WorkRam::new(),
+            rom,
+            scheduler: Scheduler::new(),
         }
     }
 

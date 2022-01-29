@@ -4,10 +4,10 @@ use gui::Framework;
 use pixels::Pixels;
 use std::time::Instant;
 use winit::event_loop::EventLoop;
-use winit::window::Window;
+use winit::window::{Fullscreen, Window, WindowId};
 
 mod framerate;
-mod gui;
+pub mod gui;
 
 #[derive(Debug, Clone)]
 pub struct RendererOptions {
@@ -79,6 +79,20 @@ impl Renderer {
 
     pub fn request_redraw(&self) {
         self.primary_window.request_redraw();
+    }
+
+    pub fn primary_window_id(&self) -> WindowId {
+        self.primary_window.id()
+    }
+
+    pub fn toggle_fullscreen(&self) {
+        match self.primary_window.fullscreen() {
+            None => {
+                self.primary_window
+                    .set_fullscreen(Some(Fullscreen::Borderless(self.primary_window.current_monitor())));
+            }
+            Some(_) => self.primary_window.set_fullscreen(None),
+        }
     }
 
     /// To be called after `input.update(event)` returns `true`

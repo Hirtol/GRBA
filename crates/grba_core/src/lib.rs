@@ -2,11 +2,13 @@ mod bus;
 pub mod cartridge;
 mod cpu;
 pub mod emulator;
+mod joypad;
 mod ppu;
 pub mod scheduler;
 mod utils;
 
 pub use ppu::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
+pub use joypad::InputKeys;
 /// The total framebuffer size that would be returned each frame.
 /// Format is `RGBA_u8`.
 pub const FRAMEBUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT * 4) as usize;

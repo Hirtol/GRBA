@@ -3,6 +3,9 @@ use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
 use winit::window::Window;
 
+pub use debug::messages::DebugMessage;
+mod debug;
+
 /// Manages all state required for rendering egui over `Pixels`.
 pub struct Framework {
     // State for egui.

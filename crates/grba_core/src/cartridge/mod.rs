@@ -1,7 +1,7 @@
 use crate::cartridge::header::CartridgeHeader;
 use crate::emulator::MemoryAddress;
 
-mod header;
+pub mod header;
 
 /// Maximum of `64KB` of additional SRAM
 pub const CARTRIDGE_RAM_SIZE: usize = 1024 * 64;
@@ -17,17 +17,13 @@ pub struct Cartridge {
     /// This is usually buffered by a backing battery, so it can be seen as a save.
     /// For now we take a [Box] here to avoid needing to specify lifetimes everywhere (as we want to be able to take
     /// a MMAP, or any byte array really). If performance turns out to be significantly worse we can always change it.
-    ram: Box<dyn std::ops::DerefMut<Target = [u8]>>,
+    ram: Box<dyn std::ops::DerefMut<Target = [u8]> + Send>,
 }
 
 impl Cartridge {
-    pub fn new(rom: &[u8], ram: Box<dyn std::ops::DerefMut<Target = [u8]>>) -> Self {
-        let header = CartridgeHeader::new(rom);
-        Self {
-            header,
-            rom: rom.to_vec(),
-            ram,
-        }
+    pub fn new(rom: Vec<u8>, ram: Box<dyn std::ops::DerefMut<Target = [u8]> + Send>) -> Self {
+        let header = CartridgeHeader::new(&rom);
+        Self { header, rom, ram }
     }
 
     pub fn header(&self) -> &CartridgeHeader {
