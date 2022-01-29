@@ -54,6 +54,14 @@ impl GBAEmulator {
         //TODO
     }
 
+    pub fn frame_buffer(&self) -> Vec<u8> {
+        vec![180; crate::FRAMEBUFFER_SIZE]
+    }
+
+    pub fn frame_buffer_ref(&mut self) -> &mut Vec<u8> {
+        todo!()
+    }
+
     #[inline(always)]
     fn frame_data(&mut self) -> FrameData {
         FrameData { mmu: &mut self.mmu }

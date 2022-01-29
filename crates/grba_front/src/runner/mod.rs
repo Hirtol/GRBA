@@ -40,7 +40,7 @@ impl EmulatorRunner {
 
 pub struct RunnerHandle {
     current_thread: JoinHandle<()>,
-    pub frame_receiver: Receiver<Box<[u8; FRAMEBUFFER_SIZE]>>,
+    pub frame_receiver: Receiver<Vec<u8>>,
     pub request_sender: Sender<EmulatorMessage>,
     pub response_receiver: Receiver<EmulatorResponse>,
 }
@@ -73,12 +73,17 @@ impl RunnerHandle {
 
 fn run_emulator(
     emu: &mut GBAEmulator,
-    frame_sender: Sender<Box<[u8; FRAMEBUFFER_SIZE]>>,
+    frame_sender: Sender<Vec<u8>>,
     response_sender: Sender<EmulatorResponse>,
     request_receiver: Receiver<EmulatorMessage>,
 ) {
     loop {
         emu.run_to_vblank();
+
+        if let Err(e) = frame_sender.send(emu.frame_buffer()) {
+            log::error!("Failed to transfer framebuffer due to: {:?}", e);
+            break;
+        }
 
         while let Ok(msg) = request_receiver.try_recv() {
             match msg {

@@ -10,7 +10,7 @@ pub const ON_CHIP_RAM_SIZE: usize = 32 * 1024;
 pub const ON_BOARD_RAM_START: usize = 0x0200_0000;
 pub const ON_CHIP_RAM_START: usize = 0x0300_0000;
 pub const ON_BOARD_RAM_END: usize = 0x0203_FFFF;
-pub const ON_CHIP_RAM_END: usize = 0x03007_FFF;
+pub const ON_CHIP_RAM_END: usize = 0x0300_7FFF;
 
 pub struct WorkRam {
     /// Slow RAM on board (256KB)
@@ -22,8 +22,8 @@ pub struct WorkRam {
 impl WorkRam {
     pub fn new() -> WorkRam {
         WorkRam {
-            board: Box::new([0; ON_BOARD_RAM_SIZE]),
-            chip: Box::new([0; ON_CHIP_RAM_SIZE]),
+            board: crate::box_array![0; ON_BOARD_RAM_SIZE],
+            chip: crate::box_array![0; ON_CHIP_RAM_SIZE],
         }
     }
 

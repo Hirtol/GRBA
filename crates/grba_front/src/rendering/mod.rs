@@ -124,7 +124,7 @@ impl Renderer {
     }
 
     /// Renders the main window's contents (The framebuffer).
-    pub fn render_pixels(&mut self, framebuffer: &[u8; grba_core::FRAMEBUFFER_SIZE]) -> anyhow::Result<()> {
+    pub fn render_pixels(&mut self, framebuffer: &[u8]) -> anyhow::Result<()> {
         let frame = self.pixels.get_frame();
 
         frame.copy_from_slice(framebuffer);

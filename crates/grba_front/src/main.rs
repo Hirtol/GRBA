@@ -8,14 +8,10 @@ use grba_core::cartridge::{Cartridge, CARTRIDGE_SRAM_START};
 use log::LevelFilter;
 use pixels::wgpu::{Backends, PowerPreference, RequestAdapterOptions};
 use pixels::{wgpu, Pixels, PixelsBuilder, SurfaceTexture};
-use std::fs::read;
 use std::path::PathBuf;
-use std::thread;
 use std::time::{Duration, Instant};
-use winit::dpi::LogicalSize;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::WindowBuilder;
 
 pub const WIDTH: u32 = 640;
 pub const HEIGHT: u32 = 480;
@@ -31,62 +27,131 @@ fn main() {
 
     simplelog::SimpleLogger::init(LevelFilter::Trace, cfg).unwrap();
 
-    let event_loop = EventLoop::new();
-    let mut input = winit_input_helper::WinitInputHelper::new();
+    let application = Application::new().expect("Failed to create application");
 
-    let mut renderer = Renderer::new(&event_loop, RendererOptions::default()).unwrap();
-    let mut state = State::new();
+    let _ = application.run();
+}
 
-    event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Poll;
+pub struct Application {
+    state: State,
+    renderer: Renderer,
+    input: winit_input_helper::WinitInputHelper,
+    event_loop: EventLoop<()>,
+    wait_to: Instant,
+}
 
-        // Handle input events
-        if input.update(&event) {
-            // Close events
-            if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
-                *control_flow = ControlFlow::Exit;
-                return;
-            }
-            // Update renderer state and request new frame.
-            renderer.after_window_update(&input);
-        }
+impl Application {
+    pub fn new() -> anyhow::Result<Application> {
+        let event_loop = EventLoop::new();
+        let input = winit_input_helper::WinitInputHelper::new();
+        let renderer = Renderer::new(&event_loop, RendererOptions::default())?;
 
-        match event {
-            Event::WindowEvent { event, window_id } => {
-                // Update egui inputs
-                renderer.framework.handle_event(&event);
+        Ok(Application {
+            state: State::new(),
+            renderer,
+            input,
+            event_loop,
+            wait_to: Instant::now(),
+        })
+    }
 
-                if window_id != renderer.primary_window_id() {
+    pub fn run(mut self) -> anyhow::Result<()> {
+        let FRAME_DURATION: Duration = Duration::from_secs_f32(1.0 / grba_core::REFRESH_RATE);
+
+        self.event_loop.run(move |event, _, control_flow| {
+            // Handle input events
+            if self.input.update(&event) {
+                // Close events
+                if self.input.key_pressed(VirtualKeyCode::Escape) || self.input.quit() {
+                    *control_flow = ControlFlow::Exit;
                     return;
                 }
+                // Update renderer state and request new frame.
+                self.renderer.after_window_update(&self.input);
+            }
 
-                match event {
-                    WindowEvent::DroppedFile(path) => {
-                        log::debug!("Dropped file: {:?}", path);
-                        let rom = handle_file_drop(path);
+            match event {
+                Event::WindowEvent { event, window_id } => {
+                    // Update egui inputs
+                    self.renderer.framework.handle_event(&event);
 
-                        if let Some(rom) = rom {
-                            state.load_cartridge(rom);
+                    if window_id != self.renderer.primary_window_id() {
+                        return;
+                    }
+
+                    match event {
+                        WindowEvent::DroppedFile(path) => {
+                            log::debug!("Dropped file: {:?}", path);
+                            let rom = handle_file_drop(path);
+
+                            if let Some(rom) = rom {
+                                self.state.load_cartridge(rom);
+                            }
+                        }
+                        WindowEvent::KeyboardInput { input, .. } => {
+                            handle_key(input, &mut self.state, &mut self.renderer);
+                        }
+                        _ => {}
+                    };
+                }
+                // Draw the current frame
+                Event::RedrawRequested(_) => {
+                    let emu = if let Some(emu) = &self.state.current_emu {
+                        // We have an emulator, so run as fast as we can.
+                        *control_flow = ControlFlow::Poll;
+                        emu
+                    } else {
+                        // No emu, don't draw excessively.
+                        *control_flow = ControlFlow::Wait;
+
+                        let render_result = self.renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE]);
+
+                        // Basic error handling
+                        if render_result.is_err() {
+                            *control_flow = ControlFlow::Exit;
+                        }
+
+                        return;
+                    };
+
+                    // Determine if we need to wait.
+                    match self.state.run_state {
+                        RunningState::FrameLimited | RunningState::FastForward(_) => {
+                            let now = Instant::now();
+
+                            if now <= self.wait_to {
+                                *control_flow = ControlFlow::WaitUntil(self.wait_to);
+                                return;
+                            } else {
+                                self.wait_to += FRAME_DURATION;
+                            }
+                        }
+                        RunningState::AudioLimited => {
+                            todo!()
+                        }
+                        RunningState::Unbounded => {}
+                    }
+
+                    // Need to render a frame.
+                    let frames_to_render = match self.state.run_state {
+                        RunningState::FastForward(frames) => frames,
+                        _ => 1,
+                    };
+
+                    for _ in 0..frames_to_render {
+                        let frame = emu.frame_receiver.recv().unwrap();
+                        let render_result = self.renderer.render_pixels(&frame);
+
+                        // Basic error handling
+                        if render_result.is_err() {
+                            *control_flow = ControlFlow::Exit;
                         }
                     }
-                    WindowEvent::KeyboardInput { input, .. } => {
-                        handle_key(input, &mut state, &mut renderer);
-                    }
-                    _ => {}
-                };
-            }
-            // Draw the current frame
-            Event::RedrawRequested(_) => {
-                let render_result = renderer.render_pixels(&[255; grba_core::FRAMEBUFFER_SIZE]);
-
-                // Basic error handling
-                if render_result.is_err() {
-                    *control_flow = ControlFlow::Exit;
                 }
+                _ => (),
             }
-            _ => (),
-        }
-    });
+        });
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -204,7 +269,7 @@ fn handle_key(input: KeyboardInput, state: &mut State, renderer: &mut Renderer) 
             if input.state == ElementState::Released {
                 state.run_default();
             } else {
-                state.run_frame_limited();
+                state.run_fast_forward(4);
             }
         }
         VirtualKeyCode::K if input.state == ElementState::Released => {
