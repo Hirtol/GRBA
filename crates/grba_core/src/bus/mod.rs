@@ -46,6 +46,6 @@ impl Bus {
 
     #[inline(always)]
     fn get_mem_range(addr: MemoryAddress) -> u32 {
-        addr << 24
+        addr >> 24
     }
 }

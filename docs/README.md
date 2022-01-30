@@ -15,3 +15,23 @@
 * [TONC](https://www.coranac.com/projects/tonc/) (GBA Tutorials and Demos)
 * [MGBA Blog](https://mgba.io/2015/06/27/cycle-counting-prefetch/)
 * [Homebrew Development](https://patater.com/gbaguy/gbaasm.htm)
+
+### Secret Notes:
+
+```
+Does arm.gba test all the ldm/stm edge cases?
+
+Not all of them, but most of them
+It misses one that modern gcc actually uses
+
+Which one?
+
+Uhh I think thumb mode ldmia with rb in rlist
+That one will destroy you if you try to add NDS support to your GBA emulator
+
+Yeah, that's architecturally defined
+Make sure not to miss it
+
+Is it defined by ARM7TDMI or ARMv4T?
+It's defined in the ARMv4 spec
+```
