@@ -25,6 +25,7 @@ impl EmulatorRunner {
         let (response_sender, response_receiver) = unbounded::<EmulatorResponse>();
 
         let emu_thread = std::thread::spawn(move || {
+            profiling::register_thread!("Emulator Thread");
             let mut emulator = create_emulator(self.rom, EmuOptions::default());
             run_emulator(&mut emulator, frame_sender, response_sender, request_receiver);
         });
@@ -78,6 +79,7 @@ fn run_emulator(
     request_receiver: Receiver<EmulatorMessage>,
 ) {
     loop {
+        profiling::scope!("Emulator Loop");
         emu.run_to_vblank();
 
         if let Err(e) = frame_sender.send(emu.frame_buffer()) {

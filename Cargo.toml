@@ -28,7 +28,7 @@ lto = true
 codegen-units = 1
 
 # Used for Profiling
-[profile.profile]
+[profile.profiling]
 inherits = "release"
 incremental = true
 debug = 1
