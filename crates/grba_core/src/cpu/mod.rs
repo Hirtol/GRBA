@@ -1,17 +1,20 @@
 use crate::bus::Bus;
+use crate::cpu::arm::{ArmInstruction, ArmLUT};
 use crate::cpu::registers::Registers;
 use registers::{Mode, State};
+
+mod arm;
 mod registers;
 
 //TODO Timings:
 // * Gamepak fetching and prefetching?
 // * Instruction timings
 
-#[derive(Debug)]
 pub struct CPU {
     registers: Registers,
     /// GBA has a pipeline of execute-decode-fetch.
     pipeline: [u32; 3],
+    arm_lut: ArmLUT,
 }
 
 impl CPU {
@@ -24,6 +27,7 @@ impl CPU {
         let mut result = CPU {
             registers: Registers::new(),
             pipeline: [0; 3],
+            arm_lut: arm::create_arm_lut(),
         };
 
         if skip_bios {
@@ -51,7 +55,7 @@ impl CPU {
 
         match self.state() {
             State::Arm => {
-                self.execute_arm(bus, self.pipeline[0]);
+                self.execute_arm(self.pipeline[0], bus);
             }
             State::Thumb => {
                 self.execute_thumb(bus, self.pipeline[0] as u16);
@@ -100,9 +104,34 @@ impl CPU {
         self.pipeline = [0; 3];
     }
 
-    fn execute_arm(&mut self, bus: &mut Bus, opcode: u32) {}
+    fn execute_arm(&mut self, instruction: ArmInstruction, bus: &mut Bus) {
+        if !self.condition_holds(instruction) {
+            return;
+        }
+
+        let lut_index = (((instruction >> 4) & 0xF) | ((instruction & 0x0FF0_0000) >> 16)) as usize;
+        self.arm_lut[lut_index](self, instruction, bus);
+    }
 
     fn execute_thumb(&mut self, bus: &mut Bus, opcode: u16) {}
+
+    fn raise_exception(&mut self, exception: Exceptions, bus: &mut Bus) {
+        todo!()
+    }
+
+    /// Read from a general purpose register.
+    /// `reg` should be in the range 0..16
+    #[inline(always)]
+    fn read_reg(&self, reg: usize) -> u32 {
+        self.registers.general_purpose[reg]
+    }
+
+    /// Write to a general purpose register.
+    /// `reg` should be in the range 0..16
+    #[inline(always)]
+    fn write_reg(&mut self, reg: usize, value: u32) {
+        self.registers.general_purpose[reg] = value;
+    }
 
     #[inline(always)]
     fn state(&self) -> State {
@@ -112,4 +141,15 @@ impl CPU {
 
 fn log_cpu_state(cpu: &CPU) {
     println!("{:?}", cpu.registers);
+}
+
+#[derive(Debug)]
+pub enum Exceptions {
+    SoftwareInterrupt,
+    UndefinedInstruction,
+    PrefetchAbort,
+    FastInterrupt,
+    Interrupt,
+    DataAbort,
+    Reset,
 }

@@ -19,7 +19,7 @@ impl Bus {
         }
     }
 
-    pub fn read_32(&self, addr: MemoryAddress) -> u32 {
+    pub fn read_32(&mut self, addr: MemoryAddress) -> u32 {
         match Self::get_mem_range(addr) {
             0 => todo!("BIOS READ"),
             2 => self.ram.read_board_32(addr),
@@ -36,13 +36,13 @@ impl Bus {
         }
     }
 
-    pub fn write_32(&self, addr: MemoryAddress, data: u32) {}
+    pub fn write_32(&mut self, addr: MemoryAddress, data: u32) {}
 
-    pub fn read_16(&self, addr: MemoryAddress) -> u16 {
+    pub fn read_16(&mut self, addr: MemoryAddress) -> u16 {
         0
     }
 
-    pub fn write_16(&self, addr: MemoryAddress, data: u16) {}
+    pub fn write_16(&mut self, addr: MemoryAddress, data: u16) {}
 
     #[inline(always)]
     fn get_mem_range(addr: MemoryAddress) -> u32 {

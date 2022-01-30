@@ -14,6 +14,8 @@ pub use ppu::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
 pub const FRAMEBUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT * 4) as usize;
 /// The amount of frames per second a normal GBA would display.
 pub const REFRESH_RATE: f32 = 59.7275;
+/// The clock speed of the ARM7TDMI CPU.
+pub const CLOCK_SPEED: u32 = 16_780_000;
 
 macro_rules! cpu_log {
     ($($arg:tt)*) => {
@@ -41,6 +43,13 @@ macro_rules! box_array {
 
         vec_to_boxed_array(vec![$val; $len])
     }};
+}
+
+#[macro_export]
+macro_rules! check_bit {
+    ($val:expr, $bit:expr) => {
+        ($val & (1 << $bit)) != 0
+    };
 }
 
 use cpu_log;

@@ -69,6 +69,6 @@ impl GBAEmulator {
 }
 
 #[repr(transparent)]
-struct FrameData<'a> {
-    mmu: &'a mut Bus,
+pub(crate) struct FrameData<'a> {
+    pub mmu: &'a mut Bus,
 }
