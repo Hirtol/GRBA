@@ -61,6 +61,8 @@ impl CPU {
                 self.execute_thumb(bus, self.pipeline[0] as u16);
             }
         }
+        // Very basic cycle counting to get things going. In the future ought to count cycles properly.
+        bus.scheduler.add_time(1);
 
         self.advance_pipeline(bus);
     }

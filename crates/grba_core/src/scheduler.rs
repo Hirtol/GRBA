@@ -63,6 +63,10 @@ impl Scheduler {
         self.event_queue.clear();
     }
 
+    pub fn add_time(&mut self, time: i32) {
+        self.current_time.0 += time as u64;
+    }
+
     /// Schedule the provided event at the absolute time `when`.
     pub fn schedule_event(&mut self, tag: EventTag, when: EmuTime) {
         self.add_event(Event { tag, timestamp: when });

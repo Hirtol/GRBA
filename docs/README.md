@@ -8,6 +8,7 @@
 
 ## EEPROM
 * [Dennis](https://densinh.github.io/DenSinH/emulation/2021/02/01/gba-eeprom.html)
+* [GBA Save Systems Explained](https://dillonbeliveau.com/2020/06/05/GBA-FLASH.html)
 
 ## General
 * [GBATek](https://problemkaputt.de/gbatek.htm)

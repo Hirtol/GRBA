@@ -7,7 +7,7 @@ mod ram;
 pub struct Bus {
     ram: ram::WorkRam,
     rom: Cartridge,
-    scheduler: Scheduler,
+    pub scheduler: Scheduler,
 }
 
 impl Bus {
