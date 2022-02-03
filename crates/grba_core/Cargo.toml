@@ -19,6 +19,7 @@ tinyvec = "1.5.1"
 num-traits = "0.2"
 num-derive = "0.3"
 binary-heap-plus = "0.4.1"
+regex = "1.5.4"
 
 # Profiling / Logging
 log = "0.4.14"

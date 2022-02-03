@@ -17,13 +17,19 @@ pub struct Cartridge {
     /// This is usually buffered by a backing battery, so it can be seen as a save.
     /// For now we take a [Box] here to avoid needing to specify lifetimes everywhere (as we want to be able to take
     /// a MMAP, or any byte array really). If performance turns out to be significantly worse we can always change it.
-    ram: Box<dyn std::ops::DerefMut<Target = [u8]> + Send>,
+    ///
+    /// TODO: Implement different sizes based on the backup ID, currently we just assume Flash.
+    saved_ram: Box<dyn std::ops::DerefMut<Target = [u8]> + Send>,
 }
 
 impl Cartridge {
     pub fn new(rom: Vec<u8>, ram: Box<dyn std::ops::DerefMut<Target = [u8]> + Send>) -> Self {
         let header = CartridgeHeader::new(&rom);
-        Self { header, rom, ram }
+        Self {
+            header,
+            rom,
+            saved_ram: ram,
+        }
     }
 
     pub fn header(&self) -> &CartridgeHeader {
@@ -38,12 +44,12 @@ impl Cartridge {
     ///
     /// Note that the ROM only has an 8-bit bus, so this should only ever return a [u8]
     pub fn read_sram(&self, addr: MemoryAddress) -> u8 {
-        self.ram[Self::cartridge_sram_addr_to_index(addr)]
+        self.saved_ram[Self::cartridge_sram_addr_to_index(addr)]
     }
 
     /// Write the given `value` to the given `addr` in SRAM.
     pub fn write_sram(&mut self, addr: MemoryAddress, value: u8) {
-        self.ram[Self::cartridge_sram_addr_to_index(addr)] = value;
+        self.saved_ram[Self::cartridge_sram_addr_to_index(addr)] = value;
     }
 
     #[inline(always)]

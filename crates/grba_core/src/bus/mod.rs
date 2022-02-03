@@ -28,7 +28,7 @@ impl Bus {
             5 => todo!("BG/OBJ READ"),
             6 => todo!("VRAM READ"),
             7 => todo!("OAM READ"),
-            8 | 9 => todo!("ROM READ 1"),
+            8 | 9 => self.rom.read_32(addr),
             0xA | 0xB => todo!("ROM READ 2"),
             0xC | 0xD => todo!("ROM READ 3"),
             0xE | 0xF => todo!("Game Pak SRAM"),

@@ -11,6 +11,18 @@ pub enum Region {
     Italian,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CartBackupId {
+    /// Either 512 or 8 KB of EEPROM
+    EEProm,
+    /// 32KB of SRAM
+    Sram,
+    /// 64KB of Flash
+    Flash64,
+    /// 128KB of Flash
+    Flash128,
+}
+
 /// Represents the Cartridge Header for a GBA rom.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CartridgeHeader {
@@ -28,6 +40,8 @@ pub struct CartridgeHeader {
     software_version: u8,
     /// Header checksum (We'll probably just ignore this one)
     complement_checksum: u8,
+    /// The backup id of this particular cartridge
+    backup_id: CartBackupId,
 }
 
 impl CartridgeHeader {
@@ -55,6 +69,7 @@ impl CartridgeHeader {
             device_type: parse_device_type(rom),
             software_version: parse_software_version(rom),
             complement_checksum: read_chksum,
+            backup_id: find_backup_id(rom).unwrap_or(CartBackupId::Flash64),
         }
     }
 
@@ -70,7 +85,7 @@ impl CartridgeHeader {
 }
 
 mod parsing {
-    use crate::cartridge::header::Region;
+    use crate::cartridge::header::{CartBackupId, Region};
 
     pub fn parse_title(rom: &[u8]) -> String {
         String::from_utf8_lossy(&rom[0xA0..0xAC])
@@ -121,5 +136,27 @@ mod parsing {
 
     pub fn parse_complement_checksum(rom: &[u8]) -> u8 {
         rom[0xBD]
+    }
+
+    /// Tries to find the backup ID string somewhere in the ROM.
+    /// If it fails will return [Option::None].
+    pub fn find_backup_id(rom: &[u8]) -> Option<CartBackupId> {
+        use regex::bytes::Regex;
+        let re = Regex::new(r#"(EEPROM|SRAM|FLASH|FLASH512|FLASH1M)_V(\d{3})"#).unwrap();
+
+        if let Some(cap) = re.captures(rom).into_iter().next() {
+            let value = match std::str::from_utf8(&cap[1]).unwrap() {
+                "EEPROM" => CartBackupId::EEProm,
+                "SRAM" => CartBackupId::Sram,
+                "FLASH" => CartBackupId::Flash64,
+                "FLASH512" => CartBackupId::Flash64,
+                "FLASH1M" => CartBackupId::Flash128,
+                s => panic!("What is this backup ID? {}", s),
+            };
+
+            return Some(value);
+        }
+
+        None
     }
 }
