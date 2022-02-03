@@ -170,6 +170,12 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         if (i & 0xF8F) == 0b0000_1000_1001 {
             result[i] = CPU::multiply_long;
         }
+
+        // Data Processing:
+        // 00XX_XXXX_XXXX
+        if (i & 0xC00) == 0b0000_0000_0000 {
+            result[i] = CPU::data_processing;
+        }
     }
 
     result
