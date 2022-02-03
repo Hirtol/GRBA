@@ -119,18 +119,86 @@ impl CPU {
         todo!()
     }
 
+    fn switch_mode(&mut self, new_mode: registers::Mode) {
+        let old_mode = self.registers.cpsr.mode();
+
+        if old_mode == new_mode {
+            return;
+        }
+
+        let old_bank_idx = old_mode.to_bank_index();
+        self.registers.cpsr.set_mode(new_mode);
+
+        // Save the unique banks
+        if old_mode == Mode::FIQ {
+            // Save current FIQ registers to FIQ bank
+            let fiq_bank = old_bank_idx;
+            self.registers.r8_bank[fiq_bank] = self.registers.general_purpose[8];
+            self.registers.r9_bank[fiq_bank] = self.registers.general_purpose[9];
+            self.registers.r10_bank[fiq_bank] = self.registers.general_purpose[10];
+            self.registers.r11_bank[fiq_bank] = self.registers.general_purpose[11];
+            self.registers.r12_bank[fiq_bank] = self.registers.general_purpose[12];
+        } else {
+            // All other modes share a register bank
+            let user_bank = Mode::User.to_bank_index();
+            self.registers.r8_bank[user_bank] = self.registers.general_purpose[8];
+            self.registers.r9_bank[user_bank] = self.registers.general_purpose[9];
+            self.registers.r10_bank[user_bank] = self.registers.general_purpose[10];
+            self.registers.r11_bank[user_bank] = self.registers.general_purpose[11];
+            self.registers.r12_bank[user_bank] = self.registers.general_purpose[12];
+        }
+
+        self.registers.r13_bank[old_bank_idx] = self.registers.general_purpose[13];
+        self.registers.r14_bank[old_bank_idx] = self.registers.general_purpose[14];
+
+        match old_mode {
+            Mode::User | Mode::System => {}
+            _ => {
+                self.registers.spsr_bank[old_mode.to_spsr_index()] = self.registers.spsr;
+            }
+        }
+
+        // Now move all banked registers of the new mode to the current registers
+        let new_bank_idx = new_mode.to_bank_index();
+        if new_mode == Mode::FIQ {
+            let fiq_bank = new_bank_idx;
+            self.registers.general_purpose[8] = self.registers.r8_bank[fiq_bank];
+            self.registers.general_purpose[9] = self.registers.r9_bank[fiq_bank];
+            self.registers.general_purpose[10] = self.registers.r10_bank[fiq_bank];
+            self.registers.general_purpose[11] = self.registers.r11_bank[fiq_bank];
+            self.registers.general_purpose[12] = self.registers.r12_bank[fiq_bank];
+        } else {
+            let user_bank = Mode::User.to_bank_index();
+            self.registers.general_purpose[8] = self.registers.r8_bank[user_bank];
+            self.registers.general_purpose[9] = self.registers.r9_bank[user_bank];
+            self.registers.general_purpose[10] = self.registers.r10_bank[user_bank];
+            self.registers.general_purpose[11] = self.registers.r11_bank[user_bank];
+            self.registers.general_purpose[12] = self.registers.r12_bank[user_bank];
+        }
+
+        self.registers.general_purpose[13] = self.registers.r13_bank[new_bank_idx];
+        self.registers.general_purpose[14] = self.registers.r14_bank[new_bank_idx];
+
+        match new_mode {
+            Mode::User | Mode::System => {}
+            _ => {
+                self.registers.spsr = self.registers.spsr_bank[old_mode.to_spsr_index()];
+            }
+        }
+    }
+
     /// Read from a general purpose register.
     /// `reg` should be in the range 0..16
     #[inline(always)]
     fn read_reg(&self, reg: usize) -> u32 {
-        self.registers.general_purpose[reg]
+        self.registers.read_reg(reg)
     }
 
     /// Write to a general purpose register.
     /// `reg` should be in the range 0..16
     #[inline(always)]
     fn write_reg(&mut self, reg: usize, value: u32) {
-        self.registers.general_purpose[reg] = value;
+        self.registers.write_reg(reg, value)
     }
 
     #[inline(always)]

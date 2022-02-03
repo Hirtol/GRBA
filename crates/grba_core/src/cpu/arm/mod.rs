@@ -8,6 +8,8 @@ pub const ARM_LUT_SIZE: usize = 4096;
 pub type ArmInstruction = u32;
 pub type ArmLUT = [fn(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus); ARM_LUT_SIZE];
 
+mod data_processing;
+
 impl CPU {
     /// Check if the conditional flag set in the provided `instruction` holds.
     pub fn condition_holds(&self, instruction: ArmInstruction) -> bool {

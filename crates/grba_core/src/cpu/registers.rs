@@ -6,7 +6,7 @@ use num_traits::FromPrimitive;
 pub type RegisterBank<const N: usize> = [u32; N];
 
 /// A `SpsrBank` contains the value of the SPSR for all different modes.
-pub type SpsrBank = RegisterBank<5>;
+pub type SpsrBank = [PSR; 5];
 
 /// Contains all CPU registers.
 /// More Info: [Here](https://problemkaputt.de/gbatek.htm#armcpuregisterset)
@@ -44,7 +44,7 @@ impl Registers {
             general_purpose: [0; 16],
             cpsr: PSR::new(),
             spsr: PSR::new(),
-            spsr_bank: [0; 5],
+            spsr_bank: [PSR::new(); 5],
             r8_bank: [0; 2],
             r9_bank: [0; 2],
             r10_bank: [0; 2],
@@ -53,6 +53,17 @@ impl Registers {
             r13_bank: [0; 6],
             r14_bank: [0; 6],
         }
+    }
+
+    #[inline(always)]
+    pub fn read_reg(&self, reg: usize) -> u32 {
+        self.general_purpose[reg]
+    }
+
+    #[inline(always)]
+    pub fn write_reg(&mut self, reg: usize, value: u32) {
+        self.general_purpose[reg] = value;
+        //TODO: Handle pipelining of if we write to R15? (Also, should ignore lower 2 bits in ARM mode and lower 1 bit in THUMB).
     }
 
     #[inline(always)]
@@ -123,7 +134,7 @@ impl Mode {
 /// Program Status Register, used in the CPSR and SPSR registers.
 ///
 /// Not implemented as raw bitfields due to high-performance requirements.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct PSR {
     sign: bool,
     zero: bool,
