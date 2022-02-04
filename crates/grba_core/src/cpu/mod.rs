@@ -1,6 +1,6 @@
 use crate::bus::Bus;
 use crate::cpu::arm::{ArmInstruction, ArmLUT, ArmV4T};
-use crate::cpu::registers::{Registers, PSR};
+use crate::cpu::registers::{Registers, PC_REG, PSR};
 use crate::utils::BitOps;
 use registers::{Mode, State};
 
@@ -102,9 +102,10 @@ impl CPU {
         }
     }
 
-    /// Clear the entire pipeline.
-    fn clear_pipeline(&mut self) {
+    /// Clear the entire pipeline, and immediately refills it afterwards.
+    fn clear_pipeline(&mut self, bus: &mut Bus) {
         self.pipeline = [0; 3];
+        self.fill_pipeline(bus);
     }
 
     fn execute_arm(&mut self, instruction: ArmInstruction, bus: &mut Bus) {
@@ -192,6 +193,15 @@ impl CPU {
         }
     }
 
+    /// Switches between ARM and Thumb mode.
+    pub fn switch_state(&mut self, new_state: State, bus: &mut Bus) {
+        // Switch to a new state, and refill the pipeline
+        if self.state() != new_state {
+            self.registers.cpsr.set_state(new_state);
+            self.fill_pipeline(bus);
+        }
+    }
+
     /// Read from a general purpose register.
     /// `reg` should be in the range 0..16
     #[inline(always)]
@@ -202,8 +212,18 @@ impl CPU {
     /// Write to a general purpose register.
     /// `reg` should be in the range 0..16
     #[inline(always)]
-    fn write_reg(&mut self, reg: usize, value: u32) {
-        self.registers.write_reg(reg, value)
+    fn write_reg(&mut self, reg: usize, value: u32, bus: &mut Bus) {
+        if reg != PC_REG {
+            self.registers.write_reg(reg, value)
+        } else {
+            // Upon writes to PC we need to flush our instruction cache, and also block out the lower bits.
+            match self.state() {
+                State::Arm => self.registers.write_reg(reg, value & 0xFFFF_FFFC),
+                State::Thumb => self.registers.write_reg(reg, value & 0xFFFF_FFFE),
+            }
+
+            self.fill_pipeline(bus);
+        }
     }
 
     #[inline(always)]

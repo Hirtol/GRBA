@@ -20,7 +20,7 @@ impl From<bool> for Psr {
 
 impl ArmV4T {
     /// Transfer PSR contents to a register
-    pub fn mrs_trans_psr_reg(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
+    pub fn mrs_trans_psr_reg(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         let r_d = instruction.get_bits(12, 15) as usize;
         let source_psr: Psr = instruction.check_bit(22).into();
 
@@ -29,7 +29,7 @@ impl ArmV4T {
             Psr::Spsr => cpu.registers.spsr,
         };
 
-        cpu.write_reg(r_d, contents.as_raw());
+        cpu.write_reg(r_d, contents.as_raw(), bus);
     }
 
     /// Transfer a register contents to PSR.

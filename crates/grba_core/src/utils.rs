@@ -7,7 +7,8 @@ pub const fn has_sign_overflowed(val1: u32, val2: u32, result: u32) -> bool {
     ((val1 ^ result) & (!val2 ^ result)) >> 31 != 0
 }
 
-pub trait BitOps<T> {
+pub trait BitOps {
+    type Output;
     /// Return the bits in the specified range.
     /// Will be optimised by the compiler to a simple `shift` and `and`.
     ///
@@ -18,7 +19,7 @@ pub trait BitOps<T> {
     ///
     /// assert_eq!(value, 0xB);
     /// ```
-    fn get_bits(self, begin: u8, end_inclusive: u8) -> T;
+    fn get_bits(self, begin: u8, end_inclusive: u8) -> Self::Output;
 
     /// Check the provided bit, if it's set return `true`, otherwise return `false`.
     ///
@@ -35,7 +36,9 @@ pub trait BitOps<T> {
 macro_rules! impl_bitops {
     ($($t:ty),*) => {
         $(
-            impl BitOps<$t> for $t {
+            impl BitOps for $t {
+                type Output = $t;
+
                 #[inline(always)]
                 fn get_bits(self, begin: u8, end_inclusive: u8) -> $t {
                     get_bits!(self, begin, end_inclusive)

@@ -19,12 +19,12 @@ impl ArmV4T {
             let current_mem = bus.read(base_address);
 
             bus.write(base_address, source_content as u8);
-            cpu.write_reg(reg_dst, current_mem as u32);
+            cpu.write_reg(reg_dst, current_mem as u32, bus);
         } else {
             let current_mem = bus.read_32(base_address);
 
             bus.write_32(base_address, source_content);
-            cpu.write_reg(reg_dst, current_mem);
+            cpu.write_reg(reg_dst, current_mem, bus);
         }
     }
 }

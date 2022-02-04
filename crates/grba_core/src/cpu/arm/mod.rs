@@ -9,6 +9,7 @@ pub type ArmInstruction = u32;
 pub type LutInstruction = fn(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus);
 pub type ArmLUT = [LutInstruction; ARM_LUT_SIZE];
 
+mod branching;
 mod data_processing;
 mod psr_transfer;
 mod single_data_swap;
@@ -58,7 +59,7 @@ impl ArmV4T {
     }
 
     /// Implements the `MUL` and `MLA` instructions.
-    pub fn multiply(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
+    pub fn multiply(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         //TODO: Instruction timing
         let accumulate = instruction.check_bit(21);
         let should_set_condition = instruction.check_bit(20);
@@ -72,7 +73,7 @@ impl ArmV4T {
             .read_reg(reg_1)
             .wrapping_mul(cpu.read_reg(reg_2))
             .wrapping_add(accumulate as u32 * cpu.read_reg(reg_add));
-        cpu.write_reg(reg_destination, result);
+        cpu.write_reg(reg_destination, result, bus);
 
         if should_set_condition {
             cpu.registers.cpsr.set_sign(result.check_bit(31));
@@ -176,6 +177,27 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // 0000_1XXX_1001
         if (i & 0xF8F) == 0b0000_1000_1001 {
             result[i] = ArmV4T::multiply_long;
+            continue;
+        }
+
+        // Single Data Swap:
+        // 0001_0X00_1001
+        if (i & 0xFBF) == 0b0001_0000_1001 {
+            result[i] = ArmV4T::single_data_swap;
+            continue;
+        }
+
+        // Branch and Exchange:
+        // 0001_0010_0001
+        if i == 0b0001_0010_0001 {
+            result[i] = ArmV4T::branch_and_exchange;
+            continue;
+        }
+
+        // Branch:
+        // 101X_XXXX_XXXX
+        if (i & 0xA00) == 0b1010_0000_0000 {
+            result[i] = ArmV4T::branch_and_link;
             continue;
         }
 

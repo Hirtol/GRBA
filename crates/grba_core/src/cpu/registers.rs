@@ -1,6 +1,11 @@
 use crate::utils::BitOps;
 use num_traits::FromPrimitive;
 
+/// Index of PC register
+pub const PC_REG: usize = 15;
+/// Index of the link register
+pub const LINK_REG: usize = 14;
+
 /// A `RegisterBank` contains the value of registers for all different modes.
 /// Which modes are actually available depends on the register
 pub type RegisterBank<const N: usize> = [u32; N];
@@ -56,29 +61,32 @@ impl Registers {
     }
 
     #[inline(always)]
-    pub fn read_reg(&self, reg: usize) -> u32 {
+    pub fn pc(&self) -> u32 {
+        self.general_purpose[PC_REG]
+    }
+
+    #[inline(always)]
+    pub(super) fn read_reg(&self, reg: usize) -> u32 {
         self.general_purpose[reg]
     }
 
+    /// Write to a register.
+    ///
+    /// Note that this can not be used by anyone but the [crate::cpu::CPU] itself, as this does not update the pipeline
+    /// if [PC_REG] is written to.
     #[inline(always)]
-    pub fn write_reg(&mut self, reg: usize, value: u32) {
+    pub(super) fn write_reg(&mut self, reg: usize, value: u32) {
         self.general_purpose[reg] = value;
-        //TODO: Handle pipelining of if we write to R15? (Also, should ignore lower 2 bits in ARM mode and lower 1 bit in THUMB).
     }
 
     #[inline(always)]
-    pub fn pc(&self) -> u32 {
-        self.general_purpose[15]
-    }
-
-    #[inline(always)]
-    pub fn advance_pc(&mut self) {
+    pub(super) fn advance_pc(&mut self) {
         match self.cpsr.state() {
             State::Arm => {
-                self.general_purpose[15] += 4;
+                self.general_purpose[PC_REG] += 4;
             }
             State::Thumb => {
-                self.general_purpose[15] += 2;
+                self.general_purpose[PC_REG] += 2;
             }
         }
     }
