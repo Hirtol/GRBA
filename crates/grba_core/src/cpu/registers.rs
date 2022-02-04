@@ -1,4 +1,4 @@
-use crate::utils::check_bit;
+use crate::utils::BitOps;
 use num_traits::FromPrimitive;
 
 /// A `RegisterBank` contains the value of registers for all different modes.
@@ -151,12 +151,12 @@ pub struct PSR {
 impl From<u32> for PSR {
     fn from(value: u32) -> Self {
         PSR {
-            sign: check_bit(value, 31),
-            zero: check_bit(value, 30),
-            carry: check_bit(value, 29),
-            overflow: check_bit(value, 28),
-            irq_disable: check_bit(value, 7),
-            fiq_disable: check_bit(value, 6),
+            sign: value.check_bit(31),
+            zero: value.check_bit(30),
+            carry: value.check_bit(29),
+            overflow: value.check_bit(28),
+            irq_disable: value.check_bit(7),
+            fiq_disable: value.check_bit(6),
             state: State::from_u32(value >> 5 & 1).unwrap(),
             mode: Mode::from_u32(value & 0x1F).unwrap(),
             reserved: value & 0x0FFF_FF00,
@@ -283,10 +283,10 @@ impl PSR {
     /// Updates only the control flags of the PSR.
     /// The provided `value` will therefore only have the most significant `4` bits examined.
     pub fn update_control_flags(&mut self, value: u32) {
-        self.sign = check_bit(value, 31);
-        self.zero = check_bit(value, 30);
-        self.carry = check_bit(value, 29);
-        self.overflow = check_bit(value, 28);
+        self.sign = value.check_bit(31);
+        self.zero = value.check_bit(30);
+        self.carry = value.check_bit(29);
+        self.overflow = value.check_bit(28);
     }
 }
 

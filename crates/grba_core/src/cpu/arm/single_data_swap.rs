@@ -1,15 +1,15 @@
 use crate::bus::Bus;
 use crate::cpu::arm::{ArmInstruction, ArmV4T};
 use crate::cpu::CPU;
-use crate::utils::{check_bit, get_bits};
+use crate::utils::BitOps;
 
 impl ArmV4T {
     pub fn single_data_swap(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        let is_byte_read = check_bit(instruction, 22);
+        let is_byte_read = instruction.check_bit(22);
         let (reg_base, reg_src, reg_dst) = (
-            get_bits(instruction, 16, 19) as usize,
-            get_bits(instruction, 0, 3) as usize,
-            get_bits(instruction, 12, 15) as usize,
+            instruction.get_bits(16, 19) as usize,
+            instruction.get_bits(0, 3) as usize,
+            instruction.get_bits(12, 15) as usize,
         );
 
         let source_content = cpu.read_reg(reg_src);

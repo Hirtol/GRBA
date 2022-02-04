@@ -1,7 +1,7 @@
 use crate::bus::Bus;
 use crate::cpu::arm::{ArmInstruction, ArmLUT, ArmV4T};
 use crate::cpu::registers::{Registers, PSR};
-use crate::utils::get_bits;
+use crate::utils::BitOps;
 use registers::{Mode, State};
 
 mod arm;
@@ -112,7 +112,7 @@ impl CPU {
             return;
         }
 
-        let lut_index = (((get_bits(instruction, 20, 27)) << 4) | get_bits(instruction, 4, 7)) as usize;
+        let lut_index = (((instruction.get_bits(20, 27)) << 4) | instruction.get_bits(4, 7)) as usize;
         self.arm_lut[lut_index](self, instruction, bus);
     }
 

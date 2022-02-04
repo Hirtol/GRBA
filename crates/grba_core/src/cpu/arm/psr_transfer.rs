@@ -1,7 +1,7 @@
 use crate::bus::Bus;
 use crate::cpu::arm::{ArmInstruction, ArmV4T};
 use crate::cpu::CPU;
-use crate::utils::{check_bit, get_bits};
+use crate::utils::BitOps;
 
 enum Psr {
     Cpsr,
@@ -21,8 +21,8 @@ impl From<bool> for Psr {
 impl ArmV4T {
     /// Transfer PSR contents to a register
     pub fn mrs_trans_psr_reg(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
-        let r_d = get_bits(instruction, 12, 15) as usize;
-        let source_psr: Psr = check_bit(instruction, 22).into();
+        let r_d = instruction.get_bits(12, 15) as usize;
+        let source_psr: Psr = instruction.check_bit(22).into();
 
         let contents = match source_psr {
             Psr::Cpsr => cpu.registers.cpsr,
@@ -36,7 +36,7 @@ impl ArmV4T {
     ///
     /// Done as a separate match as the requisite bit is not part of our LUT index.
     pub fn msr_match(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        if check_bit(instruction, 16) {
+        if instruction.check_bit(16) {
             ArmV4T::msr_trans_reg_psr(cpu, instruction, bus);
         } else {
             ArmV4T::msr_trans_reg_imm_psr_flag(cpu, instruction, bus);
@@ -47,8 +47,8 @@ impl ArmV4T {
     ///
     /// Should not be called in User mode
     pub fn msr_trans_reg_psr(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
-        let r_m = get_bits(instruction, 0, 3) as usize;
-        let dest_psr: Psr = check_bit(instruction, 22).into();
+        let r_m = instruction.get_bits(0, 3) as usize;
+        let dest_psr: Psr = instruction.check_bit(22).into();
         let value = cpu.read_reg(r_m);
 
         match dest_psr {
@@ -59,16 +59,16 @@ impl ArmV4T {
 
     /// Transfer register contents or immediate value to PSR flag bits only
     pub fn msr_trans_reg_imm_psr_flag(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
-        let dest_psr: Psr = check_bit(instruction, 22).into();
-        let immediate = check_bit(instruction, 25);
+        let dest_psr: Psr = instruction.check_bit(22).into();
+        let immediate = instruction.check_bit(25);
 
         let update_value = if immediate {
             // Shift amount is 0 extended to 32 bits, then rotated right by `rotate amount * 2`
-            let rotate = get_bits(instruction, 8, 11) * 2;
-            let imm = get_bits(instruction, 0, 7) as u32;
+            let rotate = instruction.get_bits(8, 11) * 2;
+            let imm = instruction.get_bits(0, 7) as u32;
             imm.rotate_right(rotate)
         } else {
-            let r_m = get_bits(instruction, 0, 3) as usize;
+            let r_m = instruction.get_bits(0, 3) as usize;
             cpu.read_reg(r_m)
         };
 

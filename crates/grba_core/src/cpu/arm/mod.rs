@@ -1,6 +1,6 @@
 use crate::bus::Bus;
 use crate::cpu::CPU;
-use crate::utils::{check_bit, check_bit_64, get_bits};
+use crate::utils::BitOps;
 
 /// For indexing into the LUT we use a 12-bit value, which is derived from a bitmasked instruction.
 pub const ARM_LUT_SIZE: usize = 4096;
@@ -60,8 +60,8 @@ impl ArmV4T {
     /// Implements the `MUL` and `MLA` instructions.
     pub fn multiply(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
         //TODO: Instruction timing
-        let accumulate = check_bit(instruction, 21);
-        let should_set_condition = check_bit(instruction, 20);
+        let accumulate = instruction.check_bit(21);
+        let should_set_condition = instruction.check_bit(20);
         let (reg_destination, reg_add) = get_high_registers(instruction);
         let reg_1 = ((instruction >> 8) & 0xF) as usize;
         let reg_2 = (instruction & 0xF) as usize;
@@ -75,7 +75,7 @@ impl ArmV4T {
         cpu.write_reg(reg_destination, result);
 
         if should_set_condition {
-            cpu.registers.cpsr.set_sign(check_bit(result, 31));
+            cpu.registers.cpsr.set_sign(result.check_bit(31));
             cpu.registers.cpsr.set_zero(result == 0);
             // Carry flag set to meaningless value?
         }
@@ -83,9 +83,9 @@ impl ArmV4T {
 
     pub fn multiply_long(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
         //TODO: Instruction timing
-        let unsigned = check_bit(instruction, 22);
-        let accumulate = check_bit(instruction, 21);
-        let should_set_condition = check_bit(instruction, 20);
+        let unsigned = instruction.check_bit(22);
+        let accumulate = instruction.check_bit(21);
+        let should_set_condition = instruction.check_bit(20);
         let (reg_high, reg_low) = get_high_registers(instruction);
         let reg_1 = ((instruction >> 8) & 0xF) as usize;
         let reg_2 = (instruction & 0xF) as usize;
@@ -119,7 +119,7 @@ impl ArmV4T {
         registers[reg_low] = result as u32;
 
         if should_set_condition {
-            cpu.registers.cpsr.set_sign(check_bit_64(result, 63));
+            cpu.registers.cpsr.set_sign(result.check_bit(63));
             cpu.registers.cpsr.set_zero(result == 0);
             // Carry and overflow flags set to meaningless value?
         }
@@ -146,7 +146,7 @@ impl ArmV4T {
         registers[reg_low] = result as u32;
 
         if should_set_condition {
-            cpu.registers.cpsr.set_sign(check_bit_64(result as u64, 63));
+            cpu.registers.cpsr.set_sign(result.check_bit(63));
             cpu.registers.cpsr.set_zero(result == 0);
             // Carry and overflow flags set to meaningless value?
         }
