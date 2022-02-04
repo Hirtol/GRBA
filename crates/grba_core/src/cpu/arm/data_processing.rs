@@ -1,5 +1,5 @@
 use crate::bus::Bus;
-use crate::cpu::arm::ArmInstruction;
+use crate::cpu::arm::{ArmInstruction, ArmV4T};
 use crate::cpu::registers::Mode;
 use crate::cpu::CPU;
 use crate::utils::{check_bit, check_bit_64, get_bits, has_sign_overflowed};
@@ -85,28 +85,28 @@ impl ShiftType {
     }
 }
 
-impl CPU {
-    pub fn data_processing(&mut self, instruction: ArmInstruction, _bus: &mut Bus) {
+impl ArmV4T {
+    pub fn data_processing(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
         let is_immediate = check_bit(instruction, 25);
         let opcode = DataOperation::from_u32(get_bits(instruction, 21, 24)).unwrap();
         let set_condition_code = check_bit(instruction, 20);
         let r_d = get_bits(instruction, 12, 15) as usize;
         // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
         // If the current mode is user mode we do nothing. (TODO: Check how necessary the user mode check is, spec technically asks for it)
-        if r_d == 15 && set_condition_code && self.registers.cpsr.mode() != Mode::User {
-            self.registers.cpsr = self.registers.spsr;
+        if r_d == 15 && set_condition_code && cpu.registers.cpsr.mode() != Mode::User {
+            cpu.registers.cpsr = cpu.registers.spsr;
         }
 
         if is_immediate {
             let r_op1 = get_bits(instruction, 16, 19) as usize;
-            let op1_value = self.read_reg(r_op1);
+            let op1_value = cpu.read_reg(r_op1);
             // We have to operate on an immediate value
             // Shift amount is 0 extended to 32 bits, then rotated right by `rotate amount * 2`
             let rotate = get_bits(instruction, 8, 11) * 2;
             let imm = get_bits(instruction, 0, 7) as u32;
             let op2_value = imm.rotate_right(rotate);
 
-            self.perform_data_operation(opcode, op1_value, op2_value, r_d, set_condition_code);
+            ArmV4T::perform_data_operation(cpu, opcode, op1_value, op2_value, r_d, set_condition_code);
         } else {
             // We are working with a register
             let shift_type = ShiftType::from_u32(get_bits(instruction, 5, 6)).unwrap();
@@ -118,75 +118,75 @@ impl CPU {
 
             let op2_value = if should_shift_register {
                 // Register Shift, we'll need to increment PC by 4 for the duration of this function, refer to section 4.5.5 of the instruction manual.
-                self.registers.general_purpose[15] += 4;
+                cpu.registers.general_purpose[15] += 4;
                 let shift_register = get_bits(instruction, 8, 11) as usize;
                 // Only the lower byte matters, can just directly cast to a u8
-                let shift_amount = self.read_reg(shift_register) as u8;
+                let shift_amount = cpu.read_reg(shift_register) as u8;
 
                 let (op2_value, carry) = if shift_amount == 0 {
-                    (self.read_reg(r_op2), self.registers.cpsr.carry())
+                    (cpu.read_reg(r_op2), cpu.registers.cpsr.carry())
                 } else {
-                    shift_type.perform_shift(self.read_reg(r_op2), shift_amount, self.registers.cpsr.carry())
+                    shift_type.perform_shift(cpu.read_reg(r_op2), shift_amount, cpu.registers.cpsr.carry())
                 };
 
                 //TODO: This might cause issues if we have an arithmetic instruction which doesn't set condition codes,
                 // as the previous carry value would be overwritten.
-                self.registers.cpsr.set_carry(carry);
+                cpu.registers.cpsr.set_carry(carry);
                 op2_value
             } else {
                 // Immediate Shift
                 // Shift amount is 0 extended to 32 bits, then rotated right by `rotate amount * 2`
                 let shift_amount = get_bits(instruction, 7, 11) as u8;
                 let (op2_value, carry) =
-                    shift_type.perform_shift(self.read_reg(r_op2), shift_amount, self.registers.cpsr.carry());
+                    shift_type.perform_shift(cpu.read_reg(r_op2), shift_amount, cpu.registers.cpsr.carry());
 
                 //TODO: This might cause issues if we have an arithmetic instruction which doesn't set condition codes,
                 // as the previous carry value would be overwritten.
-                self.registers.cpsr.set_carry(carry);
+                cpu.registers.cpsr.set_carry(carry);
 
                 op2_value
             };
 
             let r_op1 = get_bits(instruction, 16, 19) as usize;
-            let op1_value = self.read_reg(r_op1);
+            let op1_value = cpu.read_reg(r_op1);
 
-            self.perform_data_operation(opcode, op1_value, op2_value, r_d, set_condition_code);
+            ArmV4T::perform_data_operation(cpu, opcode, op1_value, op2_value, r_d, set_condition_code);
         }
     }
 
-    fn perform_data_operation(&mut self, opcode: DataOperation, op1: u32, op2: u32, r_d: usize, set_flags: bool) {
+    fn perform_data_operation(cpu: &mut CPU, opcode: DataOperation, op1: u32, op2: u32, r_d: usize, set_flags: bool) {
         match opcode {
             DataOperation::And => {
                 let result = op1 & op2;
-                self.write_reg(r_d, result);
+                cpu.write_reg(r_d, result);
                 if set_flags {
-                    self.set_logical_flags(result);
+                    cpu.set_logical_flags(result);
                 }
             }
             DataOperation::Eor => {
                 let result = op1 ^ op2;
-                self.write_reg(r_d, result);
+                cpu.write_reg(r_d, result);
                 if set_flags {
-                    self.set_logical_flags(result);
+                    cpu.set_logical_flags(result);
                 }
             }
             DataOperation::Sub => {
-                self.arm_sub(r_d, op1, op2, set_flags);
+                ArmV4T::arm_sub(cpu, r_d, op1, op2, set_flags);
             }
-            DataOperation::Rsb => self.arm_sub(r_d, op2, op1, set_flags),
+            DataOperation::Rsb => ArmV4T::arm_sub(cpu, r_d, op2, op1, set_flags),
             DataOperation::Add => {
                 let (result, carry) = op1.overflowing_add(op2);
-                self.write_reg(r_d, result);
+                cpu.write_reg(r_d, result);
                 if set_flags {
-                    self.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+                    cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
                 }
             }
             DataOperation::Adc => {
-                let full_result = op1 as u64 + op2 as u64 + self.registers.cpsr.carry() as u64;
+                let full_result = op1 as u64 + op2 as u64 + cpu.registers.cpsr.carry() as u64;
                 let result = full_result as u32;
-                self.write_reg(r_d, result);
+                cpu.write_reg(r_d, result);
                 if set_flags {
-                    self.set_arithmetic_flags(
+                    cpu.set_arithmetic_flags(
                         result,
                         check_bit_64(full_result, 32),
                         has_sign_overflowed(op1, op2, result),
@@ -194,87 +194,87 @@ impl CPU {
                 }
             }
             DataOperation::Sbc => {
-                self.arm_sbc(r_d, op1, op2, set_flags);
+                ArmV4T::arm_sbc(cpu, r_d, op1, op2, set_flags);
             }
-            DataOperation::Rsc => self.arm_sbc(r_d, op2, op1, set_flags),
+            DataOperation::Rsc => ArmV4T::arm_sbc(cpu, r_d, op2, op1, set_flags),
             DataOperation::Tst => {
                 let result = op1 & op2;
                 // Note, we're assuming that we can ignore the `set_flags` parameter here.
-                self.set_logical_flags(result);
+                cpu.set_logical_flags(result);
             }
             DataOperation::Teq => {
                 let result = op1 ^ op2;
                 // Note, we're assuming that we can ignore the `set_flags` parameter here.
-                self.set_logical_flags(result);
+                cpu.set_logical_flags(result);
             }
             DataOperation::Cmp => {
                 let (result, carry) = op1.overflowing_sub(op2);
                 // Note, we're assuming that we can ignore the `set_flags` parameter here.
-                self.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+                cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
             }
             DataOperation::Cmn => {
                 let (result, carry) = op1.overflowing_add(op2);
                 // Note, we're assuming that we can ignore the `set_flags` parameter here.
-                self.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+                cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
             }
             DataOperation::Orr => {
                 let result = op1 | op2;
-                self.write_reg(r_d, result);
+                cpu.write_reg(r_d, result);
                 if set_flags {
-                    self.set_logical_flags(result);
+                    cpu.set_logical_flags(result);
                 }
             }
             DataOperation::Mov => {
                 let result = op2;
-                self.write_reg(r_d, result);
+                cpu.write_reg(r_d, result);
                 if set_flags {
-                    self.set_logical_flags(result);
+                    cpu.set_logical_flags(result);
                 }
             }
             DataOperation::Bic => {
                 let result = op1 & !op2;
-                self.write_reg(r_d, result);
+                cpu.write_reg(r_d, result);
                 if set_flags {
-                    self.set_logical_flags(result);
+                    cpu.set_logical_flags(result);
                 }
             }
             DataOperation::Mvn => {
                 let result = !op2;
-                self.write_reg(r_d, result);
+                cpu.write_reg(r_d, result);
                 if set_flags {
-                    self.set_logical_flags(result);
+                    cpu.set_logical_flags(result);
                 }
             }
         };
     }
 
-    fn set_logical_flags(&mut self, value: u32) {
-        self.registers.cpsr.set_zero(value == 0);
-        self.registers.cpsr.set_sign(check_bit(value, 31));
+    fn set_logical_flags(cpu: &mut CPU, value: u32) {
+        cpu.registers.cpsr.set_zero(value == 0);
+        cpu.registers.cpsr.set_sign(check_bit(value, 31));
     }
 
-    fn set_arithmetic_flags(&mut self, value: u32, carry: bool, overflow: bool) {
-        self.set_logical_flags(value);
-        self.registers.cpsr.set_carry(carry);
-        self.registers.cpsr.set_overflow(overflow);
+    fn set_arithmetic_flags(cpu: &mut CPU, value: u32, carry: bool, overflow: bool) {
+        cpu.set_logical_flags(value);
+        cpu.registers.cpsr.set_carry(carry);
+        cpu.registers.cpsr.set_overflow(overflow);
     }
 
-    fn arm_sub(&mut self, r_d: usize, op1: u32, op2: u32, set_flags: bool) {
+    fn arm_sub(cpu: &mut CPU, r_d: usize, op1: u32, op2: u32, set_flags: bool) {
         let (result, carry) = op1.overflowing_sub(op2);
-        self.write_reg(r_d, result);
+        cpu.write_reg(r_d, result);
         if set_flags {
-            self.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
         }
     }
 
-    fn arm_sbc(&mut self, r_d: usize, op1: u32, op2: u32, set_flags: bool) {
-        let to_subtract = op2 as u64 + 1 - self.registers.cpsr.carry() as u64;
+    fn arm_sbc(cpu: &mut CPU, r_d: usize, op1: u32, op2: u32, set_flags: bool) {
+        let to_subtract = op2 as u64 + 1 - cpu.registers.cpsr.carry() as u64;
         let (full_result, carry) = (op1 as u64).overflowing_sub(to_subtract);
         let result = full_result as u32;
 
-        self.write_reg(r_d, result);
+        cpu.write_reg(r_d, result);
         if set_flags {
-            self.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
         }
     }
 }

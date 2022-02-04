@@ -1,5 +1,5 @@
 use crate::bus::Bus;
-use crate::cpu::arm::{ArmInstruction, ArmLUT};
+use crate::cpu::arm::{ArmInstruction, ArmLUT, ArmV4T};
 use crate::cpu::registers::{Registers, PSR};
 use crate::utils::get_bits;
 use registers::{Mode, State};
@@ -108,7 +108,7 @@ impl CPU {
     }
 
     fn execute_arm(&mut self, instruction: ArmInstruction, bus: &mut Bus) {
-        if !self.condition_holds(instruction) {
+        if !ArmV4T::condition_holds(self, instruction) {
             return;
         }
 

@@ -12,12 +12,27 @@ pub type ArmLUT = [LutInstruction; ARM_LUT_SIZE];
 mod data_processing;
 mod psr_transfer;
 
+pub struct ArmV4T;
+
 impl CPU {
+    fn set_logical_flags(&mut self, value: u32) {
+        self.registers.cpsr.set_zero(value == 0);
+        self.registers.cpsr.set_sign(check_bit(value, 31));
+    }
+
+    fn set_arithmetic_flags(&mut self, value: u32, carry: bool, overflow: bool) {
+        self.set_logical_flags(value);
+        self.registers.cpsr.set_carry(carry);
+        self.registers.cpsr.set_overflow(overflow);
+    }
+}
+
+impl ArmV4T {
     /// Check if the conditional flag set in the provided `instruction` holds.
-    pub fn condition_holds(&self, instruction: ArmInstruction) -> bool {
+    pub fn condition_holds(cpu: &CPU, instruction: ArmInstruction) -> bool {
         // Upper 4 bits contain the condition code for all ARM instructions
         let flags = instruction >> 28;
-        let cpsr = &self.registers.cpsr;
+        let cpsr = &cpu.registers.cpsr;
 
         match flags {
             // Is zero set (is equal)
@@ -55,7 +70,7 @@ impl CPU {
     }
 
     /// Implements the `MUL` and `MLA` instructions.
-    pub fn multiply(&mut self, instruction: ArmInstruction, _bus: &mut Bus) {
+    pub fn multiply(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
         //TODO: Instruction timing
         let accumulate = check_bit(instruction, 21);
         let should_set_condition = check_bit(instruction, 20);
@@ -65,20 +80,20 @@ impl CPU {
 
         // Check if the accumulate flag is set by casting it to u32, and then adding.
         // Doing this elides a branch (Sadly, compiler doesn't do it for us according to GodBolt :( )
-        let result = self
+        let result = cpu
             .read_reg(reg_1)
-            .wrapping_mul(self.read_reg(reg_2))
-            .wrapping_add(accumulate as u32 * self.read_reg(reg_add));
-        self.write_reg(reg_destination, result);
+            .wrapping_mul(cpu.read_reg(reg_2))
+            .wrapping_add(accumulate as u32 * cpu.read_reg(reg_add));
+        cpu.write_reg(reg_destination, result);
 
         if should_set_condition {
-            self.registers.cpsr.set_sign(check_bit(result, 31));
-            self.registers.cpsr.set_zero(result == 0);
+            cpu.registers.cpsr.set_sign(check_bit(result, 31));
+            cpu.registers.cpsr.set_zero(result == 0);
             // Carry flag set to meaningless value?
         }
     }
 
-    pub fn multiply_long(&mut self, instruction: ArmInstruction, _bus: &mut Bus) {
+    pub fn multiply_long(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
         //TODO: Instruction timing
         let unsigned = check_bit(instruction, 22);
         let accumulate = check_bit(instruction, 21);
@@ -89,14 +104,14 @@ impl CPU {
         //TODO: Can probably just cast the signed result to a u64 and keep all logic in this function, `as u64` should
         // only re-interpret the bits as a u64.
         if unsigned {
-            self.multiply_long_unsigned(accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
+            ArmV4T::multiply_long_unsigned(cpu, accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
         } else {
-            self.multiply_long_signed(accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
+            ArmV4T::multiply_long_signed(cpu, accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
         }
     }
 
     fn multiply_long_unsigned(
-        &mut self,
+        cpu: &mut CPU,
         accumulate: bool,
         should_set_condition: bool,
         reg_high: usize,
@@ -104,7 +119,7 @@ impl CPU {
         reg_1: usize,
         reg_2: usize,
     ) {
-        let registers = &mut self.registers.general_purpose;
+        let registers = &mut cpu.registers.general_purpose;
         let result = if accumulate {
             registers[reg_1] as u64 * registers[reg_2] as u64
         } else {
@@ -116,14 +131,14 @@ impl CPU {
         registers[reg_low] = result as u32;
 
         if should_set_condition {
-            self.registers.cpsr.set_sign(check_bit_64(result, 63));
-            self.registers.cpsr.set_zero(result == 0);
+            cpu.registers.cpsr.set_sign(check_bit_64(result, 63));
+            cpu.registers.cpsr.set_zero(result == 0);
             // Carry and overflow flags set to meaningless value?
         }
     }
 
     fn multiply_long_signed(
-        &mut self,
+        cpu: &mut CPU,
         accumulate: bool,
         should_set_condition: bool,
         reg_high: usize,
@@ -131,7 +146,7 @@ impl CPU {
         reg_1: usize,
         reg_2: usize,
     ) {
-        let registers = &mut self.registers.general_purpose;
+        let registers = &mut cpu.registers.general_purpose;
         let result = if accumulate {
             registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64
         } else {
@@ -143,8 +158,8 @@ impl CPU {
         registers[reg_low] = result as u32;
 
         if should_set_condition {
-            self.registers.cpsr.set_sign(check_bit_64(result as u64, 63));
-            self.registers.cpsr.set_zero(result == 0);
+            cpu.registers.cpsr.set_sign(check_bit_64(result as u64, 63));
+            cpu.registers.cpsr.set_zero(result == 0);
             // Carry and overflow flags set to meaningless value?
         }
     }
@@ -165,35 +180,35 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // Multiply:
         // 0000_00XX_1001
         if (i & 0xFCF) == 0b0000_0000_1001 {
-            result[i] = CPU::multiply;
+            result[i] = ArmV4T::multiply;
             continue;
         }
 
         // Multiply long:
         // 0000_1XXX_1001
         if (i & 0xF8F) == 0b0000_1000_1001 {
-            result[i] = CPU::multiply_long;
+            result[i] = ArmV4T::multiply_long;
             continue;
         }
 
         // MRS (Transfer PSR to register):
         // 0001_0X00_0000
         if (i & 0xFBF) == 0b0001_0000_0000 {
-            result[i] = CPU::mrs_trans_psr_reg;
+            result[i] = ArmV4T::mrs_trans_psr_reg;
             continue;
         }
 
         // MSR (Transfer register to PSR Condition Flags):
         // 00X1_0X10_XXXX
         if (i & 0xDB0) == 0b0001_0010_0000 {
-            result[i] = CPU::msr_match;
+            result[i] = ArmV4T::msr_match;
             continue;
         }
 
         // Data Processing:
         // 00XX_XXXX_XXXX
         if (i & 0xC00) == 0b0000_0000_0000 {
-            result[i] = CPU::data_processing;
+            result[i] = ArmV4T::data_processing;
             continue;
         }
     }
@@ -221,6 +236,8 @@ pub(crate) fn get_low_register(instruction: ArmInstruction) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use crate::cpu::arm::ArmV4T;
+
     #[test]
     fn test_lut_filling() {
         let lut = super::create_arm_lut();
@@ -228,11 +245,11 @@ mod tests {
         // Check MSR matching
         let fn_ref = lut[0b0011_0110_0000];
 
-        assert_eq!(fn_ref as usize, super::CPU::msr_match as usize);
+        assert_eq!(fn_ref as usize, ArmV4T::msr_match as usize);
 
         // Check Data Processing matching (AND operation in immediate mode)
         let fn_ref = lut[0b0010_0000_0000];
 
-        assert_eq!(fn_ref as usize, super::CPU::data_processing as usize);
+        assert_eq!(fn_ref as usize, ArmV4T::data_processing as usize);
     }
 }
