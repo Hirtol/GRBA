@@ -5,86 +5,6 @@ use crate::cpu::CPU;
 use crate::utils::{check_bit, check_bit_64, get_bits, has_sign_overflowed};
 use num_traits::FromPrimitive;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
-enum DataOperation {
-    And = 0b0000,
-    Eor = 0b0001,
-    Sub = 0b0010,
-    Rsb = 0b0011,
-    Add = 0b0100,
-    Adc = 0b0101,
-    Sbc = 0b0110,
-    Rsc = 0b0111,
-    Tst = 0b1000,
-    Teq = 0b1001,
-    Cmp = 0b1010,
-    Cmn = 0b1011,
-    Orr = 0b1100,
-    Mov = 0b1101,
-    Bic = 0b1110,
-    Mvn = 0b1111,
-}
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
-enum ShiftType {
-    LogicalLeft = 0b00,
-    LogicalRight = 0b01,
-    ArithRight = 0b10,
-    RotateRight = 0b11,
-}
-
-impl ShiftType {
-    /// Performs the specified shift operation on the given value.
-    /// Will return the shifted value, as well as the carry flag.
-    #[inline]
-    pub fn perform_shift(self, value: u32, shift_amount: u8, current_carry: bool) -> (u32, bool) {
-        match self {
-            ShiftType::LogicalLeft => {
-                let carry = check_bit(value, 32 - shift_amount);
-                let shifted = value << shift_amount;
-                // Least significant bit that is shifted out goes to the carry flag
-                (shifted, carry)
-            }
-            ShiftType::LogicalRight => {
-                // ARM thought it'd be fun to allow 32-bit shifts to the right with different carry behaviour... yay
-                if shift_amount < 32 {
-                    let carry = check_bit(value, shift_amount.saturating_sub(1));
-                    let shifted = value >> shift_amount;
-                    (shifted, carry)
-                } else {
-                    let carry = check_bit(value, 31);
-                    (0, carry)
-                }
-            }
-            ShiftType::ArithRight => {
-                if shift_amount < 32 {
-                    let carry = check_bit(value, shift_amount.saturating_sub(1));
-                    // We cast to an i32 to get an arithmetic shift, then cast back.
-                    let shifted = ((value as i32) >> shift_amount) as u32;
-
-                    (shifted, carry)
-                } else {
-                    let carry = check_bit(value, 31);
-                    // Since we're doing signed extension we either return nothing at all or all ones.
-                    let shifted = if carry { u32::MAX } else { 0 };
-                    (shifted, carry)
-                }
-            }
-            ShiftType::RotateRight => {
-                if shift_amount == 0 {
-                    let carry_flag = (current_carry as u32) << 31;
-                    // Carry flag is appended and everything is shifted by one position
-                    (carry_flag | (value >> 1), check_bit(value, 0))
-                } else {
-                    let carry = check_bit(value, shift_amount.saturating_sub(1));
-                    let shifted = value.rotate_right(shift_amount as u32);
-                    (shifted, carry)
-                }
-            }
-        }
-    }
-}
-
 impl ArmV4T {
     pub fn data_processing(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
         let is_immediate = check_bit(instruction, 25);
@@ -276,5 +196,98 @@ impl ArmV4T {
         if set_flags {
             cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
         }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
+enum DataOperation {
+    And = 0b0000,
+    Eor = 0b0001,
+    Sub = 0b0010,
+    Rsb = 0b0011,
+    Add = 0b0100,
+    Adc = 0b0101,
+    Sbc = 0b0110,
+    Rsc = 0b0111,
+    Tst = 0b1000,
+    Teq = 0b1001,
+    Cmp = 0b1010,
+    Cmn = 0b1011,
+    Orr = 0b1100,
+    Mov = 0b1101,
+    Bic = 0b1110,
+    Mvn = 0b1111,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
+enum ShiftType {
+    LogicalLeft = 0b00,
+    LogicalRight = 0b01,
+    ArithRight = 0b10,
+    RotateRight = 0b11,
+}
+
+impl ShiftType {
+    /// Performs the specified shift operation on the given value.
+    /// Will return the shifted value, as well as the carry flag.
+    #[inline]
+    pub fn perform_shift(self, value: u32, shift_amount: u8, current_carry: bool) -> (u32, bool) {
+        match self {
+            ShiftType::LogicalLeft => {
+                let carry = check_bit(value, 32 - shift_amount);
+                let shifted = value << shift_amount;
+                // Least significant bit that is shifted out goes to the carry flag
+                (shifted, carry)
+            }
+            ShiftType::LogicalRight => {
+                // ARM thought it'd be fun to allow 32-bit shifts to the right with different carry behaviour... yay
+                if shift_amount < 32 {
+                    let carry = check_bit(value, shift_amount.saturating_sub(1));
+                    let shifted = value >> shift_amount;
+                    (shifted, carry)
+                } else {
+                    let carry = check_bit(value, 31);
+                    (0, carry)
+                }
+            }
+            ShiftType::ArithRight => {
+                if shift_amount < 32 {
+                    let carry = check_bit(value, shift_amount.saturating_sub(1));
+                    // We cast to an i32 to get an arithmetic shift, then cast back.
+                    let shifted = ((value as i32) >> shift_amount) as u32;
+
+                    (shifted, carry)
+                } else {
+                    let carry = check_bit(value, 31);
+                    // Since we're doing signed extension we either return nothing at all or all ones.
+                    let shifted = if carry { u32::MAX } else { 0 };
+                    (shifted, carry)
+                }
+            }
+            ShiftType::RotateRight => {
+                if shift_amount == 0 {
+                    let carry_flag = (current_carry as u32) << 31;
+                    // Carry flag is appended and everything is shifted by one position
+                    (carry_flag | (value >> 1), check_bit(value, 0))
+                } else {
+                    let carry = check_bit(value, shift_amount.saturating_sub(1));
+                    let shifted = value.rotate_right(shift_amount as u32);
+                    (shifted, carry)
+                }
+            }
+        }
+    }
+}
+
+impl CPU {
+    fn set_logical_flags(&mut self, value: u32) {
+        self.registers.cpsr.set_zero(value == 0);
+        self.registers.cpsr.set_sign(check_bit(value, 31));
+    }
+
+    fn set_arithmetic_flags(&mut self, value: u32, carry: bool, overflow: bool) {
+        self.set_logical_flags(value);
+        self.registers.cpsr.set_carry(carry);
+        self.registers.cpsr.set_overflow(overflow);
     }
 }

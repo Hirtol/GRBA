@@ -11,21 +11,9 @@ pub type ArmLUT = [LutInstruction; ARM_LUT_SIZE];
 
 mod data_processing;
 mod psr_transfer;
+mod single_data_swap;
 
 pub struct ArmV4T;
-
-impl CPU {
-    fn set_logical_flags(&mut self, value: u32) {
-        self.registers.cpsr.set_zero(value == 0);
-        self.registers.cpsr.set_sign(check_bit(value, 31));
-    }
-
-    fn set_arithmetic_flags(&mut self, value: u32, carry: bool, overflow: bool) {
-        self.set_logical_flags(value);
-        self.registers.cpsr.set_carry(carry);
-        self.registers.cpsr.set_overflow(overflow);
-    }
-}
 
 impl ArmV4T {
     /// Check if the conditional flag set in the provided `instruction` holds.
