@@ -2,7 +2,7 @@ use crate::bus::Bus;
 use crate::cpu::arm::{ArmInstruction, ArmV4T};
 use crate::cpu::registers::Mode;
 use crate::cpu::CPU;
-use crate::utils::{check_bit, check_bit_64, get_bits, has_sign_overflowed};
+use crate::utils::{check_bit, get_bits, has_sign_overflowed, BitOps};
 use num_traits::FromPrimitive;
 
 impl ArmV4T {
@@ -106,11 +106,7 @@ impl ArmV4T {
                 let result = full_result as u32;
                 cpu.write_reg(r_d, result);
                 if set_flags {
-                    cpu.set_arithmetic_flags(
-                        result,
-                        check_bit_64(full_result, 32),
-                        has_sign_overflowed(op1, op2, result),
-                    );
+                    cpu.set_arithmetic_flags(result, full_result.check_bit(32), has_sign_overflowed(op1, op2, result));
                 }
             }
             DataOperation::Sbc => {

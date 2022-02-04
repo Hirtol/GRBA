@@ -32,6 +32,31 @@ pub const fn has_sign_overflowed(val1: u32, val2: u32, result: u32) -> bool {
     ((val1 ^ result) & (!val2 ^ result)) >> 31 != 0
 }
 
+pub trait BitOps<T> {
+    fn get_bits(self, begin: u8, end_inclusive: u8) -> T;
+    fn check_bit(self, bit: u8) -> bool;
+}
+
+macro_rules! impl_bitops {
+    ($($t:ty),*) => {
+        $(
+            impl BitOps<$t> for $t {
+                #[inline(always)]
+                fn get_bits(self, begin: u8, end_inclusive: u8) -> $t {
+                    get_bits!(self, begin, end_inclusive)
+                }
+
+                #[inline(always)]
+                fn check_bit(self, bit: u8) -> bool {
+                    check_bit!(self, bit)
+                }
+            }
+        )*
+    };
+}
+
+impl_bitops!(u8, u16, u32, u64, i8, i16, i32, i64);
+
 #[cfg(test)]
 mod tests {
     use crate::utils::get_bits;

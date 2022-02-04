@@ -36,13 +36,32 @@ impl Bus {
         }
     }
 
-    pub fn write_32(&mut self, addr: MemoryAddress, data: u32) {}
-
     pub fn read_16(&mut self, addr: MemoryAddress) -> u16 {
         0
     }
 
+    pub fn read(&mut self, addr: MemoryAddress) -> u8 {
+        match Self::get_mem_range(addr) {
+            0 => todo!("BIOS READ"),
+            2 => self.ram.read_board(addr),
+            3 => self.ram.read_chip(addr),
+            4 => todo!("IO READ"),
+            5 => todo!("BG/OBJ READ"),
+            6 => todo!("VRAM READ"),
+            7 => todo!("OAM READ"),
+            8 | 9 => self.rom.read(addr),
+            0xA | 0xB => todo!("ROM READ 2"),
+            0xC | 0xD => todo!("ROM READ 3"),
+            0xE | 0xF => todo!("Game Pak SRAM"),
+            _ => todo!("Not implemented mem range!"),
+        }
+    }
+
+    pub fn write_32(&mut self, addr: MemoryAddress, data: u32) {}
+
     pub fn write_16(&mut self, addr: MemoryAddress, data: u16) {}
+
+    pub fn write(&mut self, addr: MemoryAddress, data: u8) {}
 
     #[inline(always)]
     fn get_mem_range(addr: MemoryAddress) -> u32 {

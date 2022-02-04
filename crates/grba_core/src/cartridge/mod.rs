@@ -53,7 +53,7 @@ impl Cartridge {
     }
 
     #[inline(always)]
-    pub fn read_8(&self, addr: MemoryAddress) -> u8 {
+    pub fn read(&self, addr: MemoryAddress) -> u8 {
         self.rom[Self::cartridge_rom_addr_to_index(addr)]
     }
 

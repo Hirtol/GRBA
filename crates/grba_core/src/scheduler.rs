@@ -12,7 +12,6 @@ pub struct Scheduler {
     pub current_time: EmuTime,
     /// The queue of events to be processed.
     /// The back of the queue is the next event to be processed.
-    // event_queue: tinyvec::ArrayVec<[Event; 20]>,
     event_queue: BinaryHeap<Event, MinComparator>,
 }
 
