@@ -6,6 +6,7 @@ debug = 0
 # Build core emulator with full debug info for debugging.
 [profile.dev.package.grba_core]
 debug = 2
+opt-level = 1
 
 #[profile.dev.package.grba_front]
 #debug = 2
