@@ -1,6 +1,7 @@
 use crate::bus::Bus;
 use crate::cpu::arm::{ArmInstruction, ArmLUT};
-use crate::cpu::registers::Registers;
+use crate::cpu::registers::{Registers, PSR};
+use crate::utils::get_bits;
 use registers::{Mode, State};
 
 mod arm;
@@ -111,7 +112,7 @@ impl CPU {
             return;
         }
 
-        let lut_index = (((instruction >> 4) & 0xF) | ((instruction & 0x0FF0_0000) >> 16)) as usize;
+        let lut_index = (((get_bits(instruction, 20, 27)) << 4) | get_bits(instruction, 4, 7)) as usize;
         self.arm_lut[lut_index](self, instruction, bus);
     }
 
@@ -182,7 +183,9 @@ impl CPU {
         self.registers.general_purpose[14] = self.registers.r14_bank[new_bank_idx];
 
         match new_mode {
-            Mode::User | Mode::System => {}
+            Mode::User | Mode::System => {
+                self.registers.spsr = PSR::new();
+            }
             _ => {
                 self.registers.spsr = self.registers.spsr_bank[old_mode.to_spsr_index()];
             }

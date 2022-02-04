@@ -264,6 +264,8 @@ impl PSR {
         self.mode = value;
     }
 
+    /// Pack the contents of the PSR into a single 32-bit value.
+    #[inline]
     pub fn as_raw(&self) -> u32 {
         let mut result = self.reserved;
         result |= (self.sign as u32) << 31;
@@ -276,6 +278,15 @@ impl PSR {
         result |= (self.state as u32) << 5;
         result |= self.mode as u32;
         result
+    }
+
+    /// Updates only the control flags of the PSR.
+    /// The provided `value` will therefore only have the most significant `4` bits examined.
+    pub fn update_control_flags(&mut self, value: u32) {
+        self.sign = check_bit(value, 31);
+        self.zero = check_bit(value, 30);
+        self.carry = check_bit(value, 29);
+        self.overflow = check_bit(value, 28);
     }
 }
 

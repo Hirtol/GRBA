@@ -1,14 +1,16 @@
 use crate::bus::Bus;
 use crate::cpu::CPU;
-use crate::utils::{check_bit, check_bit_64};
+use crate::utils::{check_bit, check_bit_64, get_bits};
 
 /// For indexing into the LUT we use a 12-bit value, which is derived from a bitmasked instruction.
 pub const ARM_LUT_SIZE: usize = 4096;
 
 pub type ArmInstruction = u32;
-pub type ArmLUT = [fn(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus); ARM_LUT_SIZE];
+pub type LutInstruction = fn(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus);
+pub type ArmLUT = [LutInstruction; ARM_LUT_SIZE];
 
 mod data_processing;
+mod psr_transfer;
 
 impl CPU {
     /// Check if the conditional flag set in the provided `instruction` holds.
@@ -151,30 +153,48 @@ impl CPU {
 /// Create a lookup table for the ARM instructions.
 ///
 /// Would be a `const fn` if stable had const function pointers.
+/// Assumes `12-bit` indexing
 pub(crate) fn create_arm_lut() -> ArmLUT {
     fn dead_fn(_cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
         panic!("Unimplemented instruction: {:08x}", instruction);
     }
 
-    let mut result = [dead_fn as for<'r, 's> fn(&'r mut CPU, u32, &'s mut Bus); 4096];
+    let mut result = [dead_fn as LutInstruction; 4096];
 
     for i in 0..ARM_LUT_SIZE {
         // Multiply:
         // 0000_00XX_1001
         if (i & 0xFCF) == 0b0000_0000_1001 {
             result[i] = CPU::multiply;
+            continue;
         }
 
         // Multiply long:
         // 0000_1XXX_1001
         if (i & 0xF8F) == 0b0000_1000_1001 {
             result[i] = CPU::multiply_long;
+            continue;
+        }
+
+        // MRS (Transfer PSR to register):
+        // 0001_0X00_0000
+        if (i & 0xFBF) == 0b0001_0000_0000 {
+            result[i] = CPU::mrs_trans_psr_reg;
+            continue;
+        }
+
+        // MSR (Transfer register to PSR Condition Flags):
+        // 00X1_0X10_XXXX
+        if (i & 0xDB0) == 0b0001_0010_0000 {
+            result[i] = CPU::msr_match;
+            continue;
         }
 
         // Data Processing:
         // 00XX_XXXX_XXXX
         if (i & 0xC00) == 0b0000_0000_0000 {
             result[i] = CPU::data_processing;
+            continue;
         }
     }
 
@@ -197,4 +217,22 @@ pub(crate) fn get_high_registers(instruction: ArmInstruction) -> (usize, usize) 
 #[inline(always)]
 pub(crate) fn get_low_register(instruction: ArmInstruction) -> usize {
     (instruction & 0xF) as usize
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_lut_filling() {
+        let lut = super::create_arm_lut();
+
+        // Check MSR matching
+        let fn_ref = lut[0b0011_0110_0000];
+
+        assert_eq!(fn_ref as usize, super::CPU::msr_match as usize);
+
+        // Check Data Processing matching (AND operation in immediate mode)
+        let fn_ref = lut[0b0010_0000_0000];
+
+        assert_eq!(fn_ref as usize, super::CPU::data_processing as usize);
+    }
 }
