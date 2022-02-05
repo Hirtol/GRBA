@@ -61,7 +61,6 @@ impl ArmV4T {
 
     /// Implements the `MUL` and `MLA` instructions.
     pub fn multiply(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        //TODO: Instruction timing
         let accumulate = instruction.check_bit(21);
         let should_set_condition = instruction.check_bit(20);
         let (reg_destination, reg_add) = get_high_registers(instruction);
@@ -84,7 +83,6 @@ impl ArmV4T {
     }
 
     pub fn multiply_long(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
-        //TODO: Instruction timing
         let unsigned = instruction.check_bit(22);
         let accumulate = instruction.check_bit(21);
         let should_set_condition = instruction.check_bit(20);
@@ -181,11 +179,30 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
             continue;
         }
 
-        // Single Data Swap:
-        // 0001_0X00_1001
-        if (i & 0xFBF) == 0b0001_0000_1001 {
-            result[i] = ArmV4T::single_data_swap;
-            continue;
+        {
+            // This is one block, as single data swap should always be filled in before the halfword transfer (as it is
+            // a part of their matching).
+
+            // Single Data Swap:
+            // 0001_0X00_1001
+            if (i & 0xFBF) == 0b0001_0000_1001 {
+                result[i] = ArmV4T::single_data_swap;
+                continue;
+            }
+
+            // Halfword Data Transfer, register:
+            // 000X_X0XX_1XX1
+            if (i & 0xE49) == 0b0000_0000_1001 {
+                result[i] = ArmV4T::halfword_and_signed_register;
+                continue;
+            }
+
+            // Halfword Data Transfer, immediate:
+            // 000X_X1XX_1XX1
+            if (i & 0xE49) == 0b0000_0100_1001 {
+                result[i] = ArmV4T::halfword_and_signed_register;
+                continue;
+            }
         }
 
         // Branch and Exchange:

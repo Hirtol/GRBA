@@ -7,6 +7,11 @@ pub const fn has_sign_overflowed(val1: u32, val2: u32, result: u32) -> bool {
     ((val1 ^ result) & (!val2 ^ result)) >> 31 != 0
 }
 
+#[inline(always)]
+pub fn sign_extend32(data: u32, size: u8) -> i32 {
+    ((data << (32 - size)) as i32) >> (32 - size)
+}
+
 pub trait BitOps {
     type Output;
     /// Return the bits in the specified range.

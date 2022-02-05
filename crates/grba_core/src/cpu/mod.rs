@@ -63,6 +63,7 @@ impl CPU {
             }
         }
         // Very basic cycle counting to get things going. In the future ought to count cycles properly.
+        //TODO: Instruction timing
         bus.scheduler.add_time(1);
 
         self.advance_pipeline(bus);

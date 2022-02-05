@@ -2,7 +2,7 @@ use crate::bus::Bus;
 use crate::cpu::arm::{ArmInstruction, ArmV4T};
 use crate::cpu::registers::{State, LINK_REG, PC_REG};
 use crate::cpu::CPU;
-use crate::utils::BitOps;
+use crate::utils::{sign_extend32, BitOps};
 
 impl ArmV4T {
     pub fn branch_and_exchange(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
@@ -20,7 +20,7 @@ impl ArmV4T {
 
     pub fn branch_and_link(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         let is_link = instruction.check_bit(24);
-        let offset = (instruction.get_bits(0, 23) << 2) as i32;
+        let offset = sign_extend32(instruction.get_bits(0, 23) << 2, 26);
         let pc = cpu.read_reg(PC_REG);
 
         if is_link {

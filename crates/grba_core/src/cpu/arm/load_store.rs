@@ -81,4 +81,144 @@ impl ArmV4T {
             cpu.write_reg(reg_base, address, bus);
         }
     }
+
+    pub fn halfword_and_signed_register(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        let is_preindexed = instruction.check_bit(24);
+        let is_up = instruction.check_bit(23);
+        let has_writeback = instruction.check_bit(21);
+        let is_load = instruction.check_bit(20);
+        let sh = SwapType::from_u32(instruction.get_bits(5, 6)).unwrap();
+
+        let (reg_base, reg_dest) = (
+            instruction.get_bits(16, 19) as usize,
+            instruction.get_bits(12, 15) as usize,
+        );
+
+        let reg_offset = instruction.get_bits(0, 3) as usize;
+        let offset = cpu.read_reg(reg_offset);
+
+        let base_address = cpu.read_reg(reg_base);
+        let address = if is_preindexed {
+            if is_up {
+                base_address.wrapping_add(offset)
+            } else {
+                base_address.wrapping_sub(offset)
+            }
+        } else {
+            base_address
+        };
+
+        Self::halfword_operation(
+            cpu,
+            instruction,
+            bus,
+            is_preindexed,
+            is_up,
+            has_writeback,
+            is_load,
+            sh,
+            reg_base,
+            reg_dest,
+            offset,
+            address,
+        )
+    }
+
+    pub fn halfword_and_signed_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        let is_preindexed = instruction.check_bit(24);
+        let is_up = instruction.check_bit(23);
+        let has_writeback = instruction.check_bit(21);
+        let is_load = instruction.check_bit(20);
+        let sh = SwapType::from_u32(instruction.get_bits(5, 6)).unwrap();
+
+        let (reg_base, reg_dest) = (
+            instruction.get_bits(16, 19) as usize,
+            instruction.get_bits(12, 15) as usize,
+        );
+        let base_address = cpu.read_reg(reg_base);
+
+        let offset = (instruction.get_bits(8, 11) >> 4) | instruction.get_bits(0, 3);
+        let address = if is_preindexed {
+            if is_up {
+                base_address.wrapping_add(offset)
+            } else {
+                base_address.wrapping_sub(offset)
+            }
+        } else {
+            base_address
+        };
+
+        Self::halfword_operation(
+            cpu,
+            instruction,
+            bus,
+            is_preindexed,
+            is_up,
+            has_writeback,
+            is_load,
+            sh,
+            reg_base,
+            reg_dest,
+            offset,
+            address,
+        )
+    }
+
+    #[inline(always)]
+    fn halfword_operation(
+        cpu: &mut CPU,
+        instruction: ArmInstruction,
+        bus: &mut Bus,
+        is_preindexed: bool,
+        is_up: bool,
+        has_writeback: bool,
+        is_load: bool,
+        sh: SwapType,
+        reg_base: usize,
+        reg_dest: usize,
+        offset: u32,
+        address: u32,
+    ) {
+        match sh {
+            SwapType::Swp => todo!("Swap instruction in halfword and signed register?: {:#X?}", instruction),
+            SwapType::UnsignedU16 => {
+                if is_load {
+                    let value = bus.read_16(address) as u32;
+                    cpu.write_reg(reg_dest, value, bus);
+                } else {
+                    let value = cpu.read_reg(reg_dest) as u16;
+                    bus.write_16(address, value);
+                }
+            }
+            SwapType::Signedi8 => {
+                // Load bit *shouldn't* be low, so we'll just ignore it!
+                let value = bus.read(address) as i8;
+                // Sign extension should take place, but since we're casting from a smaller int to larger int this is done automatically.
+                cpu.write_reg(reg_dest, value as i32 as u32, bus);
+            }
+            SwapType::Signedi16 => {
+                // Load bit *shouldn't* be low, so we'll just ignore it!
+                let value = bus.read(address) as i16;
+                // Sign extension should take place, but since we're casting from a smaller int to larger int this is done automatically.
+                cpu.write_reg(reg_dest, value as i32 as u32, bus);
+            }
+        }
+
+        // Resolve post indexing and write back
+        if !is_preindexed {
+            let addr = if is_up { address.wrapping_add(offset) } else { address.wrapping_sub(offset) };
+
+            cpu.write_reg(reg_base, addr, bus);
+        } else if has_writeback {
+            cpu.write_reg(reg_base, address, bus);
+        }
+    }
+}
+
+#[derive(num_derive::FromPrimitive, Debug)]
+enum SwapType {
+    Swp = 0b00,
+    UnsignedU16 = 0b01,
+    Signedi8 = 0b10,
+    Signedi16 = 0b11,
 }
