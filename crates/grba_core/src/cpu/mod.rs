@@ -51,8 +51,8 @@ impl CPU {
     /// Advances the CPU one instruction.
     #[profiling::function]
     pub fn step_instruction(&mut self, bus: &mut Bus) {
-        crate::cpu_log!("Executing instruction: {:#X}", self.pipeline[0]);
-        crate::cpu_log!("Registers: {:?}", self.registers);
+        // crate::cpu_log!("Executing instruction: {:#X}", self.pipeline[0]);
+        crate::cpu_log!("Registers: {:X?}", self.registers);
 
         match self.state() {
             State::Arm => {
@@ -115,13 +115,17 @@ impl CPU {
         }
 
         let lut_index = (((instruction.get_bits(20, 27)) << 4) | instruction.get_bits(4, 7)) as usize;
+
+        crate::cpu_log!("Executing LUT: {:#b} - Raw: {:#X}", lut_index, self.pipeline[0]);
         self.arm_lut[lut_index](self, instruction, bus);
     }
 
-    fn execute_thumb(&mut self, bus: &mut Bus, opcode: u16) {}
+    fn execute_thumb(&mut self, bus: &mut Bus, opcode: u16) {
+        todo!()
+    }
 
     fn raise_exception(&mut self, exception: Exception, bus: &mut Bus) {
-        todo!()
+        todo!("{:?}", exception);
     }
 
     fn switch_mode(&mut self, new_mode: registers::Mode) {
@@ -176,10 +180,14 @@ impl CPU {
             self.registers.write_reg(reg, value)
         } else {
             // Upon writes to PC we need to flush our instruction cache, and also block out the lower bits.
-            match self.state() {
-                State::Arm => self.registers.write_reg(reg, value & 0xFFFF_FFFC),
-                State::Thumb => self.registers.write_reg(reg, value & 0xFFFF_FFFE),
-            }
+            // Why we subtract one instruction I have no clue, when testing we were always one instruction to far
+            // after a branch, so here it is.
+            let to_write = match self.state() {
+                State::Arm => (value - 4) & 0xFFFF_FFFC,
+                State::Thumb => (value - 2) & 0xFFFF_FFFE,
+            };
+
+            self.registers.write_reg(PC_REG, to_write);
 
             self.fill_pipeline(bus);
         }
@@ -192,7 +200,7 @@ impl CPU {
 }
 
 fn log_cpu_state(cpu: &CPU) {
-    println!("{:?}", cpu.registers);
+    println!("{:X?}", cpu.registers);
 }
 
 #[derive(Debug)]

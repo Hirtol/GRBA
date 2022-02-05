@@ -7,6 +7,7 @@ use num_traits::FromPrimitive;
 
 impl ArmV4T {
     pub fn data_processing(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Data Processing");
         let is_immediate = instruction.check_bit(25);
         let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
         let set_condition_code = instruction.check_bit(20);
@@ -82,6 +83,7 @@ impl ArmV4T {
         r_d: usize,
         set_flags: bool,
     ) {
+        crate::cpu_log!("Executing opcode: {:?}", opcode);
         match opcode {
             DataOperation::And => {
                 let result = op1 & op2;

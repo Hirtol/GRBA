@@ -7,6 +7,7 @@ use num_traits::FromPrimitive;
 impl ArmV4T {
     #[allow(clippy::collapsible_else_if)]
     pub fn single_data_transfer(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Single Data Transfer");
         let (reg_base, reg_dest) = (
             instruction.get_bits(16, 19) as usize,
             instruction.get_bits(12, 15) as usize,
@@ -83,6 +84,7 @@ impl ArmV4T {
     }
 
     pub fn halfword_and_signed_register(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Halfword and Signed Data Transfer Register");
         let is_preindexed = instruction.check_bit(24);
         let is_up = instruction.check_bit(23);
         let has_writeback = instruction.check_bit(21);
@@ -125,6 +127,7 @@ impl ArmV4T {
     }
 
     pub fn halfword_and_signed_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Halfword and Signed Data Transfer Immediate");
         let is_preindexed = instruction.check_bit(24);
         let is_up = instruction.check_bit(23);
         let has_writeback = instruction.check_bit(21);

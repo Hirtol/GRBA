@@ -43,7 +43,8 @@ impl GBAEmulator {
     }
 
     pub fn emulate_cycle(&mut self) -> bool {
-        true
+        self.cpu.step_instruction(&mut self.mmu);
+        false
     }
 
     pub fn key_down(&self, key: InputKeys) {

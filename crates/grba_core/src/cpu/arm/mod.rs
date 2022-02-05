@@ -135,7 +135,7 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
             // Halfword Data Transfer, immediate:
             // 000X_X1XX_1XX1
             if (i & 0xE49) == 0b0000_0100_1001 {
-                result[i] = ArmV4T::halfword_and_signed_register;
+                result[i] = ArmV4T::halfword_and_signed_immediate;
                 continue;
             }
         }

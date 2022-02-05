@@ -6,6 +6,7 @@ use crate::utils::BitOps;
 impl ArmV4T {
     /// Implements the `MUL` and `MLA` instructions.
     pub fn multiply(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Multiply");
         let accumulate = instruction.check_bit(21);
         let should_set_condition = instruction.check_bit(20);
         let (reg_destination, reg_add) = arm::get_high_registers(instruction);
@@ -28,6 +29,7 @@ impl ArmV4T {
     }
 
     pub fn multiply_long(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Multiply Long");
         let unsigned = instruction.check_bit(22);
         let accumulate = instruction.check_bit(21);
         let should_set_condition = instruction.check_bit(20);

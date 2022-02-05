@@ -6,6 +6,7 @@ use crate::utils::BitOps;
 
 impl ArmV4T {
     pub fn block_data_transfer_store(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Block Data Store");
         // For the duration of this instruction PC will be 12 ahead instead of just 8.
         cpu.registers.general_purpose[PC_REG] += 4;
         Self::block_data_transfer(cpu, instruction, bus, true);
@@ -13,6 +14,7 @@ impl ArmV4T {
     }
 
     pub fn block_data_transfer_load(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Block Data Load");
         Self::block_data_transfer(cpu, instruction, bus, false);
     }
 

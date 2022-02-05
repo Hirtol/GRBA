@@ -5,6 +5,7 @@ use crate::utils::BitOps;
 
 impl ArmV4T {
     pub fn single_data_swap(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        crate::cpu_log!("Executing instruction: Single Data Swap");
         let is_byte_read = instruction.check_bit(22);
         let (reg_base, reg_src, reg_dst) = (
             instruction.get_bits(16, 19) as usize,
