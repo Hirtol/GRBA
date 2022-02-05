@@ -65,6 +65,67 @@ impl Registers {
         self.general_purpose[PC_REG]
     }
 
+    /// Swap the register banks. Saving the current registers in the `from_mode` bank, and loading the `to_mode` bank.
+    /// Does *not* switch the mode in the CPSR, and in fact leaves the CPSR as it was.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if the `from_mode` and `to_mode` are different (swapped).
+    /// * `false` if the `from_mode` and `to_mode` are the same (early return, no swap).
+    #[inline]
+    pub fn swap_register_banks(&mut self, from_mode: Mode, to_mode: Mode) -> bool {
+        if from_mode == to_mode {
+            return false;
+        }
+
+        let from_bank_idx = from_mode.to_bank_index();
+        let to_bank_idx = to_mode.to_bank_index();
+
+        // Save the unique banks
+        if from_mode == Mode::FIQ {
+            // Save current FIQ registers to FIQ bank
+            let fiq_bank = from_bank_idx;
+            self.r8_bank[fiq_bank] = self.general_purpose[8];
+            self.r9_bank[fiq_bank] = self.general_purpose[9];
+            self.r10_bank[fiq_bank] = self.general_purpose[10];
+            self.r11_bank[fiq_bank] = self.general_purpose[11];
+            self.r12_bank[fiq_bank] = self.general_purpose[12];
+        } else {
+            // All other modes share a register bank
+            let user_bank = Mode::User.to_bank_index();
+            self.r8_bank[user_bank] = self.general_purpose[8];
+            self.r9_bank[user_bank] = self.general_purpose[9];
+            self.r10_bank[user_bank] = self.general_purpose[10];
+            self.r11_bank[user_bank] = self.general_purpose[11];
+            self.r12_bank[user_bank] = self.general_purpose[12];
+        }
+
+        self.r13_bank[from_bank_idx] = self.general_purpose[13];
+        self.r14_bank[from_bank_idx] = self.general_purpose[14];
+
+        // Now move all banked registers of the new mode to the current registers
+        if to_mode == Mode::FIQ {
+            let fiq_bank = to_bank_idx;
+            self.general_purpose[8] = self.r8_bank[fiq_bank];
+            self.general_purpose[9] = self.r9_bank[fiq_bank];
+            self.general_purpose[10] = self.r10_bank[fiq_bank];
+            self.general_purpose[11] = self.r11_bank[fiq_bank];
+            self.general_purpose[12] = self.r12_bank[fiq_bank];
+        } else {
+            let user_bank = Mode::User.to_bank_index();
+            self.general_purpose[8] = self.r8_bank[user_bank];
+            self.general_purpose[9] = self.r9_bank[user_bank];
+            self.general_purpose[10] = self.r10_bank[user_bank];
+            self.general_purpose[11] = self.r11_bank[user_bank];
+            self.general_purpose[12] = self.r12_bank[user_bank];
+        }
+
+        self.general_purpose[13] = self.r13_bank[to_bank_idx];
+        self.general_purpose[14] = self.r14_bank[to_bank_idx];
+
+        true
+    }
+
     #[inline(always)]
     pub(super) fn read_reg(&self, reg: usize) -> u32 {
         self.general_purpose[reg]

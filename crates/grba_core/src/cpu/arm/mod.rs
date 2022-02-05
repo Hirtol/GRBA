@@ -9,6 +9,7 @@ pub type ArmInstruction = u32;
 pub type LutInstruction = fn(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus);
 pub type ArmLUT = [LutInstruction; ARM_LUT_SIZE];
 
+mod block_data_transfer;
 mod branching;
 mod data_processing;
 mod load_store;
@@ -86,6 +87,17 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         if (i & 0xF00) == 0b1111_0000_0000 {
             result[i] = ArmV4T::software_interrupt;
             continue;
+        }
+
+        // Block Data Transfer:
+        // 100X_XXXX_XXXX
+        if (i & 0xE00) == 0b1000_0000_0000 {
+            // Check load bit ahead of time.
+            if i.check_bit(20) {
+                result[i] = ArmV4T::block_data_transfer_load;
+            } else {
+                result[i] = ArmV4T::block_data_transfer_store;
+            }
         }
 
         // Multiply:

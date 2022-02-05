@@ -26,8 +26,7 @@ impl ArmV4T {
         if is_link {
             // Write the old PC value to the link register.
             // Subtract an  adjustment to account for our pre-fetching (where we're 2 instructions ahead).
-            let prefetch_adjust = if cpu.state() == State::Thumb { 2 } else { 4 };
-            cpu.write_reg(LINK_REG, pc.wrapping_sub(prefetch_adjust), bus);
+            cpu.write_reg(LINK_REG, pc.wrapping_sub(4), bus);
         }
 
         cpu.write_reg(PC_REG, pc.wrapping_add(offset as u32), bus);

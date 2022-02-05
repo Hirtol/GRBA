@@ -58,7 +58,7 @@ macro_rules! impl_bitops {
     };
 }
 
-impl_bitops!(u8, u16, u32, u64, i8, i16, i32, i64);
+impl_bitops!(u8, u16, u32, u64, i8, i16, i32, i64, usize, isize);
 
 #[cfg(test)]
 mod tests {

@@ -127,34 +127,12 @@ impl CPU {
     fn switch_mode(&mut self, new_mode: registers::Mode) {
         let old_mode = self.registers.cpsr.mode();
 
-        if old_mode == new_mode {
+        // Try to swap, if we're already in the same mode this'll fail.
+        if !self.registers.swap_register_banks(old_mode, new_mode) {
             return;
         }
 
-        let old_bank_idx = old_mode.to_bank_index();
         self.registers.cpsr.set_mode(new_mode);
-
-        // Save the unique banks
-        if old_mode == Mode::FIQ {
-            // Save current FIQ registers to FIQ bank
-            let fiq_bank = old_bank_idx;
-            self.registers.r8_bank[fiq_bank] = self.registers.general_purpose[8];
-            self.registers.r9_bank[fiq_bank] = self.registers.general_purpose[9];
-            self.registers.r10_bank[fiq_bank] = self.registers.general_purpose[10];
-            self.registers.r11_bank[fiq_bank] = self.registers.general_purpose[11];
-            self.registers.r12_bank[fiq_bank] = self.registers.general_purpose[12];
-        } else {
-            // All other modes share a register bank
-            let user_bank = Mode::User.to_bank_index();
-            self.registers.r8_bank[user_bank] = self.registers.general_purpose[8];
-            self.registers.r9_bank[user_bank] = self.registers.general_purpose[9];
-            self.registers.r10_bank[user_bank] = self.registers.general_purpose[10];
-            self.registers.r11_bank[user_bank] = self.registers.general_purpose[11];
-            self.registers.r12_bank[user_bank] = self.registers.general_purpose[12];
-        }
-
-        self.registers.r13_bank[old_bank_idx] = self.registers.general_purpose[13];
-        self.registers.r14_bank[old_bank_idx] = self.registers.general_purpose[14];
 
         match old_mode {
             Mode::User | Mode::System => {}
@@ -163,30 +141,10 @@ impl CPU {
             }
         }
 
-        // Now move all banked registers of the new mode to the current registers
-        let new_bank_idx = new_mode.to_bank_index();
-        if new_mode == Mode::FIQ {
-            let fiq_bank = new_bank_idx;
-            self.registers.general_purpose[8] = self.registers.r8_bank[fiq_bank];
-            self.registers.general_purpose[9] = self.registers.r9_bank[fiq_bank];
-            self.registers.general_purpose[10] = self.registers.r10_bank[fiq_bank];
-            self.registers.general_purpose[11] = self.registers.r11_bank[fiq_bank];
-            self.registers.general_purpose[12] = self.registers.r12_bank[fiq_bank];
-        } else {
-            let user_bank = Mode::User.to_bank_index();
-            self.registers.general_purpose[8] = self.registers.r8_bank[user_bank];
-            self.registers.general_purpose[9] = self.registers.r9_bank[user_bank];
-            self.registers.general_purpose[10] = self.registers.r10_bank[user_bank];
-            self.registers.general_purpose[11] = self.registers.r11_bank[user_bank];
-            self.registers.general_purpose[12] = self.registers.r12_bank[user_bank];
-        }
-
-        self.registers.general_purpose[13] = self.registers.r13_bank[new_bank_idx];
-        self.registers.general_purpose[14] = self.registers.r14_bank[new_bank_idx];
-
         match new_mode {
             Mode::User | Mode::System => {
-                self.registers.spsr = PSR::new();
+                // Not sure if we should re-create the PSR.
+                // self.registers.spsr = PSR::new();
             }
             _ => {
                 self.registers.spsr = self.registers.spsr_bank[old_mode.to_spsr_index()];
