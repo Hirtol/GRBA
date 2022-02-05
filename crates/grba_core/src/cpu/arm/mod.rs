@@ -1,5 +1,5 @@
 use crate::bus::Bus;
-use crate::cpu::CPU;
+use crate::cpu::{Exception, CPU};
 use crate::utils::BitOps;
 
 /// For indexing into the LUT we use a 12-bit value, which is derived from a bitmasked instruction.
@@ -12,6 +12,7 @@ pub type ArmLUT = [LutInstruction; ARM_LUT_SIZE];
 mod branching;
 mod data_processing;
 mod load_store;
+mod multiply;
 mod psr_transfer;
 mod single_data_swap;
 
@@ -59,97 +60,12 @@ impl ArmV4T {
         }
     }
 
-    /// Implements the `MUL` and `MLA` instructions.
-    pub fn multiply(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        let accumulate = instruction.check_bit(21);
-        let should_set_condition = instruction.check_bit(20);
-        let (reg_destination, reg_add) = get_high_registers(instruction);
-        let reg_1 = ((instruction >> 8) & 0xF) as usize;
-        let reg_2 = (instruction & 0xF) as usize;
-
-        // Check if the accumulate flag is set by casting it to u32, and then adding.
-        // Doing this elides a branch (Sadly, compiler doesn't do it for us according to GodBolt :( )
-        let result = cpu
-            .read_reg(reg_1)
-            .wrapping_mul(cpu.read_reg(reg_2))
-            .wrapping_add(accumulate as u32 * cpu.read_reg(reg_add));
-        cpu.write_reg(reg_destination, result, bus);
-
-        if should_set_condition {
-            cpu.registers.cpsr.set_sign(result.check_bit(31));
-            cpu.registers.cpsr.set_zero(result == 0);
-            // Carry flag set to meaningless value?
-        }
+    pub fn undefined_instruction(cpu: &mut CPU, _instruction: ArmInstruction, bus: &mut Bus) {
+        cpu.raise_exception(Exception::UndefinedInstruction, bus)
     }
 
-    pub fn multiply_long(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
-        let unsigned = instruction.check_bit(22);
-        let accumulate = instruction.check_bit(21);
-        let should_set_condition = instruction.check_bit(20);
-        let (reg_high, reg_low) = get_high_registers(instruction);
-        let reg_1 = ((instruction >> 8) & 0xF) as usize;
-        let reg_2 = (instruction & 0xF) as usize;
-        //TODO: Can probably just cast the signed result to a u64 and keep all logic in this function, `as u64` should
-        // only re-interpret the bits as a u64.
-        if unsigned {
-            ArmV4T::multiply_long_unsigned(cpu, accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
-        } else {
-            ArmV4T::multiply_long_signed(cpu, accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
-        }
-    }
-
-    fn multiply_long_unsigned(
-        cpu: &mut CPU,
-        accumulate: bool,
-        should_set_condition: bool,
-        reg_high: usize,
-        reg_low: usize,
-        reg_1: usize,
-        reg_2: usize,
-    ) {
-        let registers = &mut cpu.registers.general_purpose;
-        let result = if accumulate {
-            registers[reg_1] as u64 * registers[reg_2] as u64
-        } else {
-            registers[reg_1] as u64 * registers[reg_2] as u64
-                + (((registers[reg_high] as u64) << 32) | registers[reg_low] as u64)
-        };
-
-        registers[reg_high] = (result >> 32) as u32;
-        registers[reg_low] = result as u32;
-
-        if should_set_condition {
-            cpu.registers.cpsr.set_sign(result.check_bit(63));
-            cpu.registers.cpsr.set_zero(result == 0);
-            // Carry and overflow flags set to meaningless value?
-        }
-    }
-
-    fn multiply_long_signed(
-        cpu: &mut CPU,
-        accumulate: bool,
-        should_set_condition: bool,
-        reg_high: usize,
-        reg_low: usize,
-        reg_1: usize,
-        reg_2: usize,
-    ) {
-        let registers = &mut cpu.registers.general_purpose;
-        let result = if accumulate {
-            registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64
-        } else {
-            registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64
-                + (((registers[reg_high] as i32 as i64) << 32) | registers[reg_low] as i32 as i64)
-        };
-
-        registers[reg_high] = (result >> 32) as u32;
-        registers[reg_low] = result as u32;
-
-        if should_set_condition {
-            cpu.registers.cpsr.set_sign(result.check_bit(63));
-            cpu.registers.cpsr.set_zero(result == 0);
-            // Carry and overflow flags set to meaningless value?
-        }
+    pub fn software_interrupt(cpu: &mut CPU, _instruction: ArmInstruction, bus: &mut Bus) {
+        cpu.raise_exception(Exception::SoftwareInterrupt, bus)
     }
 }
 
@@ -165,6 +81,13 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
     let mut result = [dead_fn as LutInstruction; 4096];
 
     for i in 0..ARM_LUT_SIZE {
+        // Software Interrupt:
+        // 1111_XXXX_XXXX
+        if (i & 0xF00) == 0b1111_0000_0000 {
+            result[i] = ArmV4T::software_interrupt;
+            continue;
+        }
+
         // Multiply:
         // 0000_00XX_1001
         if (i & 0xFCF) == 0b0000_0000_1001 {
@@ -214,16 +137,26 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
 
         // Branch:
         // 101X_XXXX_XXXX
-        if (i & 0xA00) == 0b1010_0000_0000 {
+        if (i & 0xE00) == 0b1010_0000_0000 {
             result[i] = ArmV4T::branch_and_link;
             continue;
         }
 
-        // Single Data Transfer:
-        // 01XX_XXXX_XXXX
-        if (i & 0x400) == 0b0100_0000_0000 {
-            result[i] = ArmV4T::single_data_transfer;
-            continue;
+        {
+            // TODO: A little confused by the undefined instruction, as it seems to overlap with single data transfer
+            // Single Data Transfer:
+            // 01XX_XXXX_XXXX
+            if (i & 0xC00) == 0b0100_0000_0000 {
+                result[i] = ArmV4T::single_data_transfer;
+                continue;
+            }
+
+            // Undefined Instruction
+            // 011X_XXXX_XXX1
+            if (i & 0xE01) == 0b0110_0000_0001 {
+                result[i] = ArmV4T::undefined_instruction;
+                continue;
+            }
         }
 
         // MRS (Transfer PSR to register):
@@ -246,6 +179,9 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
             result[i] = ArmV4T::data_processing;
             continue;
         }
+
+        // Any remaining will be undefined
+        result[i] = ArmV4T::undefined_instruction;
     }
 
     result

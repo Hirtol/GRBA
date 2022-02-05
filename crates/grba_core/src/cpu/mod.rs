@@ -120,7 +120,7 @@ impl CPU {
 
     fn execute_thumb(&mut self, bus: &mut Bus, opcode: u16) {}
 
-    fn raise_exception(&mut self, exception: Exceptions, bus: &mut Bus) {
+    fn raise_exception(&mut self, exception: Exception, bus: &mut Bus) {
         todo!()
     }
 
@@ -238,7 +238,7 @@ fn log_cpu_state(cpu: &CPU) {
 }
 
 #[derive(Debug)]
-pub enum Exceptions {
+pub enum Exception {
     SoftwareInterrupt,
     UndefinedInstruction,
     PrefetchAbort,
