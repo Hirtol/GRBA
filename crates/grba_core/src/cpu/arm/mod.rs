@@ -295,6 +295,6 @@ mod tests {
         // Check Data Processing matching (AND operation in immediate mode)
         let fn_ref = lut[0b0010_0000_0000];
 
-        assert_eq!(fn_ref as usize, ArmV4T::data_processing as usize);
+        assert_eq!(fn_ref as usize, ArmV4T::data_processing_immediate as usize);
     }
 }
