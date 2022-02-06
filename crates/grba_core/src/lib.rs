@@ -17,6 +17,8 @@ pub const REFRESH_RATE: f32 = 59.7275;
 /// The clock speed of the ARM7TDMI CPU.
 pub const CLOCK_SPEED: u32 = 16_780_000;
 
+pub const CLOCKS_PER_FRAME: u32 = (CLOCK_SPEED as f32 / REFRESH_RATE) as u32;
+
 macro_rules! cpu_log {
     ($($arg:tt)*) => {
         #[cfg(feature = "cpu-logging")]

@@ -1,7 +1,7 @@
 use crate::bus::Bus;
 use crate::cartridge::Cartridge;
 use crate::cpu::CPU;
-use crate::InputKeys;
+use crate::{InputKeys, CLOCKS_PER_FRAME};
 
 /// Refers to an *absolute* memory address.
 /// Therefore any component which takes this as an incoming type *must* pre-process the value to turn it into an address
@@ -44,7 +44,8 @@ impl GBAEmulator {
 
     pub fn emulate_cycle(&mut self) -> bool {
         self.cpu.step_instruction(&mut self.mmu);
-        false
+        // Temporary measure to get some frames.
+        (self.mmu.scheduler.current_time.0 % CLOCKS_PER_FRAME as u64) == 0
     }
 
     pub fn key_down(&self, key: InputKeys) {
