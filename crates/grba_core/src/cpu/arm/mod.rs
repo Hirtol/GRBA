@@ -93,11 +93,12 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // 100X_XXXX_XXXX
         if (i & 0xE00) == 0b1000_0000_0000 {
             // Check load bit ahead of time.
-            if i.check_bit(20) {
+            if i.check_bit(4) {
                 result[i] = ArmV4T::block_data_transfer_load;
             } else {
                 result[i] = ArmV4T::block_data_transfer_store;
             }
+            continue;
         }
 
         // Multiply:
@@ -162,13 +163,6 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
                 result[i] = ArmV4T::single_data_transfer;
                 continue;
             }
-
-            // Undefined Instruction
-            // 011X_XXXX_XXX1
-            if (i & 0xE01) == 0b0110_0000_0001 {
-                result[i] = ArmV4T::undefined_instruction;
-                continue;
-            }
         }
 
         // MRS (Transfer PSR to register):
@@ -185,10 +179,17 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
             continue;
         }
 
-        // Data Processing:
-        // 00XX_XXXX_XXXX
-        if (i & 0xC00) == 0b0000_0000_0000 {
-            result[i] = ArmV4T::data_processing;
+        // Data Processing Immediate:
+        // 001X_XXXX_XXXX
+        if (i & 0xE00) == 0b0010_0000_0000 {
+            result[i] = ArmV4T::data_processing_immediate;
+            continue;
+        }
+
+        // Data Processing Register:
+        // 000X_XXXX_XXXX
+        if (i & 0xE00) == 0b0000_0000_0000 {
+            result[i] = ArmV4T::data_processing_register;
             continue;
         }
 
@@ -214,7 +215,8 @@ impl ShiftType {
     pub fn perform_shift(self, value: u32, shift_amount: u8, current_carry: bool) -> (u32, bool) {
         match self {
             ShiftType::LogicalLeft => {
-                let carry = value.check_bit(32 - shift_amount);
+                let carry = if shift_amount == 0 { current_carry } else { value.check_bit(32 - shift_amount) };
+
                 let shifted = value << shift_amount;
                 // Least significant bit that is shifted out goes to the carry flag
                 (shifted, carry)

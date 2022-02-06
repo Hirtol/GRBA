@@ -116,7 +116,7 @@ impl CPU {
 
         let lut_index = (((instruction.get_bits(20, 27)) << 4) | instruction.get_bits(4, 7)) as usize;
 
-        crate::cpu_log!("Executing LUT: {:#b} - Raw: {:#X}", lut_index, self.pipeline[0]);
+        crate::cpu_log!("Executing LUT: {:#b} - Raw: {:#X}", lut_index, instruction);
         self.arm_lut[lut_index](self, instruction, bus);
     }
 
@@ -183,8 +183,8 @@ impl CPU {
             // Why we subtract one instruction I have no clue, when testing we were always one instruction to far
             // after a branch, so here it is.
             let to_write = match self.state() {
-                State::Arm => (value - 4) & 0xFFFF_FFFC,
-                State::Thumb => (value - 2) & 0xFFFF_FFFE,
+                State::Arm => (value.wrapping_sub(4)) & 0xFFFF_FFFC,
+                State::Thumb => (value.wrapping_sub(2)) & 0xFFFF_FFFE,
             };
 
             self.registers.write_reg(PC_REG, to_write);
