@@ -2,7 +2,6 @@ use crate::format::DiffItem;
 use crate::InstructionSnapshot;
 use anyhow::Context;
 use itertools::Itertools;
-use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -39,7 +38,6 @@ pub fn handle_diff(cmd: DiffCommand) -> anyhow::Result<()> {
         .map(|(idx, _)| idx);
 
     if let Some(idx) = result {
-        // Display the 10 instructions around the contents.
         let range = (idx.saturating_sub(cmd.before)..=idx.saturating_add(cmd.after));
         let to_display_emu = &emu_contents[range.clone()];
         let to_display_other = &other_contents[range.clone()];
@@ -58,21 +56,9 @@ pub fn handle_diff(cmd: DiffCommand) -> anyhow::Result<()> {
 
         let table = tabled::Table::new(items).with(tabled::Style::PSEUDO);
 
-        println!("{}", table);
-
-        println!("{} searching in {:.2?}", "Finished".bright_green(), now.elapsed());
-
-        Err(anyhow::anyhow!(
-            "{}: `{}`",
-            "Difference found at index".bright_red(),
-            idx.yellow()
-        ))
+        Err(anyhow::anyhow!(crate::commands::show_diff_found(now, idx, table)))
     } else {
-        println!("{} searching in {:.2?}", "Finished".bright_green(), now.elapsed());
-        println!(
-            "Searched: `{}` entries, no differences found!",
-            other_contents.len().yellow()
-        );
+        crate::commands::show_success(now, other_contents.len());
 
         Ok(())
     }

@@ -43,22 +43,15 @@ pub fn handle_run(cmd: RunCommand) -> anyhow::Result<()> {
         let current_instr = logger.history.lock().unwrap();
 
         if other_instr != &current_instr[0] {
-            println!(
-                "{} {}",
-                "Difference discovered at instruction:".bright_red(),
-                idx.yellow()
-            );
-
             let mut before = current_instr.clone();
 
             drop(current_instr);
 
-            for j in 0..cmd.after {
+            for _ in 0..cmd.after {
                 emulator.step_instruction();
+                let current_instr = logger.history.lock().unwrap();
+                before.push(current_instr[0].clone());
             }
-
-            let current_instr = logger.history.lock().unwrap();
-            before.extend(current_instr.clone());
 
             let range = (idx.saturating_sub(cmd.before)..=idx.saturating_add(cmd.after));
             let to_display_other = &other_contents[range.clone()];
@@ -76,23 +69,11 @@ pub fn handle_run(cmd: RunCommand) -> anyhow::Result<()> {
 
             let table = tabled::Table::new(items).with(tabled::Style::PSEUDO);
 
-            println!("{}", table);
-
-            println!("{} searching in {:.2?}", "Finished".bright_green(), now.elapsed());
-
-            return Err(anyhow::anyhow!(
-                "{}: `{}`",
-                "Difference found at index".bright_red(),
-                idx.yellow()
-            ));
+            return Err(anyhow::anyhow!(crate::commands::show_diff_found(now, idx, table)));
         }
     }
 
-    println!("{} searching in {:.2?}", "Finished".bright_green(), now.elapsed());
-    println!(
-        "Searched: `{}` entries, no differences found!",
-        other_contents.len().yellow()
-    );
+    crate::commands::show_success(now, other_contents.len());
 
     Ok(())
 }

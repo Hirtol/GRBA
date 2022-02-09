@@ -1160,7 +1160,6 @@ dependencies = [
  "grba_core",
  "itertools",
  "memmap2 0.5.2",
- "miette",
  "owo-colors",
  "tabled",
  "thiserror",
@@ -1178,6 +1177,7 @@ dependencies = [
  "grba_core",
  "image",
  "log",
+ "miette",
  "rayon",
  "simplelog 0.11.2",
 ]
