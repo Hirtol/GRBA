@@ -1,3 +1,4 @@
+use crate::debug::DebugLogger;
 use crate::rendering::{Renderer, RendererOptions};
 use crate::runner::{EmulatorRunner, RunnerHandle};
 use crate::utils::BoolUtils;
@@ -16,6 +17,7 @@ use winit::event_loop::{ControlFlow, EventLoop};
 pub const WIDTH: u32 = 640;
 pub const HEIGHT: u32 = 480;
 
+mod debug;
 mod rendering;
 mod runner;
 mod utils;
@@ -26,6 +28,9 @@ fn main() {
         .build();
 
     simplelog::SimpleLogger::init(LevelFilter::Trace, cfg).unwrap();
+
+    let dbg_logger = DebugLogger::new("./emu.logbin").unwrap();
+    grba_core::logging::set_logger(Box::new(dbg_logger));
 
     let application = Application::new().expect("Failed to create application");
 

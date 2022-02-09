@@ -5,7 +5,7 @@ use crate::utils::BitOps;
 use registers::{Mode, State};
 
 mod arm;
-mod registers;
+pub mod registers;
 
 //TODO Timings:
 // * Gamepak fetching and prefetching?
@@ -56,6 +56,7 @@ impl CPU {
         self.advance_pipeline(bus);
 
         crate::cpu_log!("Registers: {:X?}", self.registers);
+        crate::bin_log!(self.registers);
 
         match self.state() {
             State::Arm => {

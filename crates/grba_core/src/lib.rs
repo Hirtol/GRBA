@@ -3,6 +3,7 @@ pub mod cartridge;
 mod cpu;
 pub mod emulator;
 mod joypad;
+pub mod logging;
 mod ppu;
 pub mod scheduler;
 mod utils;
@@ -18,13 +19,6 @@ pub const REFRESH_RATE: f32 = 59.7275;
 pub const CLOCK_SPEED: u32 = 16_780_000;
 
 pub const CLOCKS_PER_FRAME: u32 = (CLOCK_SPEED as f32 / REFRESH_RATE) as u32;
-
-macro_rules! cpu_log {
-    ($($arg:tt)*) => {
-        #[cfg(feature = "cpu-logging")]
-        println!($($arg)*);
-    }
-}
 
 /// A macro similar to `vec![$elem; $size]` which returns a boxed array.
 ///
@@ -78,5 +72,3 @@ macro_rules! get_bits {
         ($val >> $start) & ((1 << ($end_inclusive - $start + 1)) - 1)
     };
 }
-
-use cpu_log;

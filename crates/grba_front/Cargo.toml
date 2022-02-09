@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = []
+default = ["bin-logging"]
 profiling-tracy = ["profiling/profile-with-tracy", "tracy-client"]
+bin-logging = ["grba_core/bin-logging"]
 
 [dependencies]
 # General Dependencies
