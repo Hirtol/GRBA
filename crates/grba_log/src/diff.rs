@@ -1,16 +1,33 @@
+use crate::format::DiffItem;
 use crate::InstructionSnapshot;
 use anyhow::Context;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use std::time::Instant;
-use tabled::*;
+
+#[derive(clap::Args, Debug)]
+pub struct DiffCommand {
+    /// The path to the GRBA log file to parse
+    #[clap(short, long, env, default_value = "./emu.logbin")]
+    emu_log: PathBuf,
+    /// The path to the other emulator's log file.
+    /// This will be used as the reference.
+    #[clap(short, long, env, default_value = "./other.logbin")]
+    other_log: PathBuf,
+    /// The amount of entries to display *before* a discovered difference in the logs
+    #[clap(short, long, default_value = "3")]
+    before: usize,
+    /// The amount of entries to display *after* a discovered difference in the logs
+    #[clap(short, long, default_value = "3")]
+    after: usize,
+}
 
 /// Handle the `Diff` command, used to find the first difference between the two provided logs.
-pub fn handle_diff(emu_log: PathBuf, other_log: PathBuf) -> anyhow::Result<()> {
+pub fn handle_diff(cmd: DiffCommand) -> anyhow::Result<()> {
     let now = Instant::now();
-    let emu_log = crate::open_mmap(&emu_log).context("Could not find emulator log, is the path correct?")?;
-    let other_log = crate::open_mmap(&other_log).context("Could not find the other log, is the path correct?")?;
+    let emu_log = crate::open_mmap(&cmd.emu_log).context("Could not find emulator log, is the path correct?")?;
+    let other_log = crate::open_mmap(&cmd.other_log).context("Could not find the other log, is the path correct?")?;
 
     let emu_contents = InstructionSnapshot::parse(&*emu_log).context("Failed to parse emu contents")?;
     let other_contents = InstructionSnapshot::parse(&*other_log).context("Failed to parse other contents")?;
@@ -21,11 +38,9 @@ pub fn handle_diff(emu_log: PathBuf, other_log: PathBuf) -> anyhow::Result<()> {
         .find_position(|(emu, other)| emu != other)
         .map(|(idx, _)| idx);
 
-    println!("{} searching in {:.2?}", "Finished".bright_green(), now.elapsed());
-
     if let Some(idx) = result {
         // Display the 10 instructions around the contents.
-        let range = (idx.saturating_sub(5)..idx.saturating_add(5));
+        let range = (idx.saturating_sub(cmd.before)..=idx.saturating_add(cmd.after));
         let to_display_emu = &emu_contents[range.clone()];
         let to_display_other = &other_contents[range.clone()];
 
@@ -45,76 +60,20 @@ pub fn handle_diff(emu_log: PathBuf, other_log: PathBuf) -> anyhow::Result<()> {
 
         println!("{}", table);
 
+        println!("{} searching in {:.2?}", "Finished".bright_green(), now.elapsed());
+
         Err(anyhow::anyhow!(
             "{}: `{}`",
             "Difference found at index".bright_red(),
             idx.yellow()
         ))
     } else {
+        println!("{} searching in {:.2?}", "Finished".bright_green(), now.elapsed());
         println!(
-            "Searched: `{}` registries, no differences found!",
-            emu_contents.len().yellow()
+            "Searched: `{}` entries, no differences found!",
+            other_contents.len().yellow()
         );
 
         Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct DiffItem<'a> {
-    /// The index of the executed instruction in the log
-    instr_idx: usize,
-    /// Whether this was the first difference causing an error
-    is_error: bool,
-    /// The indexes of the fields from [InstructionSnapshot]s which are different
-    different_fields: Vec<usize>,
-    /// The [InstructionSnapshot] from the emulator log
-    emu_instr: &'a InstructionSnapshot,
-    /// The [InstructionSnapshot] from the other emulator log
-    other_instr: &'a InstructionSnapshot,
-}
-
-impl<'a> Tabled for DiffItem<'a> {
-    const LENGTH: usize = 2;
-
-    fn fields(&self) -> Vec<String> {
-        {
-            let mut out = Vec::with_capacity(Self::LENGTH);
-
-            if self.is_error {
-                out.push(format!(
-                    "{}\n{}",
-                    self.instr_idx.bright_magenta(),
-                    "(X)".bright_magenta()
-                ));
-            } else {
-                out.push(format!("{}", self.instr_idx));
-            }
-
-            let name_table = builder::Builder::new()
-                .set_header(["Emulator"])
-                .add_row(["Emu"])
-                .add_row(["Other"])
-                .build();
-
-            let mut register_table = tabled::Table::new([self.emu_instr, self.other_instr]);
-
-            for &column_idx in &self.different_fields {
-                register_table = register_table
-                    .with(Modify::new(Column(column_idx..=column_idx)).with(Format(|s| s.bright_red().to_string())));
-            }
-
-            let table = name_table
-                .with(Concat::horizontal(register_table))
-                .with(Style::PSEUDO_CLEAN);
-
-            out.push(format!("{}", table));
-
-            out
-        }
-    }
-
-    fn headers() -> Vec<String> {
-        vec!["Index".to_string(), "Registers".to_string()]
     }
 }

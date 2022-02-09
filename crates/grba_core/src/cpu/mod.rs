@@ -56,7 +56,7 @@ impl CPU {
         self.advance_pipeline(bus);
 
         crate::cpu_log!("Registers: {:X?}", self.registers);
-        crate::bin_log!(self.registers);
+        crate::bin_log!(crate::logging::BIN_TARGET_REGISTER, self.registers);
 
         match self.state() {
             State::Arm => {

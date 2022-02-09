@@ -38,11 +38,11 @@ impl GBAEmulator {
     /// Run the emulator until it has reached Vblank
     #[profiling::function]
     pub fn run_to_vblank(&mut self) {
-        while !self.emulate_cycle() {}
+        while !self.step_instruction() {}
         profiling::finish_frame!();
     }
 
-    pub fn emulate_cycle(&mut self) -> bool {
+    pub fn step_instruction(&mut self) -> bool {
         self.cpu.step_instruction(&mut self.mmu);
         // Temporary measure to get some frames.
         (self.mmu.scheduler.current_time.0 % CLOCKS_PER_FRAME as u64) == 0

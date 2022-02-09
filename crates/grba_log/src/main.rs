@@ -16,11 +16,11 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     match args.commands {
-        SubCommands::Diff { emu_log, other_log } => {
-            diff::handle_diff(emu_log, other_log)?;
+        SubCommands::Diff(cmd) => {
+            diff::handle_diff(cmd)?;
         }
-        SubCommands::Run { rom_path, other_log } => {
-            run::handle_run(rom_path, other_log)?;
+        SubCommands::Run(cmd) => {
+            run::handle_run(cmd)?;
         }
     }
 
@@ -32,3 +32,36 @@ fn open_mmap(path: &Path) -> anyhow::Result<Mmap> {
 
     unsafe { Ok(Mmap::map(&file)?) }
 }
+
+// use miette::Diagnostic;
+// use miette::{Result, SourceSpan};
+// use thiserror::Error;
+//
+// fn main() -> Result<()> {
+//     Err(MyErrorType {
+//         src: "Demo\n yooo \n too".to_string(),
+//         err_span: (2, 3).into(),
+//         snip2: (1, 2),
+//     })?;
+//
+//     return Ok(());
+// }
+//
+// #[derive(Diagnostic, Debug, Error)]
+// #[error("oops")]
+// #[diagnostic(code(my_lib::random_error))]
+// pub struct MyErrorType {
+//     // The `Source` that miette will use.
+//     #[source_code]
+//     src: String,
+//
+//     // This will underline/mark the specific code inside the larger
+//     // snippet context.
+//     #[label = "This is the highlight"]
+//     err_span: SourceSpan,
+//
+//     // You can add as many labels as you want.
+//     // They'll be rendered sequentially.
+//     #[label("This is bad")]
+//     snip2: (usize, usize), // (usize, usize) is Into<SourceSpan>!
+// }

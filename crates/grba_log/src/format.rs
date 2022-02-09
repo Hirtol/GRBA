@@ -1,10 +1,11 @@
-use std::fmt::{Display, Formatter};
-use tabled::Tabled;
+use owo_colors::OwoColorize;
+use std::fmt::Formatter;
+use tabled::{builder, Column, Concat, Format, Modify, Style, Tabled};
 use zerocopy::{ByteSlice, LayoutVerified};
 
 /// The format from the Logs that we have from other emulators.
 /// Should really use `U32<LittleEndian>`, but that doesn't implement hex debug print :(
-#[derive(zerocopy::FromBytes, Debug, Ord, PartialOrd, Eq, PartialEq, Clone)]
+#[derive(zerocopy::FromBytes, Debug, Ord, PartialOrd, Eq, PartialEq, Clone, Default)]
 #[repr(C)]
 pub struct InstructionSnapshot {
     r0: u32,
@@ -96,17 +97,10 @@ impl InstructionSnapshot {
     }
 }
 
-impl Display for InstructionSnapshot {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let tb = tabled::Table::new([self]);
-        write!(f, "{}", tb)
-    }
-}
-
 impl Tabled for InstructionSnapshot {
     const LENGTH: usize = 18;
     fn fields(&self) -> Vec<String> {
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(Self::LENGTH);
         out.push(format!("{:#010X}", self.r0));
         out.push(format!("{:#010X}", self.r1));
         out.push(format!("{:#010X}", self.r2));
@@ -129,7 +123,7 @@ impl Tabled for InstructionSnapshot {
     }
 
     fn headers() -> Vec<String> {
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(Self::LENGTH);
 
         out.push(String::from("r0"));
         out.push(String::from("r1"));
@@ -151,5 +145,64 @@ impl Tabled for InstructionSnapshot {
         out.push(String::from("spsr"));
 
         out
+    }
+}
+
+#[derive(Debug)]
+pub struct DiffItem<'a> {
+    /// The index of the executed instruction in the log
+    pub instr_idx: usize,
+    /// Whether this was the first difference causing an error
+    pub is_error: bool,
+    /// The indexes of the fields from [InstructionSnapshot]s which are different
+    pub different_fields: Vec<usize>,
+    /// The [InstructionSnapshot] from the emulator log
+    pub emu_instr: &'a InstructionSnapshot,
+    /// The [InstructionSnapshot] from the other emulator log
+    pub other_instr: &'a InstructionSnapshot,
+}
+
+impl<'a> Tabled for DiffItem<'a> {
+    const LENGTH: usize = 2;
+
+    fn fields(&self) -> Vec<String> {
+        {
+            let mut out = Vec::with_capacity(Self::LENGTH);
+
+            if self.is_error {
+                out.push(format!(
+                    "{}\n{}",
+                    self.instr_idx.bright_magenta(),
+                    "(X)".bright_magenta()
+                ));
+            } else {
+                out.push(format!("{}", self.instr_idx));
+            }
+
+            let name_table = builder::Builder::new()
+                .set_header(["Emulator"])
+                .add_row(["Emu"])
+                .add_row(["Other"])
+                .build();
+
+            let mut register_table = tabled::Table::new([self.emu_instr, self.other_instr]);
+
+            for &column_idx in &self.different_fields {
+                register_table = register_table
+                    .with(Modify::new(Column(column_idx..=column_idx)).with(Format(|s| s.bright_red().to_string())));
+            }
+
+            let table = name_table
+                .with(Concat::horizontal(register_table))
+                .with(Style::PSEUDO_CLEAN);
+
+            out.push(format!("{}", table));
+
+            out
+        }
+    }
+
+    fn headers() -> Vec<String> {
+        vec!["Index".to_string(), "Registers".to_string()]
     }
 }

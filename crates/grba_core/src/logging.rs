@@ -1,3 +1,6 @@
+pub const BIN_TARGET_REGISTER: &str = "register";
+pub const BIN_TARGET_DEFAULT: &str = "default";
+
 #[macro_export]
 macro_rules! cpu_log {
     ($($arg:tt)*) => {
@@ -9,34 +12,32 @@ macro_rules! cpu_log {
 #[macro_export]
 macro_rules! bin_log {
     ($arg:expr) => {
+        crate::bin_log!(crate::logging::BIN_TARGET_DEFAULT, $arg);
+    };
+    ($target:expr, $arg:expr) => {
         #[cfg(feature = "bin-logging")]
         {
             let instr: crate::logging::bin_logging::InstructionSnapshot =
                 crate::logging::bin_logging::InstructionSnapshot::from_registers(&$arg);
-            crate::logging::bin_logging::log(instr.as_ref());
+            crate::logging::bin_logging::log($target, instr.as_ref());
         }
     };
 }
 
 pub trait BinaryLogger: Send + Sync {
-    fn log_binary(&mut self, data: &[u8]);
+    fn log_binary(&self, target: &str, data: &[u8]);
 }
 
 /// Set the desired logger.
 ///
 /// If the `bin-logging` feature is not enabled this is a no-op.
-pub fn set_logger(logger: Box<dyn BinaryLogger>) {
-    if cfg!(feature = "bin-logging") {
-        crate::logging::bin_logging::set_logger(logger);
-    } else {
-        // No-op
-    }
+pub fn set_logger(logger: &'static dyn BinaryLogger) {
+    #[cfg(feature = "bin-logging")]
+    crate::logging::bin_logging::set_logger(logger);
 }
 
 impl BinaryLogger for () {
-    fn log_binary(&mut self, _data: &[u8]) {
-        println!("Binary log: {}", _data.len());
-    }
+    fn log_binary(&self, _target: &str, _data: &[u8]) {}
 }
 
 #[cfg(feature = "bin-logging")]
@@ -45,19 +46,19 @@ pub mod bin_logging {
     use crate::logging::BinaryLogger;
     use once_cell::sync::Lazy;
 
-    pub(super) static mut BIN_LOG: Lazy<Box<dyn BinaryLogger>> = Lazy::new(|| Box::new(()));
+    pub(super) static mut BIN_LOG: Lazy<&dyn BinaryLogger> = Lazy::new(|| &());
 
-    pub fn set_logger(logger: Box<dyn BinaryLogger>) {
+    pub fn set_logger(logger: &'static dyn BinaryLogger) {
         // Safety? There isn't any.
         unsafe {
             *BIN_LOG = logger;
         }
     }
 
-    pub fn log(data: &[u8]) {
+    pub fn log(target: &str, data: &[u8]) {
         // Safety? There isn't any.
         unsafe {
-            BIN_LOG.log_binary(data);
+            BIN_LOG.log_binary(target, data);
         }
     }
 

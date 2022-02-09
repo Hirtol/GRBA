@@ -29,8 +29,8 @@ fn main() {
 
     simplelog::SimpleLogger::init(LevelFilter::Trace, cfg).unwrap();
 
-    let dbg_logger = DebugLogger::new("./emu.logbin").unwrap();
-    grba_core::logging::set_logger(Box::new(dbg_logger));
+    let dbg_logger = Box::leak(Box::new(DebugLogger::new("./emu.logbin").unwrap()));
+    grba_core::logging::set_logger(dbg_logger);
 
     let application = Application::new().expect("Failed to create application");
 
