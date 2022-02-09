@@ -42,7 +42,7 @@ impl CPU {
             result.registers.general_purpose[15] = 0x08000000; // PC
         }
 
-        result.fill_pipeline(bus);
+        result.flush_pipeline(bus);
 
         result
     }
@@ -52,6 +52,9 @@ impl CPU {
     #[profiling::function]
     pub fn step_instruction(&mut self, bus: &mut Bus) {
         // crate::cpu_log!("Executing instruction: {:#X}", self.pipeline[0]);
+        // We immediately advance the pipeline once to recover from pipeline flush (which only partly fills the pipeline)
+        self.advance_pipeline(bus);
+
         crate::cpu_log!("Registers: {:X?}", self.registers);
 
         match self.state() {
@@ -65,10 +68,10 @@ impl CPU {
         // Very basic cycle counting to get things going. In the future ought to count cycles properly.
         //TODO: Instruction timing
         bus.scheduler.add_time(1);
-
-        self.advance_pipeline(bus);
     }
 
+    // Sure hope this gets inlined to prevent excessive `match self.state() {}` calls >.>
+    #[inline]
     fn advance_pipeline(&mut self, bus: &mut Bus) {
         self.pipeline[0] = self.pipeline[1];
         self.pipeline[1] = self.pipeline[2];
@@ -103,10 +106,24 @@ impl CPU {
         }
     }
 
-    /// Clear the entire pipeline, and immediately refills it afterwards.
-    fn clear_pipeline(&mut self, bus: &mut Bus) {
-        self.pipeline = [0; 3];
-        self.fill_pipeline(bus);
+    /// Clear the entire pipeline, and partly refills it afterwards.
+    ///
+    /// This is a partial refill to account for us immediately incrementing the PC when we next execute an instruction.
+    fn flush_pipeline(&mut self, bus: &mut Bus) {
+        self.pipeline[0] = 0;
+
+        match self.state() {
+            State::Arm => {
+                self.pipeline[1] = bus.read_32(self.registers.pc());
+                self.registers.advance_pc();
+                self.pipeline[2] = bus.read_32(self.registers.pc());
+            }
+            State::Thumb => {
+                self.pipeline[1] = bus.read_16(self.registers.pc()) as u32;
+                self.registers.advance_pc();
+                self.pipeline[2] = bus.read_16(self.registers.pc()) as u32;
+            }
+        }
     }
 
     fn execute_arm(&mut self, instruction: ArmInstruction, bus: &mut Bus) {
@@ -158,10 +175,10 @@ impl CPU {
 
     /// Switches between ARM and Thumb mode.
     pub fn switch_state(&mut self, new_state: State, bus: &mut Bus) {
-        // Switch to a new state, and refill the pipeline
+        // Switch to a new state
         if self.state() != new_state {
             self.registers.cpsr.set_state(new_state);
-            self.fill_pipeline(bus);
+            // TODO: Do we need to flush pipeline here? At the very least probably need to align PC to new state?
         }
     }
 
@@ -180,16 +197,14 @@ impl CPU {
             self.registers.write_reg(reg, value)
         } else {
             // Upon writes to PC we need to flush our instruction cache, and also block out the lower bits.
-            // Why we subtract one instruction I have no clue, when testing we were always one instruction to far
-            // after a branch, so here it is.
             let to_write = match self.state() {
-                State::Arm => (value.wrapping_sub(4)) & 0xFFFF_FFFC,
-                State::Thumb => (value.wrapping_sub(2)) & 0xFFFF_FFFE,
+                State::Arm => value & 0xFFFF_FFFC,
+                State::Thumb => value & 0xFFFF_FFFE,
             };
 
             self.registers.write_reg(PC_REG, to_write);
 
-            self.fill_pipeline(bus);
+            self.flush_pipeline(bus);
         }
     }
 
