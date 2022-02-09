@@ -1,0 +1,16 @@
+[package]
+name = "grba_log"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zip = "0.5.13"
+miette = { version = "3.3.0", features = ["fancy"] }
+thiserror = "1.0.30"
+anyhow = "1.0.53"
+grba_core = {path = "../grba_core"}
+
+# Parsing
+memmap2 = "0.5.2"
+zerocopy = { version = "0.6.1", features = ["alloc"] }
+clap = { version = "3.0.14", features = ["derive", "env"] }
