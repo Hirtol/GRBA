@@ -15,12 +15,12 @@ pub enum SubCommands {
     #[clap(alias = "d")]
     Diff {
         /// The path to the GRBA log file to parse
-        #[clap(short, long, env, default_value = "./emu.bin")]
+        #[clap(short, long, env, default_value = "./emu.logbin")]
         emu_log: PathBuf,
 
         /// The path to the other emulator's log file.
         /// This will be used as the reference.
-        #[clap(short, long, env, default_value = "./other.bin")]
+        #[clap(short, long, env, default_value = "./other.logbin")]
         other_log: PathBuf,
     },
     /// Will run the provided `rom_path` until the log and `other_log` diverge.

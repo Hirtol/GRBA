@@ -6,9 +6,12 @@ edition = "2021"
 [dependencies]
 zip = "0.5.13"
 miette = { version = "3.3.0", features = ["fancy"] }
+tabled = { version = "0.4.2", features = ["color"] }
+owo-colors = "3.2.0"
 thiserror = "1.0.30"
 anyhow = "1.0.53"
 grba_core = {path = "../grba_core"}
+itertools = "0.10.3"
 
 # Parsing
 memmap2 = "0.5.2"
