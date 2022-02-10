@@ -20,6 +20,9 @@ pub struct DiffCommand {
     /// The amount of entries to display *after* a discovered difference in the logs
     #[clap(short, long, default_value = "3")]
     after: usize,
+    /// Ignores the provided registers when comparing the logs
+    #[clap(short)]
+    ignore: Vec<usize>,
 }
 
 /// Handle the `Diff` command, used to find the first difference between the two provided logs.

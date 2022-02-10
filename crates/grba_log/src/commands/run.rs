@@ -1,3 +1,4 @@
+use crate::bin_logger::InstructionLogger;
 use crate::format::{DiffItem, DiffItemWithInstr};
 use crate::InstructionSnapshot;
 use anyhow::Context;
@@ -19,6 +20,9 @@ pub struct RunCommand {
     /// The amount of entries to display *after* a discovered difference in the logs
     #[clap(short, long, default_value = "3")]
     after: usize,
+    /// Ignores the provided registers when comparing the logs
+    #[clap(short)]
+    ignore: Vec<usize>,
 }
 
 /// Handle the `Run` command, where our emulator is ran until a difference is found.
@@ -26,52 +30,88 @@ pub struct RunCommand {
 pub fn handle_run(cmd: RunCommand) -> anyhow::Result<()> {
     let now = Instant::now();
     let logger = crate::bin_logger::setup_logger(cmd.before + 1);
-    let mut emulator = create_emulator(&cmd.rom_path)?;
 
-    let other_log = crate::open_mmap(&cmd.other_log).context("Could not find the other log, is the path correct?")?;
+    RunExecutor {
+        cmd,
+        start_time: now,
+        logger,
+    }
+    .run()
+}
 
-    let other_contents = &InstructionSnapshot::parse(&*other_log).context("Failed to parse other contents")?[2..];
+pub struct RunExecutor {
+    cmd: RunCommand,
+    start_time: Instant,
+    logger: &'static InstructionLogger,
+}
 
-    for (idx, other_instr) in other_contents.iter().enumerate() {
-        emulator.step_instruction();
-        let current_frame = logger.get_most_recent();
+impl RunExecutor {
+    /// Execute the `Run` command.
+    pub fn run(mut self) -> anyhow::Result<()> {
+        let mut emulator = create_emulator(&self.cmd.rom_path)?;
 
-        if other_instr != current_frame.registers.as_ref() {
-            let mut before = logger.history.lock().unwrap().clone();
+        let other_log =
+            crate::open_mmap(&self.cmd.other_log).context("Could not find the other log, is the path correct?")?;
 
-            for _ in 0..cmd.after {
-                emulator.step_instruction();
-                before.push(logger.get_most_recent());
+        let other_contents = &InstructionSnapshot::parse(&*other_log).context("Failed to parse other contents")?[2..];
+
+        for (idx, other_instr) in other_contents.iter().enumerate() {
+            emulator.step_instruction();
+            let current_frame = self.logger.get_most_recent();
+
+            if other_instr != current_frame.registers.as_ref() {
+                let differences = other_instr.get_differing_fields(current_frame.registers.as_ref());
+                // Skip if the only differences are in ignored registers
+                if differences.iter().all(|diff| self.cmd.ignore.contains(diff)) {
+                    continue;
+                }
+
+                self.handle_difference(&mut emulator, other_contents, idx)?;
             }
-
-            let range = idx.saturating_sub(cmd.before)..=idx.saturating_add(cmd.after);
-            let to_display_other = &other_contents[range.clone()];
-            let items: Vec<_> = range
-                .zip(&before)
-                .zip(to_display_other)
-                .map(|((i, emu), other)| DiffItemWithInstr {
-                    instr: emu.instruction,
-                    diff_item: DiffItem {
-                        instr_idx: i,
-                        emu_instr: emu.registers.as_ref(),
-                        other_instr: other,
-                        is_error: idx == i,
-                        different_fields: other.get_differing_fields(emu.registers.as_ref()),
-                    },
-                })
-                .collect();
-
-            let table = tabled::Table::new(items)
-                .with(tabled::Style::PSEUDO)
-                .with(tabled::Modify::new(tabled::Column(2..=2)).with(tabled::Alignment::left()));
-
-            return Err(anyhow::anyhow!(crate::commands::show_diff_found(now, idx, table)));
         }
+
+        crate::commands::show_success(self.start_time, other_contents.len());
+
+        Ok(())
     }
 
-    crate::commands::show_success(now, other_contents.len());
+    /// Handle a confirmed difference in the logs.
+    fn handle_difference(
+        &mut self,
+        emulator: &mut GBAEmulator,
+        other_contents: &[InstructionSnapshot],
+        idx: usize,
+    ) -> anyhow::Result<()> {
+        let mut before = self.logger.history.lock().unwrap().clone();
 
-    Ok(())
+        for _ in 0..self.cmd.after {
+            emulator.step_instruction();
+            before.push(self.logger.get_most_recent());
+        }
+
+        let range = idx.saturating_sub(self.cmd.before)..=idx.saturating_add(self.cmd.after);
+        let to_display_other = &other_contents[range.clone()];
+        let items: Vec<_> = range
+            .zip(&before)
+            .zip(to_display_other)
+            .map(|((i, emu), other)| DiffItemWithInstr {
+                instr: emu.instruction,
+                diff_item: DiffItem {
+                    instr_idx: i,
+                    emu_instr: emu.registers.as_ref(),
+                    other_instr: other,
+                    is_error: idx == i,
+                    different_fields: other.get_differing_fields(emu.registers.as_ref()),
+                },
+            })
+            .collect();
+
+        let table = tabled::Table::new(items)
+            .with(tabled::Style::PSEUDO)
+            .with(tabled::Modify::new(tabled::Column(2..=2)).with(tabled::Alignment::left()));
+
+        anyhow::bail!(crate::commands::show_diff_found(self.start_time, idx, table))
+    }
 }
 
 fn create_emulator(rom: &Path) -> anyhow::Result<GBAEmulator> {
