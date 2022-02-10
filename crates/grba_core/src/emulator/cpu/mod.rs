@@ -1,6 +1,6 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::arm::{ArmInstruction, ArmLUT, ArmV4T};
-use crate::emulator::cpu::registers::{Registers, PC_REG, PSR};
+use crate::emulator::cpu::registers::{Registers, PC_REG};
 use crate::utils::BitOps;
 use registers::{Mode, State};
 
@@ -139,11 +139,11 @@ impl CPU {
         self.arm_lut[lut_index](self, instruction, bus);
     }
 
-    fn execute_thumb(&mut self, bus: &mut Bus, opcode: u16) {
+    fn execute_thumb(&mut self, _bus: &mut Bus, _opcode: u16) {
         todo!()
     }
 
-    fn raise_exception(&mut self, exception: Exception, bus: &mut Bus) {
+    fn raise_exception(&mut self, exception: Exception, _bus: &mut Bus) {
         todo!("{:?}", exception);
     }
 
@@ -176,7 +176,7 @@ impl CPU {
     }
 
     /// Switches between ARM and Thumb mode.
-    pub fn switch_state(&mut self, new_state: State, bus: &mut Bus) {
+    pub fn switch_state(&mut self, new_state: State, _bus: &mut Bus) {
         // Switch to a new state
         if self.state() != new_state {
             self.registers.cpsr.set_state(new_state);

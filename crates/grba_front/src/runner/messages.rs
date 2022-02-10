@@ -1,5 +1,5 @@
-use grba_core::InputKeys;
 use crate::rendering::gui::DebugMessage;
+use grba_core::InputKeys;
 
 #[derive(Debug)]
 pub enum EmulatorMessage {
@@ -7,7 +7,7 @@ pub enum EmulatorMessage {
     ExitRequest,
     Debug(DebugMessage),
     KeyDown(InputKeys),
-    KeyUp(InputKeys)
+    KeyUp(InputKeys),
 }
 
 #[derive(Debug)]

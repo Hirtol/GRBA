@@ -45,7 +45,7 @@ impl Renderer {
                 .build(&event_loop)?
         };
 
-        let (mut pixels, mut framework) = {
+        let (pixels, framework) = {
             let window_size = window.inner_size();
             let scale_factor = window.scale_factor() as f32;
             let surface_texture = pixels::SurfaceTexture::new(window_size.width, window_size.height, &window);

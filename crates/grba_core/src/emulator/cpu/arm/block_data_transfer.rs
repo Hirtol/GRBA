@@ -1,5 +1,5 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T, ShiftType};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T};
 use crate::emulator::cpu::registers::{Mode, PC_REG};
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;

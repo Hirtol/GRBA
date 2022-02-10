@@ -1,14 +1,11 @@
-use crate::debug::DebugLogger;
 use crate::rendering::{Renderer, RendererOptions};
 use crate::runner::{EmulatorRunner, RunnerHandle};
 use crate::utils::BoolUtils;
-use crate::RunningState::FastForward;
-use egui_wgpu_backend::wgpu::{PresentMode, TextureFormat};
+
 use grba_core::emulator::cartridge::header::CartridgeHeader;
-use grba_core::emulator::cartridge::{Cartridge, CARTRIDGE_SRAM_START};
+use grba_core::emulator::cartridge::Cartridge;
 use log::LevelFilter;
-use pixels::wgpu::{Backends, PowerPreference, RequestAdapterOptions};
-use pixels::{wgpu, Pixels, PixelsBuilder, SurfaceTexture};
+
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};

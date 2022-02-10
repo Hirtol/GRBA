@@ -27,6 +27,7 @@ macro_rules! bin_log {
 /// Set the desired logger.
 ///
 /// If the `bin-logging` feature is not enabled this is a no-op.
+#[allow(unused_variables)]
 pub fn set_logger(logger: &'static dyn BinaryLogger) {
     #[cfg(feature = "bin-logging")]
     crate::logging::bin_logging::set_logger(logger);
@@ -119,9 +120,8 @@ impl InstructionSnapshot {
 
 #[cfg(feature = "bin-logging")]
 pub mod bin_logging {
-    use crate::emulator::cpu::registers::Registers;
+
     use crate::logging::BinaryLogger;
-    use once_cell::sync::Lazy;
 
     pub(super) static mut BIN_LOG: &dyn BinaryLogger = &();
 

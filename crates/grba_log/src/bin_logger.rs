@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use grba_core::logging::InstructionFrame;
+use std::sync::Mutex;
 
 pub fn setup_logger(before: usize) -> &'static InstructionLogger {
     // Since this is the only command we'll execute we're just gonna leak the logger.

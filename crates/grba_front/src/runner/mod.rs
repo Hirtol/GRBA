@@ -1,10 +1,10 @@
 use crate::runner::messages::{EmulatorMessage, EmulatorResponse};
 use crossbeam::channel::{bounded, unbounded, Receiver, Sender};
-use egui::Key::P;
+
 use grba_core::emulator::cartridge::Cartridge;
 use grba_core::emulator::EmuOptions;
 use grba_core::emulator::GBAEmulator;
-use grba_core::{InputKeys, FRAMEBUFFER_SIZE};
+use grba_core::InputKeys;
 use std::thread::JoinHandle;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
@@ -75,7 +75,7 @@ impl RunnerHandle {
 fn run_emulator(
     emu: &mut GBAEmulator,
     frame_sender: Sender<Vec<u8>>,
-    response_sender: Sender<EmulatorResponse>,
+    _response_sender: Sender<EmulatorResponse>,
     request_receiver: Receiver<EmulatorMessage>,
 ) {
     loop {

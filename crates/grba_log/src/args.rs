@@ -1,5 +1,4 @@
-use clap::{AppSettings, Parser, Subcommand};
-use std::path::PathBuf;
+use clap::{AppSettings, Subcommand};
 
 #[derive(clap::Parser, Debug)]
 #[clap(version, about)]

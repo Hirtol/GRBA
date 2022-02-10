@@ -39,7 +39,7 @@ pub fn handle_diff(cmd: DiffCommand) -> anyhow::Result<()> {
         .map(|(idx, _)| idx);
 
     if let Some(idx) = result {
-        let range = (idx.saturating_sub(cmd.before)..=idx.saturating_add(cmd.after));
+        let range = idx.saturating_sub(cmd.before)..=idx.saturating_add(cmd.after);
         let to_display_emu = &emu_contents[range.clone()];
         let to_display_other = &other_contents[range.clone()];
 

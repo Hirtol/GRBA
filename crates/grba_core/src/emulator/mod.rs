@@ -1,13 +1,13 @@
+use crate::{InputKeys, CLOCKS_PER_FRAME};
 use bus::Bus;
 use cartridge::Cartridge;
 use cpu::CPU;
-use crate::{CLOCKS_PER_FRAME, InputKeys};
 
 mod bus;
 pub mod cartridge;
 pub mod cpu;
-pub mod ppu;
 pub mod debugging;
+pub mod ppu;
 
 /// Refers to an *absolute* memory address.
 /// Therefore any component which takes this as an incoming type *must* pre-process the value to turn it into an address
@@ -19,12 +19,15 @@ pub struct EmuOptions {
     pub skip_bios: bool,
     /// `true` if the emulator should run in debug mode.
     /// This will enable breakpoints.
-    pub debugging: bool
+    pub debugging: bool,
 }
 
 impl Default for EmuOptions {
     fn default() -> Self {
-        EmuOptions { skip_bios: true, debugging: false }
+        EmuOptions {
+            skip_bios: true,
+            debugging: false,
+        }
     }
 }
 
@@ -42,7 +45,7 @@ impl GBAEmulator {
         GBAEmulator {
             cpu: CPU::new(options.skip_bios, &mut mmu),
             mmu,
-            options
+            options,
         }
     }
 
@@ -52,9 +55,9 @@ impl GBAEmulator {
         // We split on the debugging option here to incur as little runtime overhead as possible.
         // If we need more thorough debugging abilities in the future we'll probably need to look at generics instead.
         if self.options.debugging {
-            while !self.step_instruction_debug() {};
+            while !self.step_instruction_debug() {}
         } else {
-            while !self.step_instruction() {};
+            while !self.step_instruction() {}
         }
         profiling::finish_frame!();
     }
@@ -64,16 +67,16 @@ impl GBAEmulator {
         // Temporary measure to get some frames.
         (self.mmu.scheduler.current_time.0 % CLOCKS_PER_FRAME as u64) == 0
     }
-    
+
     pub fn step_instruction_debug(&mut self) -> bool {
         self.step_instruction()
     }
 
-    pub fn key_down(&self, key: InputKeys) {
+    pub fn key_down(&self, _key: InputKeys) {
         //TODO
     }
 
-    pub fn key_up(&self, key: InputKeys) {
+    pub fn key_up(&self, _key: InputKeys) {
         //TODO
     }
 

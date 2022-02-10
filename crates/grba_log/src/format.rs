@@ -1,6 +1,6 @@
 use capstone::prelude::*;
 use owo_colors::OwoColorize;
-use std::fmt::Formatter;
+
 use tabled::{builder, Column, Concat, Format, Modify, Style, Tabled};
 use zerocopy::{ByteSlice, LayoutVerified};
 

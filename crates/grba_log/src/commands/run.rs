@@ -44,7 +44,7 @@ pub fn handle_run(cmd: RunCommand) -> anyhow::Result<()> {
                 before.push(logger.get_most_recent());
             }
 
-            let range = (idx.saturating_sub(cmd.before)..=idx.saturating_add(cmd.after));
+            let range = idx.saturating_sub(cmd.before)..=idx.saturating_add(cmd.after);
             let to_display_other = &other_contents[range.clone()];
             let items: Vec<_> = range
                 .zip(&before)
