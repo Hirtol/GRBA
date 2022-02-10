@@ -6,6 +6,7 @@ use crate::utils::BitOps;
 use registers::{Mode, State};
 
 mod arm;
+mod common;
 pub mod registers;
 mod thumb;
 

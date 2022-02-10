@@ -1,5 +1,6 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4, ShiftType};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
+use crate::emulator::cpu::common::ShiftType;
 use crate::emulator::cpu::registers::{Mode, PC_REG};
 use crate::emulator::cpu::CPU;
 use crate::utils::{has_sign_overflowed, BitOps};
@@ -223,17 +224,4 @@ enum DataOperation {
     Mov = 0b1101,
     Bic = 0b1110,
     Mvn = 0b1111,
-}
-
-impl CPU {
-    fn set_logical_flags(&mut self, value: u32, carry: bool) {
-        self.registers.cpsr.set_zero(value == 0);
-        self.registers.cpsr.set_carry(carry);
-        self.registers.cpsr.set_sign(value.check_bit(31));
-    }
-
-    fn set_arithmetic_flags(&mut self, value: u32, carry: bool, overflow: bool) {
-        self.set_logical_flags(value, carry);
-        self.registers.cpsr.set_overflow(overflow);
-    }
 }

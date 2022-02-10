@@ -17,13 +17,18 @@ impl ThumbV4 {}
 
 pub(crate) fn create_thumb_lut() -> ThumbLUT {
     fn dead_fn(_cpu: &mut CPU, instruction: ThumbInstruction, _bus: &mut Bus) {
-        panic!("Unimplemented thumb instruction: {:08x}", instruction);
+        panic!("Unimplemented thumb instruction: {:#08X}", instruction);
     }
 
     let mut result: ThumbLUT = [dead_fn as LutInstruction; THUMB_LUT_SIZE];
 
     for i in 0..THUMB_LUT_SIZE {
-        result[i] = dead_fn;
+        // Move Shifted Register:
+        // 000X_XXXX
+        if (i & 0xE0) == 0b0000_0000 {
+            result[i] = ThumbV4::move_shifted_reg;
+            continue;
+        }
     }
 
     result
