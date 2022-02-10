@@ -9,13 +9,13 @@ impl ArmV4T {
         crate::cpu_log!("Executing instruction: Block Data Store");
         // For the duration of this instruction PC will be 12 ahead instead of just 8.
         cpu.registers.general_purpose[PC_REG] += 4;
-        Self::block_data_transfer(cpu, instruction, bus, true);
+        Self::block_data_transfer(cpu, instruction, bus, false);
         cpu.registers.general_purpose[PC_REG] -= 4;
     }
 
     pub fn block_data_transfer_load(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         crate::cpu_log!("Executing instruction: Block Data Load");
-        Self::block_data_transfer(cpu, instruction, bus, false);
+        Self::block_data_transfer(cpu, instruction, bus, true);
     }
 
     #[inline(always)]
