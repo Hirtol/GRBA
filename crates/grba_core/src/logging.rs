@@ -56,7 +56,7 @@ pub mod bin_logging {
     }
 
     pub fn log(target: &str, data: &[u8]) {
-        // Safety? There isn't any.
+        // Safety is to be upheld by the underlying logger.
         unsafe {
             BIN_LOG.log_binary(target, data);
         }

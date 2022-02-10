@@ -32,9 +32,10 @@ impl CPU {
         };
 
         if skip_bios {
-            result.registers.cpsr = registers::PSR::from(0x6000001F);
-            result.registers.general_purpose[0] = 0x08000000;
-            result.registers.general_purpose[1] = 0x000000EA;
+            // Temporarily commented out for log diffing.
+            // result.registers.cpsr = registers::PSR::from(0x6000001F);
+            // result.registers.general_purpose[0] = 0x08000000;
+            // result.registers.general_purpose[1] = 0x000000EA;
             result.registers.general_purpose[13] = 0x03007F00; // SP
 
             result.registers.r13_bank[registers::Mode::Supervisor.to_bank_index()] = 0x03007FE0; // SP SVC

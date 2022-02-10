@@ -47,8 +47,8 @@ impl Registers {
     pub fn new() -> Registers {
         Registers {
             general_purpose: [0; 16],
-            cpsr: PSR::new(),
-            spsr: PSR::new(),
+            cpsr: PSR::from_raw(0x000000DF),
+            spsr: PSR::from_raw(0x000000DF),
             spsr_bank: [PSR::new(); 5],
             r8_bank: [0; 2],
             r9_bank: [0; 2],
