@@ -15,8 +15,8 @@ pub use ppu::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
 pub const FRAMEBUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT * 4) as usize;
 /// The amount of frames per second a normal GBA would display.
 pub const REFRESH_RATE: f32 = 59.7275;
-/// The clock speed of the ARM7TDMI CPU.
-pub const CLOCK_SPEED: u32 = 16_780_000;
+/// The clock speed of the ARM7TDMI CPU in Hz.
+pub const CLOCK_SPEED: u32 = 16_777_216;
 
 pub const CLOCKS_PER_FRAME: u32 = (CLOCK_SPEED as f32 / REFRESH_RATE) as u32;
 
