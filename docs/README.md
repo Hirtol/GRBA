@@ -17,6 +17,9 @@
 * [MGBA Blog](https://mgba.io/2015/06/27/cycle-counting-prefetch/)
 * [Homebrew Development](https://patater.com/gbaguy/gbaasm.htm)
 
+## Demo Links
+* [GBADev](https://www.gbadev.org/demos.php?showinfo=527)
+
 ### Secret Notes:
 
 ```
