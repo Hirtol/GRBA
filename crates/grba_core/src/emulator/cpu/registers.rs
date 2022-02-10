@@ -5,6 +5,8 @@ use num_traits::FromPrimitive;
 pub const PC_REG: usize = 15;
 /// Index of the link register
 pub const LINK_REG: usize = 14;
+/// Index of the stack pointer register
+pub const SP_REG: usize = 13;
 
 /// A `RegisterBank` contains the value of registers for all different modes.
 /// Which modes are actually available depends on the register
@@ -199,6 +201,10 @@ impl Mode {
             Mode::Abort => 2,
             Mode::Undefined => 4,
         }
+    }
+
+    pub const fn has_spsr(self) -> bool {
+        !matches!(self, Mode::User | Mode::System)
     }
 }
 

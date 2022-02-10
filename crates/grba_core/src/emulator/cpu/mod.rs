@@ -1,6 +1,7 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::arm::{ArmInstruction, ArmLUT, ArmV4};
 use crate::emulator::cpu::registers::{Registers, PC_REG};
+use crate::emulator::cpu::thumb::{ThumbInstruction, ThumbLUT};
 use crate::utils::BitOps;
 use registers::{Mode, State};
 
@@ -17,6 +18,7 @@ pub struct CPU {
     /// GBA has a pipeline of execute-decode-fetch.
     pipeline: [u32; 3],
     arm_lut: ArmLUT,
+    thumb_lut: ThumbLUT,
 }
 
 impl CPU {
@@ -30,6 +32,7 @@ impl CPU {
             registers: Registers::default(),
             pipeline: [0; 3],
             arm_lut: arm::create_arm_lut(),
+            thumb_lut: thumb::create_thumb_lut(),
         };
 
         if skip_bios {
@@ -62,7 +65,7 @@ impl CPU {
 
         match self.state() {
             State::Arm => {
-                self.execute_arm(self.pipeline[0], bus);
+                self.execute_arm(bus, self.pipeline[0]);
             }
             State::Thumb => {
                 self.execute_thumb(bus, self.pipeline[0] as u16);
@@ -129,22 +132,25 @@ impl CPU {
         }
     }
 
-    fn execute_arm(&mut self, instruction: ArmInstruction, bus: &mut Bus) {
+    fn execute_arm(&mut self, bus: &mut Bus, instruction: ArmInstruction) {
         if !ArmV4::condition_holds(self, instruction) {
             return;
         }
 
         let lut_index = (((instruction.get_bits(20, 27)) << 4) | instruction.get_bits(4, 7)) as usize;
 
-        crate::cpu_log!("Executing LUT: {:#b} - Raw: {:#X}", lut_index, instruction);
+        crate::cpu_log!("Executing Arm LUT: {:#b} - Raw: {:#X}", lut_index, instruction);
         self.arm_lut[lut_index](self, instruction, bus);
     }
 
-    fn execute_thumb(&mut self, _bus: &mut Bus, _opcode: u16) {
-        todo!()
+    fn execute_thumb(&mut self, bus: &mut Bus, instruction: ThumbInstruction) {
+        let lut_index = instruction.get_bits(8, 15) as usize;
+
+        crate::cpu_log!("Executing Thumb LUT: {:#b} - Raw: {:#X}", lut_index, instruction);
+        self.thumb_lut[lut_index](self, instruction, bus);
     }
 
-    fn raise_exception(&mut self, exception: Exception, _bus: &mut Bus) {
+    fn raise_exception(&mut self, _bus: &mut Bus, exception: Exception) {
         todo!("{:?}", exception);
     }
 

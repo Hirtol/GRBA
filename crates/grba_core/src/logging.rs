@@ -1,4 +1,4 @@
-use crate::emulator::cpu::registers::Registers;
+use crate::emulator::cpu::registers::{Mode, Registers};
 
 pub const BIN_TARGET_FRAME: &str = "frame";
 pub const BIN_TARGET_DEFAULT: &str = "default";
@@ -113,7 +113,7 @@ impl InstructionSnapshot {
             r14: reg.general_purpose[14],
             r15: reg.general_purpose[15],
             cpsr: reg.cpsr.as_raw(),
-            spsr: reg.spsr.as_raw(),
+            spsr: if reg.cpsr.mode().has_spsr() { reg.spsr.as_raw() } else { reg.cpsr.as_raw() },
         }
     }
 }

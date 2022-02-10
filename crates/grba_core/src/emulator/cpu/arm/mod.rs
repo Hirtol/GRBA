@@ -62,11 +62,11 @@ impl ArmV4 {
     }
 
     pub fn undefined_instruction(cpu: &mut CPU, _instruction: ArmInstruction, bus: &mut Bus) {
-        cpu.raise_exception(Exception::UndefinedInstruction, bus)
+        cpu.raise_exception(bus, Exception::UndefinedInstruction)
     }
 
     pub fn software_interrupt(cpu: &mut CPU, _instruction: ArmInstruction, bus: &mut Bus) {
-        cpu.raise_exception(Exception::SoftwareInterrupt, bus)
+        cpu.raise_exception(bus, Exception::SoftwareInterrupt)
     }
 }
 
