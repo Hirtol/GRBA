@@ -1,9 +1,9 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 
-impl ArmV4T {
+impl ArmV4 {
     pub fn single_data_swap(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         crate::cpu_log!("Executing instruction: Single Data Swap");
         let is_byte_read = instruction.check_bit(22);

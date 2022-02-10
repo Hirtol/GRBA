@@ -1,10 +1,10 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
 use crate::emulator::cpu::registers::{Mode, PC_REG};
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 
-impl ArmV4T {
+impl ArmV4 {
     pub fn block_data_transfer_store(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         crate::cpu_log!("Executing instruction: Block Data Store");
         // For the duration of this instruction PC will be 12 ahead instead of just 8.

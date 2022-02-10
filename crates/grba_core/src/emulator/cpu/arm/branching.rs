@@ -1,10 +1,10 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
 use crate::emulator::cpu::registers::{State, LINK_REG, PC_REG};
 use crate::emulator::cpu::CPU;
 use crate::utils::{sign_extend32, BitOps};
 
-impl ArmV4T {
+impl ArmV4 {
     pub fn branch_and_exchange(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         crate::cpu_log!("Executing instruction: Branch and exchange");
         let r_n = instruction.get_bits(0, 3) as usize;

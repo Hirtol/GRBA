@@ -1,5 +1,5 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 
@@ -18,7 +18,7 @@ impl From<bool> for Psr {
     }
 }
 
-impl ArmV4T {
+impl ArmV4 {
     /// Transfer PSR contents to a register
     pub fn mrs_trans_psr_reg(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         let r_d = instruction.get_bits(12, 15) as usize;
@@ -37,9 +37,9 @@ impl ArmV4T {
     /// Done as a separate match as the requisite bit is not part of our LUT index.
     pub fn msr_match(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         if instruction.check_bit(16) {
-            ArmV4T::msr_trans_reg_psr(cpu, instruction, bus);
+            ArmV4::msr_trans_reg_psr(cpu, instruction, bus);
         } else {
-            ArmV4T::msr_trans_reg_imm_psr_flag(cpu, instruction, bus);
+            ArmV4::msr_trans_reg_imm_psr_flag(cpu, instruction, bus);
         }
     }
 

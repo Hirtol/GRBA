@@ -1,9 +1,9 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
 use crate::emulator::cpu::{arm, CPU};
 use crate::utils::BitOps;
 
-impl ArmV4T {
+impl ArmV4 {
     /// Implements the `MUL` and `MLA` instructions.
     pub fn multiply(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         crate::cpu_log!("Executing instruction: Multiply");
@@ -39,9 +39,9 @@ impl ArmV4T {
         //TODO: Can probably just cast the signed result to a u64 and keep all logic in this function, `as u64` should
         // only re-interpret the bits as a u64.
         if unsigned {
-            ArmV4T::multiply_long_unsigned(cpu, accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
+            ArmV4::multiply_long_unsigned(cpu, accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
         } else {
-            ArmV4T::multiply_long_signed(cpu, accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
+            ArmV4::multiply_long_signed(cpu, accumulate, should_set_condition, reg_high, reg_low, reg_1, reg_2);
         }
     }
 

@@ -1,11 +1,12 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmLUT, ArmV4T};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmLUT, ArmV4};
 use crate::emulator::cpu::registers::{Registers, PC_REG};
 use crate::utils::BitOps;
 use registers::{Mode, State};
 
 mod arm;
 pub mod registers;
+mod thumb;
 
 //TODO Timings:
 // * Gamepak fetching and prefetching?
@@ -129,7 +130,7 @@ impl CPU {
     }
 
     fn execute_arm(&mut self, instruction: ArmInstruction, bus: &mut Bus) {
-        if !ArmV4T::condition_holds(self, instruction) {
+        if !ArmV4::condition_holds(self, instruction) {
             return;
         }
 

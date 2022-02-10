@@ -1,10 +1,10 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T, ShiftType};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4, ShiftType};
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 use num_traits::FromPrimitive;
 
-impl ArmV4T {
+impl ArmV4 {
     #[allow(clippy::collapsible_else_if)]
     pub fn single_data_transfer(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         crate::cpu_log!("Executing instruction: Single Data Transfer");

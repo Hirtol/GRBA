@@ -17,9 +17,9 @@ mod multiply;
 mod psr_transfer;
 mod single_data_swap;
 
-pub struct ArmV4T;
+pub struct ArmV4;
 
-impl ArmV4T {
+impl ArmV4 {
     /// Check if the conditional flag set in the provided `instruction` holds.
     pub fn condition_holds(cpu: &CPU, instruction: ArmInstruction) -> bool {
         // Upper 4 bits contain the condition code for all ARM instructions
@@ -85,7 +85,7 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // Software Interrupt:
         // 1111_XXXX_XXXX
         if (i & 0xF00) == 0b1111_0000_0000 {
-            result[i] = ArmV4T::software_interrupt;
+            result[i] = ArmV4::software_interrupt;
             continue;
         }
 
@@ -94,9 +94,9 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         if (i & 0xE00) == 0b1000_0000_0000 {
             // Check load bit ahead of time.
             if i.check_bit(4) {
-                result[i] = ArmV4T::block_data_transfer_load;
+                result[i] = ArmV4::block_data_transfer_load;
             } else {
-                result[i] = ArmV4T::block_data_transfer_store;
+                result[i] = ArmV4::block_data_transfer_store;
             }
             continue;
         }
@@ -104,14 +104,14 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // Multiply:
         // 0000_00XX_1001
         if (i & 0xFCF) == 0b0000_0000_1001 {
-            result[i] = ArmV4T::multiply;
+            result[i] = ArmV4::multiply;
             continue;
         }
 
         // Multiply long:
         // 0000_1XXX_1001
         if (i & 0xF8F) == 0b0000_1000_1001 {
-            result[i] = ArmV4T::multiply_long;
+            result[i] = ArmV4::multiply_long;
             continue;
         }
 
@@ -122,21 +122,21 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
             // Single Data Swap:
             // 0001_0X00_1001
             if (i & 0xFBF) == 0b0001_0000_1001 {
-                result[i] = ArmV4T::single_data_swap;
+                result[i] = ArmV4::single_data_swap;
                 continue;
             }
 
             // Halfword Data Transfer, register:
             // 000X_X0XX_1XX1
             if (i & 0xE49) == 0b0000_0000_1001 {
-                result[i] = ArmV4T::halfword_and_signed_register;
+                result[i] = ArmV4::halfword_and_signed_register;
                 continue;
             }
 
             // Halfword Data Transfer, immediate:
             // 000X_X1XX_1XX1
             if (i & 0xE49) == 0b0000_0100_1001 {
-                result[i] = ArmV4T::halfword_and_signed_immediate;
+                result[i] = ArmV4::halfword_and_signed_immediate;
                 continue;
             }
         }
@@ -144,14 +144,14 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // Branch and Exchange:
         // 0001_0010_0001
         if i == 0b0001_0010_0001 {
-            result[i] = ArmV4T::branch_and_exchange;
+            result[i] = ArmV4::branch_and_exchange;
             continue;
         }
 
         // Branch:
         // 101X_XXXX_XXXX
         if (i & 0xE00) == 0b1010_0000_0000 {
-            result[i] = ArmV4T::branch_and_link;
+            result[i] = ArmV4::branch_and_link;
             continue;
         }
 
@@ -160,7 +160,7 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
             // Single Data Transfer:
             // 01XX_XXXX_XXXX
             if (i & 0xC00) == 0b0100_0000_0000 {
-                result[i] = ArmV4T::single_data_transfer;
+                result[i] = ArmV4::single_data_transfer;
                 continue;
             }
         }
@@ -168,33 +168,33 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // MRS (Transfer PSR to register):
         // 0001_0X00_0000
         if (i & 0xFBF) == 0b0001_0000_0000 {
-            result[i] = ArmV4T::mrs_trans_psr_reg;
+            result[i] = ArmV4::mrs_trans_psr_reg;
             continue;
         }
 
         // MSR (Transfer register to PSR Condition Flags):
         // 00X1_0X10_XXXX
         if (i & 0xDB0) == 0b0001_0010_0000 {
-            result[i] = ArmV4T::msr_match;
+            result[i] = ArmV4::msr_match;
             continue;
         }
 
         // Data Processing Immediate:
         // 001X_XXXX_XXXX
         if (i & 0xE00) == 0b0010_0000_0000 {
-            result[i] = ArmV4T::data_processing_immediate;
+            result[i] = ArmV4::data_processing_immediate;
             continue;
         }
 
         // Data Processing Register:
         // 000X_XXXX_XXXX
         if (i & 0xE00) == 0b0000_0000_0000 {
-            result[i] = ArmV4T::data_processing_register;
+            result[i] = ArmV4::data_processing_register;
             continue;
         }
 
         // Any remaining will be undefined
-        result[i] = ArmV4T::undefined_instruction;
+        result[i] = ArmV4::undefined_instruction;
     }
 
     result
@@ -281,7 +281,7 @@ pub(crate) fn get_low_register(instruction: ArmInstruction) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::emulator::cpu::arm::ArmV4T;
+    use crate::emulator::cpu::arm::ArmV4;
 
     #[test]
     fn test_lut_filling() {
@@ -290,11 +290,11 @@ mod tests {
         // Check MSR matching
         let fn_ref = lut[0b0011_0110_0000];
 
-        assert_eq!(fn_ref as usize, ArmV4T::msr_match as usize);
+        assert_eq!(fn_ref as usize, ArmV4::msr_match as usize);
 
         // Check Data Processing matching (AND operation in immediate mode)
         let fn_ref = lut[0b0010_0000_0000];
 
-        assert_eq!(fn_ref as usize, ArmV4T::data_processing_immediate as usize);
+        assert_eq!(fn_ref as usize, ArmV4::data_processing_immediate as usize);
     }
 }

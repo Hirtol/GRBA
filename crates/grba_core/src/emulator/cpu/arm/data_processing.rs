@@ -1,11 +1,11 @@
 use crate::emulator::bus::Bus;
-use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T, ShiftType};
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4, ShiftType};
 use crate::emulator::cpu::registers::{Mode, PC_REG};
 use crate::emulator::cpu::CPU;
 use crate::utils::{has_sign_overflowed, BitOps};
 use num_traits::FromPrimitive;
 
-impl ArmV4T {
+impl ArmV4 {
     pub fn data_processing_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         crate::cpu_log!("Executing instruction: Data Immediate");
         let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
@@ -25,7 +25,7 @@ impl ArmV4T {
         let imm = instruction.get_bits(0, 7) as u32;
         let op2_value = imm.rotate_right(rotate);
 
-        ArmV4T::perform_data_operation(
+        ArmV4::perform_data_operation(
             cpu,
             bus,
             opcode,
@@ -79,7 +79,7 @@ impl ArmV4T {
         let r_op1 = instruction.get_bits(16, 19) as usize;
         let op1_value = cpu.read_reg(r_op1);
 
-        ArmV4T::perform_data_operation(cpu, bus, opcode, op1_value, op2_value, r_d, set_condition_code, carry);
+        ArmV4::perform_data_operation(cpu, bus, opcode, op1_value, op2_value, r_d, set_condition_code, carry);
 
         // Undo our increment from before
         cpu.registers.general_purpose[PC_REG] -= 4;
@@ -112,9 +112,9 @@ impl ArmV4T {
                 }
             }
             DataOperation::Sub => {
-                ArmV4T::arm_sub(cpu, bus, r_d, op1, op2, set_flags);
+                ArmV4::arm_sub(cpu, bus, r_d, op1, op2, set_flags);
             }
-            DataOperation::Rsb => ArmV4T::arm_sub(cpu, bus, r_d, op2, op1, set_flags),
+            DataOperation::Rsb => ArmV4::arm_sub(cpu, bus, r_d, op2, op1, set_flags),
             DataOperation::Add => {
                 let (result, carry) = op1.overflowing_add(op2);
                 cpu.write_reg(r_d, result, bus);
@@ -131,9 +131,9 @@ impl ArmV4T {
                 }
             }
             DataOperation::Sbc => {
-                ArmV4T::arm_sbc(cpu, bus, r_d, op1, op2, set_flags);
+                ArmV4::arm_sbc(cpu, bus, r_d, op1, op2, set_flags);
             }
-            DataOperation::Rsc => ArmV4T::arm_sbc(cpu, bus, r_d, op2, op1, set_flags),
+            DataOperation::Rsc => ArmV4::arm_sbc(cpu, bus, r_d, op2, op1, set_flags),
             DataOperation::Tst => {
                 let result = op1 & op2;
                 // Note, we're assuming that we can ignore the `set_flags` parameter here.
