@@ -1,6 +1,6 @@
-use crate::bus::Bus;
-use crate::cpu::arm::{ArmInstruction, ArmV4T};
-use crate::cpu::{arm, CPU};
+use crate::emulator::bus::Bus;
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T};
+use crate::emulator::cpu::{arm, CPU};
 use crate::utils::BitOps;
 
 impl ArmV4T {

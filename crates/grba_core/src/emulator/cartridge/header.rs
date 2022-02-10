@@ -85,7 +85,7 @@ impl CartridgeHeader {
 }
 
 mod parsing {
-    use crate::cartridge::header::{CartBackupId, Region};
+    use crate::emulator::cartridge::header::{CartBackupId, Region};
 
     pub fn parse_title(rom: &[u8]) -> String {
         String::from_utf8_lossy(&rom[0xA0..0xAC])

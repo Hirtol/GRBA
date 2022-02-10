@@ -1,6 +1,6 @@
-use crate::bus::Bus;
-use crate::cpu::arm::{ArmInstruction, ArmV4T, ShiftType};
-use crate::cpu::CPU;
+use crate::emulator::bus::Bus;
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T, ShiftType};
+use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 use num_traits::FromPrimitive;
 

@@ -146,7 +146,7 @@ impl Debug for WorkRam {
 
 #[cfg(test)]
 mod tests {
-    use crate::bus::ram::WorkRam;
+    use crate::emulator::bus::ram::WorkRam;
 
     #[test]
     fn test_mem_access() {

@@ -1,3 +1,4 @@
+use capstone::prelude::*;
 use owo_colors::OwoColorize;
 use std::fmt::Formatter;
 use tabled::{builder, Column, Concat, Format, Modify, Style, Tabled};
@@ -94,6 +95,20 @@ impl InstructionSnapshot {
         }
 
         differing_fields
+    }
+}
+
+impl From<grba_core::logging::InstructionSnapshot> for InstructionSnapshot {
+    fn from(snap: grba_core::logging::InstructionSnapshot) -> Self {
+        // Since we're using the C layout, we can just cast the pointer
+        unsafe { std::mem::transmute(snap) }
+    }
+}
+
+impl AsRef<InstructionSnapshot> for grba_core::logging::InstructionSnapshot {
+    fn as_ref(&self) -> &InstructionSnapshot {
+        // Since we're using the C layout, we can just cast the pointer
+        unsafe { std::mem::transmute(self) }
     }
 }
 
@@ -204,5 +219,49 @@ impl<'a> Tabled for DiffItem<'a> {
 
     fn headers() -> Vec<String> {
         vec!["Index".to_string(), "Registers".to_string()]
+    }
+}
+
+#[derive(Debug)]
+pub struct DiffItemWithInstr<'a> {
+    pub diff_item: DiffItem<'a>,
+    pub instr: u32,
+}
+
+impl<'a> tabled::Tabled for DiffItemWithInstr<'a> {
+    const LENGTH: usize = 1 + DiffItem::LENGTH;
+
+    fn fields(&self) -> Vec<String> {
+        {
+            let mut out = Vec::with_capacity(Self::LENGTH);
+            out.extend(self.diff_item.fields());
+
+            let capstone = capstone::Capstone::new()
+                .arm()
+                .mode(capstone::arch::arm::ArchMode::Arm)
+                .syntax(arch::arm::ArchSyntax::NoRegName)
+                .detail(true)
+                .build()
+                .unwrap();
+
+            let disassembled = capstone
+                .disasm_all(&self.instr.to_le_bytes(), self.diff_item.emu_instr.r15 as u64)
+                .unwrap();
+
+            out.push(format!(
+                "{} {}",
+                disassembled[0].mnemonic().unwrap(),
+                disassembled[0].op_str().unwrap()
+            ));
+
+            out
+        }
+    }
+
+    fn headers() -> Vec<String> {
+        let mut out = Vec::with_capacity(Self::LENGTH);
+        out.extend(DiffItem::headers());
+        out.push(String::from("Disassembly"));
+        out
     }
 }

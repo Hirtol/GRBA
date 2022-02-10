@@ -16,3 +16,4 @@ itertools = "0.10.3"
 memmap2 = "0.5.2"
 zerocopy = { version = "0.6.1", features = ["alloc"] }
 clap = { version = "3.0.14", features = ["derive", "env"] }
+capstone = "0.10.0"

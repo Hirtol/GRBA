@@ -1,7 +1,7 @@
 use crate::runner::messages::{EmulatorMessage, EmulatorResponse};
 use crossbeam::channel::{bounded, unbounded, Receiver, Sender};
 use egui::Key::P;
-use grba_core::cartridge::Cartridge;
+use grba_core::emulator::cartridge::Cartridge;
 use grba_core::emulator::EmuOptions;
 use grba_core::emulator::GBAEmulator;
 use grba_core::{InputKeys, FRAMEBUFFER_SIZE};

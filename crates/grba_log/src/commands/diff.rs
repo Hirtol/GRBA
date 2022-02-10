@@ -29,7 +29,8 @@ pub fn handle_diff(cmd: DiffCommand) -> anyhow::Result<()> {
     let other_log = crate::open_mmap(&cmd.other_log).context("Could not find the other log, is the path correct?")?;
 
     let emu_contents = InstructionSnapshot::parse(&*emu_log).context("Failed to parse emu contents")?;
-    let other_contents = InstructionSnapshot::parse(&*other_log).context("Failed to parse other contents")?;
+    // Due to the way we do pipelining in the beginning (we just fill the pipeline up immediately) we need to skip the first two instructions.
+    let other_contents = &InstructionSnapshot::parse(&*other_log).context("Failed to parse other contents")?[2..];
 
     let result = emu_contents
         .iter()

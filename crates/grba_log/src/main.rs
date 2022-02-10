@@ -6,11 +6,12 @@ use memmap2::Mmap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
-use zerocopy::{ByteSlice, LayoutVerified};
+use zerocopy::{AsBytes, ByteSlice, LayoutVerified};
 
 mod args;
 mod commands;
 mod format;
+mod bin_logger;
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();

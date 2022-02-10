@@ -4,8 +4,8 @@ use crate::runner::{EmulatorRunner, RunnerHandle};
 use crate::utils::BoolUtils;
 use crate::RunningState::FastForward;
 use egui_wgpu_backend::wgpu::{PresentMode, TextureFormat};
-use grba_core::cartridge::header::CartridgeHeader;
-use grba_core::cartridge::{Cartridge, CARTRIDGE_SRAM_START};
+use grba_core::emulator::cartridge::header::CartridgeHeader;
+use grba_core::emulator::cartridge::{Cartridge, CARTRIDGE_SRAM_START};
 use log::LevelFilter;
 use pixels::wgpu::{Backends, PowerPreference, RequestAdapterOptions};
 use pixels::{wgpu, Pixels, PixelsBuilder, SurfaceTexture};
@@ -29,8 +29,8 @@ fn main() {
 
     simplelog::SimpleLogger::init(LevelFilter::Trace, cfg).unwrap();
 
-    let dbg_logger = Box::leak(Box::new(DebugLogger::new("./emu.logbin").unwrap()));
-    grba_core::logging::set_logger(dbg_logger);
+    #[cfg(feature = "bin-logging")]
+    debug::setup_emulator_logger("./emu.logbin").expect("Failed to setup bin logger");
 
     let application = Application::new().expect("Failed to create application");
 
@@ -237,7 +237,8 @@ fn handle_file_drop(path: PathBuf) -> Option<Cartridge> {
             .create(true)
             .open(parent_dir.join(format!("{}.bin", file_name)))
             .unwrap();
-        file.set_len(grba_core::cartridge::CARTRIDGE_RAM_SIZE as u64).unwrap();
+        file.set_len(grba_core::emulator::cartridge::CARTRIDGE_RAM_SIZE as u64)
+            .unwrap();
 
         let mut mm = memmap2::MmapOptions::new();
         let map = unsafe { mm.populate().map_mut(&file).ok()? };

@@ -5,8 +5,8 @@ use tabled::Table;
 pub mod diff;
 pub mod run;
 
-fn show_success(now: Instant, total_instr_count: usize) {
-    println!("{} searching in {:.2?}", "Finished".bright_green(), now.elapsed());
+fn show_success(elapsed: Instant, total_instr_count: usize) {
+    println!("{} searching in {:.2?}", "Finished".bright_green(), elapsed.elapsed());
     println!(
         "Searched: `{}` entries, no differences found!",
         total_instr_count.yellow()

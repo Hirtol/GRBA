@@ -1,4 +1,4 @@
-use crate::cartridge::header::CartridgeHeader;
+use crate::emulator::cartridge::header::CartridgeHeader;
 use crate::emulator::MemoryAddress;
 
 pub mod header;

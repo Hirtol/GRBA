@@ -43,13 +43,13 @@ pub struct Registers {
     pub r14_bank: RegisterBank<6>,
 }
 
-impl Registers {
-    pub fn new() -> Registers {
+impl Default for Registers {
+    fn default() -> Self {
         Registers {
             general_purpose: [0; 16],
             cpsr: PSR::from_raw(0x000000DF),
             spsr: PSR::from_raw(0x000000DF),
-            spsr_bank: [PSR::new(); 5],
+            spsr_bank: [PSR::default(); 5],
             r8_bank: [0; 2],
             r9_bank: [0; 2],
             r10_bank: [0; 2],
@@ -59,7 +59,9 @@ impl Registers {
             r14_bank: [0; 6],
         }
     }
+}
 
+impl Registers {
     #[inline(always)]
     pub fn pc(&self) -> u32 {
         self.general_purpose[PC_REG]
@@ -127,7 +129,7 @@ impl Registers {
     }
 
     #[inline(always)]
-    pub(super) fn read_reg(&self, reg: usize) -> u32 {
+    pub(crate) fn read_reg(&self, reg: usize) -> u32 {
         self.general_purpose[reg]
     }
 
@@ -136,12 +138,12 @@ impl Registers {
     /// Note that this can not be used by anyone but the [crate::cpu::CPU] itself, as this does not update the pipeline
     /// if [PC_REG] is written to.
     #[inline(always)]
-    pub(super) fn write_reg(&mut self, reg: usize, value: u32) {
+    pub(crate) fn write_reg(&mut self, reg: usize, value: u32) {
         self.general_purpose[reg] = value;
     }
 
     #[inline(always)]
-    pub(super) fn advance_pc(&mut self) {
+    pub(crate) fn advance_pc(&mut self) {
         match self.cpsr.state() {
             State::Arm => {
                 self.general_purpose[PC_REG] += 4;
@@ -233,8 +235,8 @@ impl From<u32> for PSR {
     }
 }
 
-impl PSR {
-    pub fn new() -> PSR {
+impl Default for PSR {
+    fn default() -> Self {
         PSR {
             sign: false,
             zero: false,
@@ -247,7 +249,9 @@ impl PSR {
             reserved: 0,
         }
     }
+}
 
+impl PSR {
     #[inline(always)]
     pub fn from_raw(raw: u32) -> PSR {
         PSR::from(raw)
@@ -361,7 +365,7 @@ impl PSR {
 
 #[cfg(test)]
 mod tests {
-    use crate::cpu::registers::{Mode, PSR};
+    use crate::emulator::cpu::registers::{Mode, PSR};
 
     #[test]
     fn psr_test() {

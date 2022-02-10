@@ -1,7 +1,7 @@
-use crate::bus::Bus;
-use crate::cpu::arm::{ArmInstruction, ArmV4T, ShiftType};
-use crate::cpu::registers::{Mode, PC_REG};
-use crate::cpu::CPU;
+use crate::emulator::bus::Bus;
+use crate::emulator::cpu::arm::{ArmInstruction, ArmV4T, ShiftType};
+use crate::emulator::cpu::registers::{Mode, PC_REG};
+use crate::emulator::cpu::CPU;
 use crate::utils::{has_sign_overflowed, BitOps};
 use num_traits::FromPrimitive;
 

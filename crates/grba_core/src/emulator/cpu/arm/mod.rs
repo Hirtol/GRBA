@@ -1,5 +1,5 @@
-use crate::bus::Bus;
-use crate::cpu::{Exception, CPU};
+use crate::emulator::bus::Bus;
+use crate::emulator::cpu::{Exception, CPU};
 use crate::utils::BitOps;
 
 /// For indexing into the LUT we use a 12-bit value, which is derived from a bitmasked instruction.
@@ -281,7 +281,7 @@ pub(crate) fn get_low_register(instruction: ArmInstruction) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::cpu::arm::ArmV4T;
+    use crate::emulator::cpu::arm::ArmV4T;
 
     #[test]
     fn test_lut_filling() {

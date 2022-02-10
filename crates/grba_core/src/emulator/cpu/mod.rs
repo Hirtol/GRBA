@@ -1,6 +1,6 @@
-use crate::bus::Bus;
-use crate::cpu::arm::{ArmInstruction, ArmLUT, ArmV4T};
-use crate::cpu::registers::{Registers, PC_REG, PSR};
+use crate::emulator::bus::Bus;
+use crate::emulator::cpu::arm::{ArmInstruction, ArmLUT, ArmV4T};
+use crate::emulator::cpu::registers::{Registers, PC_REG, PSR};
 use crate::utils::BitOps;
 use registers::{Mode, State};
 
@@ -26,7 +26,7 @@ impl CPU {
     /// * `skip_bios` - Whether to skip the BIOS. If skipped will initialise appropriate registers
     pub fn new(skip_bios: bool, bus: &mut Bus) -> CPU {
         let mut result = CPU {
-            registers: Registers::new(),
+            registers: Registers::default(),
             pipeline: [0; 3],
             arm_lut: arm::create_arm_lut(),
         };
@@ -52,12 +52,12 @@ impl CPU {
     /// Advances the CPU one instruction.
     #[profiling::function]
     pub fn step_instruction(&mut self, bus: &mut Bus) {
-        // crate::cpu_log!("Executing instruction: {:#X}", self.pipeline[0]);
         // We immediately advance the pipeline once to recover from pipeline flush (which only partly fills the pipeline)
         self.advance_pipeline(bus);
 
         crate::cpu_log!("Registers: {:X?}", self.registers);
-        crate::bin_log!(crate::logging::BIN_TARGET_REGISTER, self.registers);
+        #[cfg(feature = "bin-logging")]
+        log_cpu_state(self);
 
         match self.state() {
             State::Arm => {
@@ -216,8 +216,14 @@ impl CPU {
     }
 }
 
+#[inline(always)]
 fn log_cpu_state(cpu: &CPU) {
-    println!("{:X?}", cpu.registers);
+    let frame = crate::logging::InstructionFrame {
+        registers: crate::logging::InstructionSnapshot::from_registers(&cpu.registers),
+        instruction: cpu.pipeline[0],
+    };
+
+    crate::bin_log!(crate::logging::BIN_TARGET_FRAME, frame.as_ref());
 }
 
 #[derive(Debug)]

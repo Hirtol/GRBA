@@ -1,4 +1,4 @@
-use crate::cartridge::Cartridge;
+use crate::emulator::cartridge::Cartridge;
 use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
 
