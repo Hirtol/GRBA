@@ -85,8 +85,11 @@ impl CPU {
 }
 
 pub mod common_behaviour {
+    use crate::emulator::bus::Bus;
+    use crate::emulator::cpu::registers::{State, PC_REG};
     use crate::emulator::cpu::CPU;
     use crate::utils::{has_sign_overflowed, BitOps};
+    use num_traits::FromPrimitive;
 
     /// Defines the `add` instruction behaviour for both the ARM and THUMB modes.
     ///
@@ -140,5 +143,21 @@ pub mod common_behaviour {
         }
 
         result
+    }
+
+    /// Perform a branch and (possible) state exchange.
+    ///
+    /// If the `0th` bit of the `address` is set then the CPU will change to [State::Thumb], otherwise it will switch to
+    /// [State::Arm].
+    #[inline]
+    pub fn branch_and_exchange(cpu: &mut CPU, address: u32, bus: &mut Bus) {
+        let to_thumb = address.check_bit(0) as u8;
+
+        // If there is a new state, switch to it
+        let new_state = State::from_u8(to_thumb).unwrap();
+        cpu.switch_state(new_state, bus);
+
+        // Write new PC value, definitely flushes the pipeline
+        cpu.write_reg(PC_REG, address, bus);
     }
 }

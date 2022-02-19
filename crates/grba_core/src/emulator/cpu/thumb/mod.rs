@@ -11,6 +11,7 @@ pub type LutInstruction = fn(cpu: &mut CPU, instruction: ThumbInstruction, bus: 
 pub type ThumbLUT = [LutInstruction; THUMB_LUT_SIZE];
 
 mod alu;
+mod branch;
 
 /// Contains all Thumb instructions for the ArmV4T.
 pub struct ThumbV4;
@@ -51,6 +52,13 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
         // 0100_00XX
         if (i & 0xFC) == 0b0100_0000 {
             result[i] = ThumbV4::alu_operations;
+            continue;
+        }
+
+        // Hi register operations/branch exchange (TODO: Split on opcode, we can do that here!)
+        // 0100_01XX
+        if (i & 0xFC) == 0b0100_0100 {
+            result[i] = ThumbV4::hi_reg_op_branch_exchange;
             continue;
         }
     }

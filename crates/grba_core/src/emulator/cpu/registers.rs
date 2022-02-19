@@ -165,6 +165,16 @@ pub enum State {
     Thumb = 0b1,
 }
 
+impl From<u8> for State {
+    fn from(value: u8) -> Self {
+        match value {
+            0b0 => State::Arm,
+            0b1 => State::Thumb,
+            _ => panic!("Invalid state value: {}", value),
+        }
+    }
+}
+
 /// The mode the CPU can find itself in.
 /// Triggered by different exceptions.
 #[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]

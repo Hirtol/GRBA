@@ -1,6 +1,7 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
-use crate::emulator::cpu::registers::{State, LINK_REG, PC_REG};
+use crate::emulator::cpu::common::common_behaviour;
+use crate::emulator::cpu::registers::{LINK_REG, PC_REG};
 use crate::emulator::cpu::CPU;
 use crate::utils::{sign_extend32, BitOps};
 
@@ -10,13 +11,7 @@ impl ArmV4 {
         let r_n = instruction.get_bits(0, 3) as usize;
         let reg_contents = cpu.read_reg(r_n);
 
-        let to_thumb = reg_contents.check_bit(0);
-
-        // If there is a new state, switch to it
-        cpu.switch_state(if to_thumb { State::Thumb } else { State::Arm }, bus);
-
-        // Write new PC value, definitely flushes the pipeline
-        cpu.write_reg(PC_REG, reg_contents, bus);
+        common_behaviour::branch_and_exchange(cpu, reg_contents, bus);
     }
 
     pub fn branch_and_link(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
