@@ -78,3 +78,36 @@ impl CPU {
         self.registers.cpsr.set_overflow(overflow);
     }
 }
+
+pub mod common_behaviour {
+    use crate::emulator::cpu::CPU;
+    use crate::utils::has_sign_overflowed;
+
+    /// Defines the `add` instruction behaviour for both the ARM and THUMB modes.
+    ///
+    /// The `write_flags` parameter is used to determine whether the flags should be written, will be an arithmetic write.
+    #[inline]
+    pub fn add(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
+        let (result, carry) = op1.overflowing_add(op2);
+
+        if write_flags {
+            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+        }
+
+        result
+    }
+
+    /// Defines the `sub` instruction behaviour for both the ARM and THUMB modes.
+    ///
+    /// The `write_flags` parameter is used to determine whether the flags should be written to, it will be an arithmetic write
+    #[inline]
+    pub fn sub(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
+        let (result, carry) = op1.overflowing_sub(op2);
+
+        if write_flags {
+            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+        }
+
+        result
+    }
+}

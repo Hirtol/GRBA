@@ -1,6 +1,6 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
-use crate::emulator::cpu::common::ShiftType;
+use crate::emulator::cpu::common::{common_behaviour, ShiftType};
 use crate::emulator::cpu::registers::{Mode, PC_REG};
 use crate::emulator::cpu::CPU;
 use crate::utils::{has_sign_overflowed, BitOps};
@@ -117,13 +117,12 @@ impl ArmV4 {
             }
             DataOperation::Rsb => ArmV4::arm_sub(cpu, bus, r_d, op2, op1, set_flags),
             DataOperation::Add => {
-                let (result, carry) = op1.overflowing_add(op2);
+                let result = common_behaviour::add(cpu, op1, op2, set_flags);
+
                 cpu.write_reg(r_d, result, bus);
-                if set_flags {
-                    cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
-                }
             }
             DataOperation::Adc => {
+                // We don't use overflowing_add as we need to do a second add immediately, cheaper to check the bit after.
                 let full_result = op1 as u64 + op2 as u64 + cpu.registers.cpsr.carry() as u64;
                 let result = full_result as u32;
                 cpu.write_reg(r_d, result, bus);
@@ -187,11 +186,9 @@ impl ArmV4 {
     }
 
     fn arm_sub(cpu: &mut CPU, bus: &mut Bus, r_d: usize, op1: u32, op2: u32, set_flags: bool) {
-        let (result, carry) = op1.overflowing_sub(op2);
+        let result = common_behaviour::sub(cpu, op1, op2, set_flags);
+
         cpu.write_reg(r_d, result, bus);
-        if set_flags {
-            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
-        }
     }
 
     fn arm_sbc(cpu: &mut CPU, bus: &mut Bus, r_d: usize, op1: u32, op2: u32, set_flags: bool) {

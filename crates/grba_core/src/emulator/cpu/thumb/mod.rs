@@ -6,6 +6,8 @@ pub const THUMB_LUT_SIZE: usize = 256;
 
 pub type ThumbInstruction = u16;
 pub type LutInstruction = fn(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus);
+/// The LUT is a lookup table of instructions.
+/// The index is derived from the instruction, namely the upper byte of the [ThumbInstruction]
 pub type ThumbLUT = [LutInstruction; THUMB_LUT_SIZE];
 
 mod alu;
@@ -27,6 +29,21 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
         // 000X_XXXX
         if (i & 0xE0) == 0b0000_0000 {
             result[i] = ThumbV4::move_shifted_reg;
+            continue;
+        }
+
+        // Add/Subtract
+        // 0001_1XXX
+        if (i & 0xF8) == 0b0001_1000 {
+            //TODO: Split on Opcode/Immediate value
+            result[i] = ThumbV4::add_subtract;
+            continue;
+        }
+
+        // move/compare/add/subtract immediate
+        // 001X_XXXX
+        if (i & 0xE0) == 0b0010_0000 {
+            result[i] = ThumbV4::move_compare_add_subtract;
             continue;
         }
     }

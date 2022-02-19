@@ -4,7 +4,7 @@ use crate::{check_bit, get_bits};
 /// TODO: Verify if this is correct
 #[inline(always)]
 pub const fn has_sign_overflowed(val1: u32, val2: u32, result: u32) -> bool {
-    ((val1 ^ result) & (!val2 ^ result)) >> 31 != 0
+    ((val1 ^ result) & (val2 ^ result)) >> 31 != 0
 }
 
 #[inline(always)]
