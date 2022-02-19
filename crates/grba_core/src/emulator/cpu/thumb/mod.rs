@@ -46,6 +46,13 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
             result[i] = ThumbV4::move_compare_add_subtract;
             continue;
         }
+
+        // ALU operations
+        // 0100_00XX
+        if (i & 0xFC) == 0b0100_0000 {
+            result[i] = ThumbV4::alu_operations;
+            continue;
+        }
     }
 
     result

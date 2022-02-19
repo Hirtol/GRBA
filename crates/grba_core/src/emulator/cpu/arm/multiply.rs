@@ -22,8 +22,7 @@ impl ArmV4 {
         cpu.write_reg(reg_destination, result, bus);
 
         if should_set_condition {
-            cpu.registers.cpsr.set_sign(result.check_bit(31));
-            cpu.registers.cpsr.set_zero(result == 0);
+            cpu.set_zero_and_sign(result);
             // Carry flag set to meaningless value?
         }
     }

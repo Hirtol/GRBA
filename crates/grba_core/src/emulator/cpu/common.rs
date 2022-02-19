@@ -66,10 +66,15 @@ impl ShiftType {
 
 impl CPU {
     #[inline(always)]
-    pub(crate) fn set_logical_flags(&mut self, value: u32, carry: bool) {
+    pub(crate) fn set_zero_and_sign(&mut self, value: u32) {
         self.registers.cpsr.set_zero(value == 0);
-        self.registers.cpsr.set_carry(carry);
         self.registers.cpsr.set_sign(value.check_bit(31));
+    }
+
+    #[inline(always)]
+    pub(crate) fn set_logical_flags(&mut self, value: u32, carry: bool) {
+        self.set_zero_and_sign(value);
+        self.registers.cpsr.set_carry(carry);
     }
 
     #[inline(always)]
@@ -81,7 +86,7 @@ impl CPU {
 
 pub mod common_behaviour {
     use crate::emulator::cpu::CPU;
-    use crate::utils::has_sign_overflowed;
+    use crate::utils::{has_sign_overflowed, BitOps};
 
     /// Defines the `add` instruction behaviour for both the ARM and THUMB modes.
     ///
@@ -103,6 +108,32 @@ pub mod common_behaviour {
     #[inline]
     pub fn sub(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
         let (result, carry) = op1.overflowing_sub(op2);
+
+        if write_flags {
+            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+        }
+
+        result
+    }
+
+    #[inline]
+    pub fn adc(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
+        // We don't use overflowing_add as we need to do a second add immediately, cheaper to check the bit after.
+        let full_result = op1 as u64 + op2 as u64 + cpu.registers.cpsr.carry() as u64;
+        let result = full_result as u32;
+
+        if write_flags {
+            cpu.set_arithmetic_flags(result, full_result.check_bit(32), has_sign_overflowed(op1, op2, result));
+        }
+
+        result
+    }
+
+    #[inline]
+    pub fn sbc(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
+        let to_subtract = op2 as u64 - (!cpu.registers.cpsr.carry()) as u64;
+        let (full_result, carry) = (op1 as u64).overflowing_sub(to_subtract);
+        let result = full_result as u32;
 
         if write_flags {
             cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));

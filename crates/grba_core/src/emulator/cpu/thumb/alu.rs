@@ -3,6 +3,7 @@ use crate::emulator::cpu::common::{common_behaviour, ShiftType};
 use crate::emulator::cpu::thumb::{ThumbInstruction, ThumbV4};
 use crate::emulator::cpu::CPU;
 use crate::utils::{has_sign_overflowed, BitOps};
+use num_traits::FromPrimitive;
 
 #[derive(Debug)]
 enum ShiftOpcode {
@@ -100,4 +101,123 @@ impl ThumbV4 {
             _ => unreachable!(),
         }
     }
+
+    pub fn alu_operations(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
+        let opcode: AluDataOperation = AluDataOperation::from_u16(instruction.get_bits(6, 9)).unwrap();
+        let r_s = instruction.get_bits(3, 5) as usize;
+        let r_d = instruction.get_bits(0, 2) as usize;
+
+        let op1 = cpu.read_reg(r_d);
+        let op2 = cpu.read_reg(r_s);
+
+        match opcode {
+            AluDataOperation::And => {
+                let result = op1 & op2;
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_zero_and_sign(result);
+            }
+            AluDataOperation::Eor => {
+                let result = op1 ^ op2;
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_zero_and_sign(result);
+            }
+            AluDataOperation::Lsl => {
+                let (result, carry) = ShiftType::LogicalLeft.perform_shift(op1, op2 as u8, cpu.registers.cpsr.carry());
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_logical_flags(result, carry);
+            }
+            AluDataOperation::Lsr => {
+                let (result, carry) = ShiftType::LogicalRight.perform_shift(op1, op2 as u8, cpu.registers.cpsr.carry());
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_logical_flags(result, carry);
+            }
+            AluDataOperation::Asr => {
+                let (result, carry) = ShiftType::ArithRight.perform_shift(op1, op2 as u8, cpu.registers.cpsr.carry());
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_logical_flags(result, carry);
+            }
+            AluDataOperation::Adc => {
+                let result = common_behaviour::adc(cpu, op1, op2, true);
+
+                cpu.write_reg(r_d, result, bus);
+            }
+            AluDataOperation::Sbc => {
+                let result = common_behaviour::sbc(cpu, op1, op2, true);
+
+                cpu.write_reg(r_d, result, bus);
+            }
+            AluDataOperation::Ror => {
+                let (result, carry) = ShiftType::RotateRight.perform_shift(op1, op2 as u8, cpu.registers.cpsr.carry());
+
+                cpu.set_logical_flags(result, carry);
+
+                cpu.write_reg(r_d, result, bus);
+            }
+            AluDataOperation::Tst => {
+                let result = op1 & op2;
+
+                cpu.set_zero_and_sign(result);
+            }
+            AluDataOperation::Neg => {
+                let result = common_behaviour::sub(cpu, 0, op2, true);
+
+                cpu.write_reg(r_d, result, bus);
+            }
+            AluDataOperation::Cmp => {
+                let _ = common_behaviour::sub(cpu, op1, op2, true);
+            }
+            AluDataOperation::Cmn => {
+                let _ = common_behaviour::add(cpu, op1, op2, true);
+            }
+            AluDataOperation::Orr => {
+                let result = op1 | op2;
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_zero_and_sign(result);
+            }
+            AluDataOperation::Mul => {
+                let result = op1.wrapping_mul(op2);
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_zero_and_sign(result);
+            }
+            AluDataOperation::Bic => {
+                let result = op1 & !op2;
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_zero_and_sign(result);
+            }
+            AluDataOperation::Mvn => {
+                let result = !op2;
+                cpu.write_reg(r_d, result, bus);
+
+                cpu.set_zero_and_sign(result);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
+enum AluDataOperation {
+    And = 0b0000,
+    Eor = 0b0001,
+    Lsl = 0b0010,
+    Lsr = 0b0011,
+    Asr = 0b0100,
+    Adc = 0b0101,
+    Sbc = 0b0110,
+    Ror = 0b0111,
+    Tst = 0b1000,
+    Neg = 0b1001,
+    Cmp = 0b1010,
+    Cmn = 0b1011,
+    Orr = 0b1100,
+    Mul = 0b1101,
+    Bic = 0b1110,
+    Mvn = 0b1111,
 }

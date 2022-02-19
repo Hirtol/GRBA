@@ -113,27 +113,35 @@ impl ArmV4 {
                 }
             }
             DataOperation::Sub => {
-                ArmV4::arm_sub(cpu, bus, r_d, op1, op2, set_flags);
+                let result = common_behaviour::sub(cpu, op1, op2, set_flags);
+
+                cpu.write_reg(r_d, result, bus);
             }
-            DataOperation::Rsb => ArmV4::arm_sub(cpu, bus, r_d, op2, op1, set_flags),
+            DataOperation::Rsb => {
+                let result = common_behaviour::sub(cpu, op2, op1, set_flags);
+
+                cpu.write_reg(r_d, result, bus);
+            }
             DataOperation::Add => {
                 let result = common_behaviour::add(cpu, op1, op2, set_flags);
 
                 cpu.write_reg(r_d, result, bus);
             }
             DataOperation::Adc => {
-                // We don't use overflowing_add as we need to do a second add immediately, cheaper to check the bit after.
-                let full_result = op1 as u64 + op2 as u64 + cpu.registers.cpsr.carry() as u64;
-                let result = full_result as u32;
+                let result = common_behaviour::adc(cpu, op1, op2, set_flags);
+
                 cpu.write_reg(r_d, result, bus);
-                if set_flags {
-                    cpu.set_arithmetic_flags(result, full_result.check_bit(32), has_sign_overflowed(op1, op2, result));
-                }
             }
             DataOperation::Sbc => {
-                ArmV4::arm_sbc(cpu, bus, r_d, op1, op2, set_flags);
+                let result = common_behaviour::sbc(cpu, op1, op2, set_flags);
+
+                cpu.write_reg(r_d, result, bus);
             }
-            DataOperation::Rsc => ArmV4::arm_sbc(cpu, bus, r_d, op2, op1, set_flags),
+            DataOperation::Rsc => {
+                let result = common_behaviour::sbc(cpu, op2, op1, set_flags);
+
+                cpu.write_reg(r_d, result, bus);
+            }
             DataOperation::Tst => {
                 let result = op1 & op2;
                 // Note, we're assuming that we can ignore the `set_flags` parameter here.
@@ -183,23 +191,6 @@ impl ArmV4 {
                 }
             }
         };
-    }
-
-    fn arm_sub(cpu: &mut CPU, bus: &mut Bus, r_d: usize, op1: u32, op2: u32, set_flags: bool) {
-        let result = common_behaviour::sub(cpu, op1, op2, set_flags);
-
-        cpu.write_reg(r_d, result, bus);
-    }
-
-    fn arm_sbc(cpu: &mut CPU, bus: &mut Bus, r_d: usize, op1: u32, op2: u32, set_flags: bool) {
-        let to_subtract = op2 as u64 + 1 - cpu.registers.cpsr.carry() as u64;
-        let (full_result, carry) = (op1 as u64).overflowing_sub(to_subtract);
-        let result = full_result as u32;
-
-        cpu.write_reg(r_d, result, bus);
-        if set_flags {
-            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
-        }
     }
 }
 
