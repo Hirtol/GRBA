@@ -34,7 +34,7 @@ impl Default for EmuOptions {
 /// The main emulator struct
 pub struct GBAEmulator {
     pub(crate) cpu: CPU,
-    pub(crate) mmu: Bus,
+    pub(crate) bus: Bus,
     options: EmuOptions,
 }
 
@@ -44,7 +44,7 @@ impl GBAEmulator {
 
         GBAEmulator {
             cpu: CPU::new(options.skip_bios, &mut mmu),
-            mmu,
+            bus: mmu,
             options,
         }
     }
@@ -63,9 +63,14 @@ impl GBAEmulator {
     }
 
     pub fn step_instruction(&mut self) -> bool {
-        self.cpu.step_instruction(&mut self.mmu);
+        self.cpu.step_instruction(&mut self.bus);
+
+        // Very basic cycle counting to get things going. In the future ought to count cycles properly.
+        //TODO: Instruction timing
+        self.bus.scheduler.add_time(2);
+
         // Temporary measure to get some frames.
-        (self.mmu.scheduler.current_time.0 % CLOCKS_PER_FRAME as u64) == 0
+        (self.bus.scheduler.current_time.0 % CLOCKS_PER_FRAME as u64) == 0
     }
 
     pub fn step_instruction_debug(&mut self) -> bool {
@@ -90,7 +95,7 @@ impl GBAEmulator {
 
     #[inline(always)]
     fn frame_data(&mut self) -> FrameData {
-        FrameData { mmu: &mut self.mmu }
+        FrameData { mmu: &mut self.bus }
     }
 }
 
