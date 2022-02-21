@@ -1,6 +1,7 @@
 use capstone::prelude::*;
 use owo_colors::OwoColorize;
 
+use grba_core::emulator::cpu::registers::{Mode, State, PSR};
 use tabled::{builder, Column, Concat, Format, Modify, Style, Tabled};
 use zerocopy::{ByteSlice, LayoutVerified};
 
@@ -236,9 +237,16 @@ impl<'a> tabled::Tabled for DiffItemWithInstr<'a> {
             let mut out = Vec::with_capacity(Self::LENGTH);
             out.extend(self.diff_item.fields());
 
+            let cpsr = PSR::from_raw(self.diff_item.emu_instr.cpsr);
+
+            let current_mode = match cpsr.state() {
+                State::Arm => capstone::arch::arm::ArchMode::Arm,
+                State::Thumb => capstone::arch::arm::ArchMode::Thumb,
+            };
+
             let capstone = capstone::Capstone::new()
                 .arm()
-                .mode(capstone::arch::arm::ArchMode::Arm)
+                .mode(current_mode)
                 .syntax(arch::arm::ArchSyntax::NoRegName)
                 .detail(true)
                 .build()
@@ -249,9 +257,11 @@ impl<'a> tabled::Tabled for DiffItemWithInstr<'a> {
                 .unwrap();
 
             out.push(format!(
-                "{} {}",
+                "{} {}\n{:?}\n{:#X}",
                 disassembled[0].mnemonic().unwrap(),
-                disassembled[0].op_str().unwrap()
+                disassembled[0].op_str().unwrap(),
+                current_mode,
+                self.instr
             ));
 
             out

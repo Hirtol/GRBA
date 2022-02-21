@@ -189,7 +189,15 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // Data Processing Register:
         // 000X_XXXX_XXXX
         if (i & 0xE00) == 0b0000_0000_0000 {
-            result[i] = ArmV4::data_processing_register;
+            // Check the shift type
+            let is_register_shift = i.check_bit(0);
+
+            if is_register_shift {
+                result[i] = ArmV4::data_processing_register_register_shift;
+            } else {
+                result[i] = ArmV4::data_processing_register_immediate_shift;
+            }
+
             continue;
         }
 

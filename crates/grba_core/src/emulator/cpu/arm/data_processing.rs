@@ -8,7 +8,6 @@ use num_traits::FromPrimitive;
 
 impl ArmV4 {
     pub fn data_processing_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        crate::cpu_log!("Executing instruction: Data Immediate");
         let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
         let set_condition_code = instruction.check_bit(20);
         let r_d = instruction.get_bits(12, 15) as usize;
@@ -38,8 +37,34 @@ impl ArmV4 {
         );
     }
 
-    pub fn data_processing_register(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        crate::cpu_log!("Executing instruction: Data Processing Register");
+    pub fn data_processing_register_immediate_shift(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
+        let set_condition_code = instruction.check_bit(20);
+        let r_d = instruction.get_bits(12, 15) as usize;
+        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
+        // If the current mode is user mode we do nothing. (TODO: Check how necessary the user mode check is, spec technically asks for it)
+        if r_d == 15 && set_condition_code && cpu.registers.cpsr.mode() != Mode::User {
+            cpu.registers.cpsr = cpu.registers.spsr;
+        }
+
+        let shift_type = ShiftType::from_u32(instruction.get_bits(5, 6)).unwrap();
+        // r_m
+        let r_op2 = instruction.get_bits(0, 3) as usize;
+
+        let (op2_value, carry) = {
+            // Immediate Shift
+            let shift_amount = instruction.get_bits(7, 11) as u8;
+
+            shift_type.perform_shift(cpu.read_reg(r_op2), shift_amount, cpu.registers.cpsr.carry())
+        };
+
+        let r_op1 = instruction.get_bits(16, 19) as usize;
+        let op1_value = cpu.read_reg(r_op1);
+
+        ArmV4::perform_data_operation(cpu, bus, opcode, op1_value, op2_value, r_d, set_condition_code, carry);
+    }
+
+    pub fn data_processing_register_register_shift(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         //we'll need to increment PC by 4 for the duration of this function, refer to section 4.5.5 of the instruction manual.
         cpu.registers.general_purpose[PC_REG] += 4;
 
@@ -56,10 +81,7 @@ impl ArmV4 {
         // r_m
         let r_op2 = instruction.get_bits(0, 3) as usize;
 
-        // Check the shift type
-        let should_shift_register = instruction.check_bit(4);
-
-        let (op2_value, carry) = if should_shift_register {
+        let (op2_value, carry) = {
             // Register Shift
             let shift_register = instruction.get_bits(8, 11) as usize;
             // Only the lower byte matters, can just directly cast to a u8
@@ -70,11 +92,6 @@ impl ArmV4 {
             } else {
                 shift_type.perform_shift(cpu.read_reg(r_op2), shift_amount, cpu.registers.cpsr.carry())
             }
-        } else {
-            // Immediate Shift
-            let shift_amount = instruction.get_bits(7, 11) as u8;
-
-            shift_type.perform_shift(cpu.read_reg(r_op2), shift_amount, cpu.registers.cpsr.carry())
         };
 
         let r_op1 = instruction.get_bits(16, 19) as usize;
