@@ -8,7 +8,7 @@ pub const fn has_sign_overflowed(val1: u32, val2: u32, result: u32) -> bool {
 }
 
 #[inline(always)]
-pub fn sign_extend32(data: u32, size: u8) -> i32 {
+pub const fn sign_extend32(data: u32, size: u8) -> i32 {
     ((data << (32 - size)) as i32) >> (32 - size)
 }
 

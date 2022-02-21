@@ -12,6 +12,8 @@ pub type ThumbLUT = [LutInstruction; THUMB_LUT_SIZE];
 
 mod alu;
 mod branch;
+mod load_store;
+mod multi_load_store;
 
 /// Contains all Thumb instructions for the ArmV4T.
 pub struct ThumbV4;
@@ -59,6 +61,69 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
         // 0100_01XX
         if (i & 0xFC) == 0b0100_0100 {
             result[i] = ThumbV4::hi_reg_op_branch_exchange;
+            continue;
+        }
+
+        // PC-Relative Load
+        // 0100_1XXX
+        if (i & 0xF8) == 0b0100_1000 {
+            result[i] = ThumbV4::pc_relative_load;
+            continue;
+        }
+
+        // Load/Store with Register Offset
+        // 0101_XX0X
+        if (i & 0xF2) == 0b0101_0000 {
+            result[i] = ThumbV4::load_store_with_reg_offset;
+            continue;
+        }
+
+        // Load/Store with Sign Extended Byte
+        // 0101_XX1X
+        if (i & 0xF2) == 0b0101_0010 {
+            result[i] = ThumbV4::load_store_sign_extended_byte_halfword;
+            continue;
+        }
+
+        // Load/Store with immediate offset
+        // 011X_XXXX
+        if (i & 0xE0) == 0b0110_0000 {
+            result[i] = ThumbV4::load_store_with_immediate_offset;
+            continue;
+        }
+
+        // Load/Store halfword
+        // 1000_XXXX
+        if (i & 0xF0) == 0b1000_0000 {
+            result[i] = ThumbV4::load_store_halfword;
+            continue;
+        }
+
+        // SP-relative load/store
+        // 1001_XXXX
+        if (i & 0xF0) == 0b1001_0000 {
+            result[i] = ThumbV4::sp_relative_load_store;
+            continue;
+        }
+
+        // Load address
+        // 1010_XXXX
+        if (i & 0xF0) == 0b1010_0000 {
+            result[i] = ThumbV4::load_address;
+            continue;
+        }
+
+        // Add offset to stack pointer
+        // 1011_0000
+        if (i & 0xFF) == 0b1011_0000 {
+            result[i] = ThumbV4::add_offset_to_stack_pointer;
+            continue;
+        }
+
+        // Push/Pop registers
+        // 1011_X10X
+        if (i & 0xF6) == 0b1011_0100 {
+            result[i] = ThumbV4::push_pop_registers;
             continue;
         }
     }
