@@ -24,17 +24,11 @@ impl ArmV4 {
         let rotate = instruction.get_bits(8, 11) * 2;
         let imm = instruction.get_bits(0, 7) as u32;
         let op2_value = imm.rotate_right(rotate);
+        // We don't use the barrel shifter `ShiftType::RotateRight` here because of this strange situation.
+        // It seems that, if rotate == 0, then instead of using RotateRightExtended, it just doesn't change the carry flag.
+        let carry = if rotate != 0 { op2_value.check_bit(31) } else { cpu.registers.cpsr.carry() };
 
-        ArmV4::perform_data_operation(
-            cpu,
-            bus,
-            opcode,
-            op1_value,
-            op2_value,
-            r_d,
-            set_condition_code,
-            cpu.registers.cpsr.carry(),
-        );
+        ArmV4::perform_data_operation(cpu, bus, opcode, op1_value, op2_value, r_d, set_condition_code, carry);
     }
 
     pub fn data_processing_register_immediate_shift(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {

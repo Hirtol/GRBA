@@ -55,9 +55,8 @@ impl ShiftType {
                     // Carry flag is appended and everything is shifted by one position
                     (carry_flag | (value >> 1), value.check_bit(0))
                 } else {
-                    let carry = value.check_bit(shift_amount.saturating_sub(1));
                     let shifted = value.rotate_right(shift_amount as u32);
-                    (shifted, carry)
+                    (shifted, shifted.check_bit(31))
                 }
             }
         }
