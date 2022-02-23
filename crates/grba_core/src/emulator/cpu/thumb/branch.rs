@@ -91,11 +91,11 @@ impl ThumbV4 {
         let offset = sign_extend32((instruction.get_bits(0, 10) as u32) << 1, 12);
         let lr = cpu.read_reg(LINK_REG);
         let final_value = lr.wrapping_add(offset as u32);
+        let next_instruction_address = cpu.read_reg(PC_REG).wrapping_sub(2);
 
         cpu.write_reg(PC_REG, final_value, bus);
-        // Write the next instruction (from where we are now) to the link register. In the `long_branch_with_link_high`
-        // instruction we read the PC from that instruction, thus the instruction after the `long_branch_with_link_low`
-        // is already correctly pointed to (and we don't need a `wrapping_sub(2)` because of that)
-        cpu.write_reg(LINK_REG, final_value | 1, bus);
+        // The link register should contain the next instruction's (at this instruction, aka, before the jump) address
+        // Bitwise or with 1
+        cpu.write_reg(LINK_REG, next_instruction_address | 1, bus);
     }
 }
