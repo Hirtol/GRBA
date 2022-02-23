@@ -20,7 +20,7 @@ impl ShiftType {
             ShiftType::LogicalLeft => {
                 let carry = if shift_amount == 0 { current_carry } else { value.check_bit(32 - shift_amount) };
 
-                let shifted = value << shift_amount;
+                let shifted = value.wrapping_shl(shift_amount as u32);
                 // Least significant bit that is shifted out goes to the carry flag
                 (shifted, carry)
             }
@@ -151,7 +151,9 @@ pub mod common_behaviour {
         let (result, carry) = op1.overflowing_sub(op2);
 
         if write_flags {
-            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+            // Note that ARM apparently uses an inverted carry flag for borrows (aka, subtract with overflow)
+            // In addition, we invert op2 here in order to get the correct behaviour for the overflow flag
+            cpu.set_arithmetic_flags(result, !carry, has_sign_overflowed(op1, !op2, result));
         }
 
         result
@@ -172,12 +174,14 @@ pub mod common_behaviour {
 
     #[inline]
     pub fn sbc(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
-        let to_subtract = op2 as u64 - (!cpu.registers.cpsr.carry()) as u64;
+        let to_subtract = (op2 as u64).wrapping_add((!cpu.registers.cpsr.carry()) as u64);
         let (full_result, carry) = (op1 as u64).overflowing_sub(to_subtract);
         let result = full_result as u32;
 
         if write_flags {
-            cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+            // Note that ARM apparently uses an inverted carry flag for borrows (aka, subtract with overflow)
+            // In addition, we invert op2 here in order to get the correct behaviour for the overflow flag
+            cpu.set_arithmetic_flags(result, !carry, has_sign_overflowed(op1, !op2, result));
         }
 
         result

@@ -2,7 +2,7 @@ use crate::emulator::bus::Bus;
 use crate::emulator::cpu::common::{common_behaviour, ShiftType};
 use crate::emulator::cpu::thumb::{ThumbInstruction, ThumbV4};
 use crate::emulator::cpu::CPU;
-use crate::utils::{has_sign_overflowed, BitOps};
+use crate::utils::BitOps;
 use num_traits::FromPrimitive;
 
 #[derive(Debug)]
@@ -59,12 +59,13 @@ impl ThumbV4 {
 
         let to_add = if is_immediate { r_n_or_immediate as u32 } else { cpu.read_reg(r_n_or_immediate) };
         let s_contents = cpu.read_reg(r_s);
-        let (to_write, carry) =
-            if is_sub { s_contents.overflowing_sub(to_add) } else { s_contents.overflowing_add(to_add) };
+        let to_write = if is_sub {
+            common_behaviour::sub(cpu, s_contents, to_add, true)
+        } else {
+            common_behaviour::add(cpu, s_contents, to_add, true)
+        };
 
         cpu.write_reg(r_d, to_write, bus);
-
-        cpu.set_arithmetic_flags(to_write, carry, has_sign_overflowed(s_contents, to_add, to_write));
     }
 
     //15 14 13 12 11

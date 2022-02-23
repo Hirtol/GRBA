@@ -90,26 +90,6 @@ impl CPU {
         };
     }
 
-    /// Immediately fill the entire pipeline with instructions, starting at `pc`.
-    fn fill_pipeline(&mut self, bus: &mut Bus) {
-        match self.state() {
-            State::Arm => {
-                self.pipeline[0] = bus.read_32(self.registers.pc());
-                self.registers.advance_pc();
-                self.pipeline[1] = bus.read_32(self.registers.pc());
-                self.registers.advance_pc();
-                self.pipeline[2] = bus.read_32(self.registers.pc());
-            }
-            State::Thumb => {
-                self.pipeline[0] = bus.read_16(self.registers.pc()) as u32;
-                self.registers.advance_pc();
-                self.pipeline[1] = bus.read_16(self.registers.pc()) as u32;
-                self.registers.advance_pc();
-                self.pipeline[2] = bus.read_16(self.registers.pc()) as u32;
-            }
-        }
-    }
-
     /// Clear the entire pipeline, and partly refills it afterwards.
     ///
     /// This is a partial refill to account for us immediately incrementing the PC when we next execute an instruction.

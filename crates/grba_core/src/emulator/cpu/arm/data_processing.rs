@@ -3,7 +3,7 @@ use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
 use crate::emulator::cpu::common::{common_behaviour, ShiftType};
 use crate::emulator::cpu::registers::{Mode, PC_REG};
 use crate::emulator::cpu::CPU;
-use crate::utils::{has_sign_overflowed, BitOps};
+use crate::utils::BitOps;
 use num_traits::FromPrimitive;
 
 impl ArmV4 {
@@ -164,14 +164,12 @@ impl ArmV4 {
                 cpu.set_logical_flags(result, barrel_shift_carry);
             }
             DataOperation::Cmp => {
-                let (result, carry) = op1.overflowing_sub(op2);
-                // Note, we're assuming that we can ignore the `set_flags` parameter here.
-                cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+                // Normal sub, but we ignore the result
+                let _ = common_behaviour::sub(cpu, op1, op2, true);
             }
             DataOperation::Cmn => {
-                let (result, carry) = op1.overflowing_add(op2);
-                // Note, we're assuming that we can ignore the `set_flags` parameter here.
-                cpu.set_arithmetic_flags(result, carry, has_sign_overflowed(op1, op2, result));
+                // Normal add, but we ignore the result
+                let _ = common_behaviour::add(cpu, op1, op2, true);
             }
             DataOperation::Orr => {
                 let result = op1 | op2;
