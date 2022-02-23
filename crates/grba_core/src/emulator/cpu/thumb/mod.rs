@@ -1,5 +1,6 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::CPU;
+use crate::utils::BitOps;
 
 /// For indexing into the LUT we use a 8-bit value, which is derived from a bitmasked instruction.
 pub const THUMB_LUT_SIZE: usize = 256;
@@ -124,6 +125,41 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
         // 1011_X10X
         if (i & 0xF6) == 0b1011_0100 {
             result[i] = ThumbV4::push_pop_registers;
+            continue;
+        }
+
+        // Multiple load/store
+        // 1100_XXXX
+        if (i & 0xF0) == 0b1100_0000 {
+            result[i] = ThumbV4::multiple_load_store;
+            continue;
+        }
+
+        // Conditional Branch
+        // 1101_XXXX
+        if (i & 0xF0) == 0b1101_0000 {
+            result[i] = ThumbV4::conditional_branch;
+            continue;
+        }
+
+        // Unconditional Branch
+        // 1110_0XXX
+        if (i & 0xF8) == 0b1110_0000 {
+            result[i] = ThumbV4::unconditional_branch;
+            continue;
+        }
+
+        // Long branch with link
+        // 1111_XXXX
+        if (i & 0xF0) == 0b1111_0000 {
+            let offset_low = i.check_bit(3);
+
+            if offset_low {
+                result[i] = ThumbV4::long_branch_with_link_low;
+            } else {
+                result[i] = ThumbV4::long_branch_with_link_high;
+            }
+
             continue;
         }
     }

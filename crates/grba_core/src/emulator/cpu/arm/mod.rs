@@ -1,4 +1,5 @@
 use crate::emulator::bus::Bus;
+use crate::emulator::cpu::common::common_behaviour;
 use crate::emulator::cpu::{Exception, CPU};
 use crate::utils::BitOps;
 
@@ -26,39 +27,7 @@ impl ArmV4 {
         let flags = instruction >> 28;
         let cpsr = &cpu.registers.cpsr;
 
-        match flags {
-            // Is zero set (is equal)
-            0b0000 => cpsr.zero(),
-            // Is zero not set (not equal)
-            0b0001 => !cpsr.zero(),
-            // Is carry
-            0b0010 => cpsr.carry(),
-            // Is carry clear
-            0b0011 => !cpsr.carry(),
-            // Is sign negative
-            0b0100 => cpsr.sign(),
-            // Is sign positive or zero
-            0b0101 => !cpsr.sign(),
-            // Has overflowed
-            0b0110 => cpsr.overflow(),
-            // No overflow
-            0b0111 => !cpsr.overflow(),
-            0b1000 => cpsr.carry() && !cpsr.zero(),
-            0b1001 => !cpsr.carry() && cpsr.zero(),
-            // Greater than or equal
-            0b1010 => cpsr.sign() == cpsr.overflow(),
-            // Less than
-            0b1011 => cpsr.sign() != cpsr.overflow(),
-            // Greater than
-            0b1100 => !cpsr.zero() && (cpsr.sign() == cpsr.overflow()),
-            // Less than or equal
-            0b1101 => cpsr.zero() || (cpsr.sign() != cpsr.overflow()),
-            // Always
-            0b1110 => true,
-            // Never
-            0b1111 => false,
-            _ => panic!("Impossible condition code, did the bit shift get changed?"),
-        }
+        common_behaviour::check_condition(cpsr, flags as u8)
     }
 
     pub fn undefined_instruction(cpu: &mut CPU, _instruction: ArmInstruction, bus: &mut Bus) {

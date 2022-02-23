@@ -1,9 +1,10 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::common::common_behaviour;
-use crate::emulator::cpu::registers::PC_REG;
+use crate::emulator::cpu::registers::{Mode, State, LINK_REG, PC_REG};
 use crate::emulator::cpu::thumb::{ThumbInstruction, ThumbV4};
-use crate::emulator::cpu::CPU;
-use crate::utils::BitOps;
+use crate::emulator::cpu::{Exception, CPU};
+use crate::utils::{sign_extend32, BitOps};
+use num_traits::FromPrimitive;
 
 impl ThumbV4 {
     pub fn hi_reg_op_branch_exchange(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
@@ -53,5 +54,48 @@ impl ThumbV4 {
         let pc_value = cpu.registers.pc() & 0xFFFFFFFC;
 
         cpu.write_reg(r_d, pc_value.wrapping_add(imm_value as u32), bus);
+    }
+
+    pub fn conditional_branch(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
+        let condition = instruction.get_bits(8, 11);
+        let offset = sign_extend32((instruction.get_bits(0, 7) << 1) as u32, 9);
+
+        match condition {
+            // Software interrupt
+            0b1111 => {
+                cpu.raise_exception(bus, Exception::SoftwareInterrupt);
+            }
+            _ => {
+                if common_behaviour::check_condition(&cpu.registers.cpsr, condition as u8) {
+                    let pc = cpu.read_reg(PC_REG);
+                    cpu.write_reg(PC_REG, pc.wrapping_add(offset as u32), bus);
+                }
+            }
+        };
+    }
+
+    pub fn unconditional_branch(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
+        let offset = sign_extend32((instruction.get_bits(0, 10) << 1) as u32, 12);
+        let pc = cpu.read_reg(PC_REG);
+        cpu.write_reg(PC_REG, pc.wrapping_add(offset as u32), bus);
+    }
+
+    pub fn long_branch_with_link_high(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
+        let offset = sign_extend32((instruction.get_bits(0, 10) as u32) << 12, 23);
+        let pc = cpu.read_reg(PC_REG);
+
+        cpu.write_reg(LINK_REG, pc.wrapping_add(offset as u32), bus);
+    }
+
+    pub fn long_branch_with_link_low(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
+        let offset = sign_extend32((instruction.get_bits(0, 10) as u32) << 1, 12);
+        let lr = cpu.read_reg(LINK_REG);
+        let final_value = lr.wrapping_add(offset as u32);
+
+        cpu.write_reg(PC_REG, final_value, bus);
+        // Write the next instruction (from where we are now) to the link register. In the `long_branch_with_link_high`
+        // instruction we read the PC from that instruction, thus the instruction after the `long_branch_with_link_low`
+        // is already correctly pointed to (and we don't need a `wrapping_sub(2)` because of that)
+        cpu.write_reg(LINK_REG, final_value | 1, bus);
     }
 }

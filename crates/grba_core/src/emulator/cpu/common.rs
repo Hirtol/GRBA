@@ -85,10 +85,49 @@ impl CPU {
 
 pub mod common_behaviour {
     use crate::emulator::bus::Bus;
-    use crate::emulator::cpu::registers::{State, PC_REG};
+    use crate::emulator::cpu::registers::{State, PC_REG, PSR};
     use crate::emulator::cpu::CPU;
     use crate::utils::{has_sign_overflowed, BitOps};
     use num_traits::FromPrimitive;
+
+    /// Check the provided condition code. The expected format is a four bit value in the lower nibble of `condition`
+    ///
+    /// This `check_condition` function works for both the `ARM` condition codes check, as well as the `THUMB` conditional branches
+    pub fn check_condition(cpsr: &PSR, condition: u8) -> bool {
+        match condition {
+            // Is zero set (is equal)
+            0b0000 => cpsr.zero(),
+            // Is zero not set (not equal)
+            0b0001 => !cpsr.zero(),
+            // Is carry
+            0b0010 => cpsr.carry(),
+            // Is carry clear
+            0b0011 => !cpsr.carry(),
+            // Is sign negative
+            0b0100 => cpsr.sign(),
+            // Is sign positive or zero
+            0b0101 => !cpsr.sign(),
+            // Has overflowed
+            0b0110 => cpsr.overflow(),
+            // No overflow
+            0b0111 => !cpsr.overflow(),
+            0b1000 => cpsr.carry() && !cpsr.zero(),
+            0b1001 => !cpsr.carry() && cpsr.zero(),
+            // Greater than or equal
+            0b1010 => cpsr.sign() == cpsr.overflow(),
+            // Less than
+            0b1011 => cpsr.sign() != cpsr.overflow(),
+            // Greater than
+            0b1100 => !cpsr.zero() && (cpsr.sign() == cpsr.overflow()),
+            // Less than or equal
+            0b1101 => cpsr.zero() || (cpsr.sign() != cpsr.overflow()),
+            // Always
+            0b1110 => true,
+            // Never
+            0b1111 => false,
+            _ => panic!("Impossible condition code, did the bit shift get changed?"),
+        }
+    }
 
     /// Defines the `add` instruction behaviour for both the ARM and THUMB modes.
     ///

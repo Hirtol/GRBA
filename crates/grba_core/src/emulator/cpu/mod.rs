@@ -1,6 +1,6 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::arm::{ArmInstruction, ArmLUT, ArmV4};
-use crate::emulator::cpu::registers::{Registers, PC_REG};
+use crate::emulator::cpu::registers::{Registers, LINK_REG, PC_REG};
 use crate::emulator::cpu::thumb::{ThumbInstruction, ThumbLUT};
 use crate::utils::BitOps;
 use registers::{Mode, State};
@@ -148,11 +148,44 @@ impl CPU {
         self.thumb_lut[lut_index](self, instruction, bus);
     }
 
-    fn raise_exception(&mut self, _bus: &mut Bus, exception: Exception) {
-        todo!("{:?}", exception);
+    fn raise_exception(&mut self, bus: &mut Bus, exception: Exception) {
+        const RESET_ADDR: u32 = 0x00000000;
+        const UNDEFINED_INSTRUCTION_ADDR: u32 = 0x00000004;
+        const SOFTWARE_INTERRUPT_ADDR: u32 = 0x00000008;
+        const PREFETCH_ABORT_ADDR: u32 = 0x0000000C;
+        const DATA_ABORT_ADDR: u32 = 0x00000010;
+        const RESERVED_ADDR: u32 = 0x00000014;
+        const IRQ_ADDR: u32 = 0x00000018;
+        const FIQ_ADDR: u32 = 0x0000001C;
+
+        match exception {
+            Exception::SoftwareInterrupt => {
+                crate::cpu_log!("Raising Software Interrupt");
+                let pipeline_subtraction = match self.state() {
+                    State::Arm => 4,
+                    State::Thumb => 2,
+                };
+
+                let link_reg_value = self.read_reg(PC_REG) - pipeline_subtraction;
+                let old_cpsr = self.registers.cpsr;
+                // Change CPU state to ARM (if not already)
+                self.switch_state(State::Arm, bus);
+                // Enter supervisor mode
+                self.switch_mode(Mode::Supervisor, bus);
+                // Set the link register to the next instruction
+                self.write_reg(LINK_REG, link_reg_value, bus);
+                // Jump to the exception handler
+                self.write_reg(PC_REG, SOFTWARE_INTERRUPT_ADDR, bus);
+                // Disable any further interrupts
+                self.registers.cpsr.set_irq_disable(true);
+                // Preserve our old cpsr
+                self.registers.spsr = old_cpsr;
+            }
+            _ => todo!("{:?}", exception),
+        }
     }
 
-    fn switch_mode(&mut self, new_mode: registers::Mode) {
+    fn switch_mode(&mut self, new_mode: registers::Mode, _bus: &mut Bus) {
         let old_mode = self.registers.cpsr.mode();
 
         // Try to swap, if we're already in the same mode this'll fail.
