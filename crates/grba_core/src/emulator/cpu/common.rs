@@ -17,13 +17,24 @@ impl ShiftType {
     #[inline]
     pub fn perform_shift(self, value: u32, shift_amount: u8, current_carry: bool) -> (u32, bool) {
         match self {
-            ShiftType::LogicalLeft => {
-                let carry = if shift_amount == 0 { current_carry } else { value.check_bit(32 - shift_amount) };
+            ShiftType::LogicalLeft => match shift_amount {
+                // Interesting to note that the generated assembly with overlapping match arms is actually better
+                // (Though even without overlap the assembly is still significantly more performant than if-else chains)
+                0 => {
+                    let shifted = value << shift_amount;
 
-                let shifted = value.wrapping_shl(shift_amount as u32);
-                // Least significant bit that is shifted out goes to the carry flag
-                (shifted, carry)
-            }
+                    (shifted, current_carry)
+                }
+                0..=31 => {
+                    let carry = value.check_bit(32 - shift_amount);
+
+                    let shifted = value << shift_amount;
+                    // Least significant bit that is shifted out goes to the carry flag
+                    (shifted, carry)
+                }
+                32 => (0, value.check_bit(0)),
+                _ => (0, false),
+            },
             ShiftType::LogicalRight => {
                 // ARM thought it'd be fun to allow 32-bit shifts to the right with different carry behaviour... yay
                 if shift_amount < 32 {
