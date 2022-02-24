@@ -95,7 +95,7 @@ impl ArmV4 {
         }
 
         match dest_psr {
-            Psr::Cpsr => cpu.registers.write_cpsr(cur_psr_value),
+            Psr::Cpsr => cpu.registers.write_cpsr(PSR::from_raw(cur_psr_value)),
             Psr::Spsr => cpu.registers.spsr = PSR::from_raw(cur_psr_value),
         };
     }

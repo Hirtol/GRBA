@@ -11,11 +11,6 @@ impl ArmV4 {
         let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
         let set_condition_code = instruction.check_bit(20);
         let r_d = instruction.get_bits(12, 15) as usize;
-        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
-        // If the current mode is user mode we do nothing. (TODO: Check how necessary the user mode check is, spec technically asks for it)
-        if r_d == 15 && set_condition_code && cpu.registers.cpsr.mode() != Mode::User {
-            cpu.registers.cpsr = cpu.registers.spsr;
-        }
 
         let r_op1 = instruction.get_bits(16, 19) as usize;
         let op1_value = cpu.read_reg(r_op1);
@@ -35,14 +30,8 @@ impl ArmV4 {
         let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
         let set_condition_code = instruction.check_bit(20);
         let r_d = instruction.get_bits(12, 15) as usize;
-        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
-        // If the current mode is user mode we do nothing. (TODO: Check how necessary the user mode check is, spec technically asks for it)
-        if r_d == 15 && set_condition_code && cpu.registers.cpsr.mode() != Mode::User {
-            cpu.registers.cpsr = cpu.registers.spsr;
-        }
 
         let shift_type = ShiftType::from_u32(instruction.get_bits(5, 6)).unwrap();
-        // r_m
         let r_op2 = instruction.get_bits(0, 3) as usize;
 
         let (op2_value, carry) = {
@@ -65,14 +54,8 @@ impl ArmV4 {
         let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
         let set_condition_code = instruction.check_bit(20);
         let r_d = instruction.get_bits(12, 15) as usize;
-        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
-        // If the current mode is user mode we do nothing. (TODO: Check how necessary the user mode check is, spec technically asks for it)
-        if r_d == 15 && set_condition_code && cpu.registers.cpsr.mode() != Mode::User {
-            cpu.registers.cpsr = cpu.registers.spsr;
-        }
 
         let shift_type = ShiftType::from_u32(instruction.get_bits(5, 6)).unwrap();
-        // r_m
         let r_op2 = instruction.get_bits(0, 3) as usize;
 
         let (op2_value, carry) = {
@@ -107,7 +90,6 @@ impl ArmV4 {
         set_flags: bool,
         barrel_shift_carry: bool,
     ) {
-        crate::cpu_log!("Executing opcode: {:?}", opcode);
         match opcode {
             DataOperation::And => {
                 let result = op1 & op2;
@@ -200,6 +182,11 @@ impl ArmV4 {
                 }
             }
         };
+
+        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
+        if r_d == 15 && set_flags {
+            cpu.registers.write_cpsr(cpu.registers.spsr);
+        }
     }
 }
 

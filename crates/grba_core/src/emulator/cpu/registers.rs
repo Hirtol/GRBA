@@ -178,9 +178,9 @@ impl Registers {
 
     /// Write to the CPSR, and if the new mode is different from the current mode, swap the register banks.
     #[inline]
-    pub(crate) fn write_cpsr(&mut self, value: u32) {
+    pub(crate) fn write_cpsr(&mut self, value: PSR) {
         let old_mode = self.cpsr.mode();
-        self.cpsr = value.into();
+        self.cpsr = value;
 
         self.swap_register_banks(old_mode, self.cpsr.mode(), true);
     }
