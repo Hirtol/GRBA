@@ -35,41 +35,46 @@ impl ShiftType {
                 32 => (0, value.check_bit(0)),
                 _ => (0, false),
             },
-            ShiftType::LogicalRight => {
-                // ARM thought it'd be fun to allow 32-bit shifts to the right with different carry behaviour... yay
-                if shift_amount < 32 {
+            ShiftType::LogicalRight => match shift_amount {
+                // Fun times abound, non-overlapping match arms generate more performant assembly here.
+                0 | 32 => (0, value.check_bit(31)),
+                1..=31 => {
                     let carry = value.check_bit(shift_amount.saturating_sub(1));
                     let shifted = value >> shift_amount;
                     (shifted, carry)
-                } else {
-                    let carry = value.check_bit(31);
-                    (0, carry)
                 }
-            }
-            ShiftType::ArithRight => {
-                if shift_amount < 32 {
+                _ => (0, false),
+            },
+            ShiftType::ArithRight => match shift_amount {
+                1..=31 => {
                     let carry = value.check_bit(shift_amount.saturating_sub(1));
                     // We cast to an i32 to get an arithmetic shift, then cast back.
                     let shifted = ((value as i32) >> shift_amount) as u32;
 
                     (shifted, carry)
-                } else {
+                }
+                // The documentation says:
+                // * "ASR by 32 or more has result filled with (gap here in original documentation) and carry out equal to bit 31 of Rm."
+                // "Filled with...", filled with what? :(
+                // We'll assume the same behaviour as with the special case `0`
+                _ => {
                     let carry = value.check_bit(31);
                     // Since we're doing signed extension we either return nothing at all or all ones.
                     let shifted = if carry { u32::MAX } else { 0 };
                     (shifted, carry)
                 }
-            }
-            ShiftType::RotateRight => {
-                if shift_amount == 0 {
+            },
+            ShiftType::RotateRight => match shift_amount {
+                0 => {
                     let carry_flag = (current_carry as u32) << 31;
                     // Carry flag is appended and everything is shifted by one position
                     (carry_flag | (value >> 1), value.check_bit(0))
-                } else {
+                }
+                _ => {
                     let shifted = value.rotate_right(shift_amount as u32);
                     (shifted, shifted.check_bit(31))
                 }
-            }
+            },
         }
     }
 }
