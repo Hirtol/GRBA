@@ -3,20 +3,10 @@ use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
 use crate::emulator::cpu::registers::PSR;
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
-use bitflags::bitflags;
 
 enum Psr {
     Cpsr,
     Spsr,
-}
-
-bitflags! {
-    struct FieldMask: u32 {
-        const Control = 0b0001;
-        const Extension = 0b0010;
-        const Status = 0b0100;
-        const Flags = 0b1000;
-    }
 }
 
 impl ArmV4 {
