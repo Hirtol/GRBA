@@ -144,7 +144,11 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // MSR (Transfer register to PSR Condition Flags):
         // 00X1_0X10_XXXX
         if (i & 0xDB0) == 0b0001_0010_0000 {
-            result[i] = ArmV4::msr_match;
+            if i.check_bit(9) {
+                result[i] = ArmV4::msr_immediate
+            } else {
+                result[i] = ArmV4::msr_register
+            }
             continue;
         }
 

@@ -23,23 +23,10 @@ impl ArmV4 {
         cpu.write_reg(r_d, contents.as_raw(), bus);
     }
 
-    /// Transfer a register contents to PSR.
-    ///
-    /// Done as a separate match as the requisite bit is not part of our LUT index.
-    pub fn msr_match(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        //TODO: Split on this bit in the LUT
-        if instruction.check_bit(25) {
-            ArmV4::msr_immediate(cpu, instruction, bus);
-            // ArmV4::msr_trans_reg_psr(cpu, instruction, bus);
-        } else {
-            ArmV4::msr_register(cpu, instruction, bus);
-        }
-    }
-
     /// Transfer register contents to PSR.
     ///
     /// Should not be called in User mode
-    fn msr_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+    pub fn msr_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         // Shift amount is 0 extended to 32 bits, then rotated right by `rotate amount * 2`
         let rotate = instruction.get_bits(8, 11) * 2;
         let imm = instruction.get_bits(0, 7) as u32;
@@ -51,7 +38,7 @@ impl ArmV4 {
     /// Transfer register contents to PSR.
     ///
     /// Should not be called in User mode
-    fn msr_register(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+    pub fn msr_register(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         let r_m = instruction.get_bits(0, 3) as usize;
         let new_value = cpu.read_reg(r_m);
 
