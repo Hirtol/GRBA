@@ -21,8 +21,11 @@ pub struct RunCommand {
     #[clap(short, long, default_value = "3")]
     after: usize,
     /// Ignores the provided registers when comparing the logs
-    #[clap(short)]
+    #[clap(long)]
     ignore: Vec<usize>,
+    /// The amount of times to ignore a difference before stopping the run command. Not affected by `ignore`
+    #[clap(short, long, default_value = "0")]
+    ignore_amount: u32,
 }
 
 /// Handle the `Run` command, where our emulator is ran until a difference is found.
@@ -63,6 +66,11 @@ impl RunExecutor {
                 let differences = other_instr.get_differing_fields(current_frame.registers.as_ref());
                 // Skip if the only differences are in ignored registers
                 if differences.iter().all(|diff| self.cmd.ignore.contains(diff)) {
+                    continue;
+                }
+
+                if self.cmd.ignore_amount > 0 {
+                    self.cmd.ignore_amount -= 1;
                     continue;
                 }
 
