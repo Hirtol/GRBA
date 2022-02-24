@@ -205,7 +205,7 @@ mod tests {
         // Check MSR matching
         let fn_ref = lut[0b0011_0110_0000];
 
-        assert_eq!(fn_ref as usize, ArmV4::msr_match as usize);
+        assert_eq!(fn_ref as usize, ArmV4::msr_immediate as usize);
 
         // Check Data Processing matching (AND operation in immediate mode)
         let fn_ref = lut[0b0010_0000_0000];
