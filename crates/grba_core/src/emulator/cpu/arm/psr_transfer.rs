@@ -1,20 +1,21 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
+use crate::emulator::cpu::registers::PSR;
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
+use bitflags::bitflags;
 
 enum Psr {
     Cpsr,
     Spsr,
 }
 
-impl From<bool> for Psr {
-    fn from(val: bool) -> Self {
-        if val {
-            Psr::Spsr
-        } else {
-            Psr::Cpsr
-        }
+bitflags! {
+    struct FieldMask: u32 {
+        const Control = 0b0001;
+        const Extension = 0b0010;
+        const Status = 0b0100;
+        const Flags = 0b1000;
     }
 }
 
@@ -36,45 +37,76 @@ impl ArmV4 {
     ///
     /// Done as a separate match as the requisite bit is not part of our LUT index.
     pub fn msr_match(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        if instruction.check_bit(16) {
-            ArmV4::msr_trans_reg_psr(cpu, instruction, bus);
+        //TODO: Split on this bit in the LUT
+        if instruction.check_bit(25) {
+            ArmV4::msr_immediate(cpu, instruction, bus);
+            // ArmV4::msr_trans_reg_psr(cpu, instruction, bus);
         } else {
-            ArmV4::msr_trans_reg_imm_psr_flag(cpu, instruction, bus);
+            ArmV4::msr_register(cpu, instruction, bus);
         }
     }
 
     /// Transfer register contents to PSR.
     ///
     /// Should not be called in User mode
-    pub fn msr_trans_reg_psr(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
-        let r_m = instruction.get_bits(0, 3) as usize;
-        let dest_psr: Psr = instruction.check_bit(22).into();
-        let value = cpu.read_reg(r_m);
+    fn msr_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        // Shift amount is 0 extended to 32 bits, then rotated right by `rotate amount * 2`
+        let rotate = instruction.get_bits(8, 11) * 2;
+        let imm = instruction.get_bits(0, 7) as u32;
+        let new_value = imm.rotate_right(rotate);
 
-        match dest_psr {
-            Psr::Cpsr => cpu.registers.cpsr = value.into(),
-            Psr::Spsr => cpu.registers.spsr = value.into(),
-        }
+        Self::msr_common(cpu, instruction, new_value);
     }
 
-    /// Transfer register contents or immediate value to PSR flag bits only
-    pub fn msr_trans_reg_imm_psr_flag(cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
-        let dest_psr: Psr = instruction.check_bit(22).into();
-        let immediate = instruction.check_bit(25);
+    /// Transfer register contents to PSR.
+    ///
+    /// Should not be called in User mode
+    fn msr_register(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+        let r_m = instruction.get_bits(0, 3) as usize;
+        let new_value = cpu.read_reg(r_m);
 
-        let update_value = if immediate {
-            // Shift amount is 0 extended to 32 bits, then rotated right by `rotate amount * 2`
-            let rotate = instruction.get_bits(8, 11) * 2;
-            let imm = instruction.get_bits(0, 7) as u32;
-            imm.rotate_right(rotate)
-        } else {
-            let r_m = instruction.get_bits(0, 3) as usize;
-            cpu.read_reg(r_m)
+        Self::msr_common(cpu, instruction, new_value);
+    }
+
+    fn msr_common(cpu: &mut CPU, instruction: ArmInstruction, new_value: u32) {
+        let dest_psr: Psr = instruction.check_bit(22).into();
+        let field_mask = instruction.get_bits(16, 19);
+
+        let mut cur_psr_value = match dest_psr {
+            Psr::Cpsr => cpu.registers.cpsr.as_raw(),
+            Psr::Spsr => cpu.registers.spsr.as_raw(),
         };
 
+        // Control bits
+        if field_mask.check_bit(0) {
+            cur_psr_value = (cur_psr_value & 0xFFFFFF00) | (new_value & 0xFF);
+        }
+        // Extension bits
+        if field_mask.check_bit(1) {
+            cur_psr_value = (cur_psr_value & 0xFFFF00FF) | (new_value & 0xFF00);
+        }
+        // Status bits
+        if field_mask.check_bit(2) {
+            cur_psr_value = (cur_psr_value & 0xFF00FFFF) | (new_value & 0xFF0000);
+        }
+        // Flag bits
+        if field_mask.check_bit(3) {
+            cur_psr_value = (cur_psr_value & 0x00FFFFFF) | (new_value & 0xFF000000);
+        }
+
         match dest_psr {
-            Psr::Cpsr => cpu.registers.cpsr.update_control_flags(update_value),
-            Psr::Spsr => cpu.registers.spsr.update_control_flags(update_value),
+            Psr::Cpsr => cpu.registers.write_cpsr(cur_psr_value),
+            Psr::Spsr => cpu.registers.spsr = PSR::from_raw(cur_psr_value),
+        };
+    }
+}
+
+impl From<bool> for Psr {
+    fn from(val: bool) -> Self {
+        if val {
+            Psr::Spsr
+        } else {
+            Psr::Cpsr
         }
     }
 }

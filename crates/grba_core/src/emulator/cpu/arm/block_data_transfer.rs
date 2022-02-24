@@ -119,10 +119,10 @@ impl ArmV4 {
                 cpu.registers.cpsr = cpu.registers.spsr;
             } else {
                 // For STM instructions data will be taken from the User bank, so we need to switch to that.
-                swapped_banks = cpu.registers.swap_register_banks(old_mode, Mode::User);
+                swapped_banks = cpu.registers.swap_register_banks(old_mode, Mode::User, false);
             }
         } else {
-            swapped_banks = cpu.registers.swap_register_banks(old_mode, Mode::User);
+            swapped_banks = cpu.registers.swap_register_banks(old_mode, Mode::User, false);
         }
 
         // Inefficient iteration for now, TODO: Optimise.
@@ -149,7 +149,7 @@ impl ArmV4 {
 
         if swapped_banks {
             // In theory has_writeback should be false, but can't hurt to pre-emptively swap back.
-            cpu.registers.swap_register_banks(Mode::User, old_mode);
+            cpu.registers.swap_register_banks(Mode::User, old_mode, false);
         }
 
         if has_writeback {

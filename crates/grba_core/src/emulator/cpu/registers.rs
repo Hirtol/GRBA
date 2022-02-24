@@ -77,7 +77,7 @@ impl Registers {
     /// * `true` if the `from_mode` and `to_mode` are different (swapped).
     /// * `false` if the `from_mode` and `to_mode` are the same (early return, no swap).
     #[inline]
-    pub fn swap_register_banks(&mut self, from_mode: Mode, to_mode: Mode) -> bool {
+    pub fn swap_register_banks(&mut self, from_mode: Mode, to_mode: Mode, swap_spsr: bool) -> bool {
         if from_mode == to_mode {
             return false;
         }
@@ -127,6 +127,26 @@ impl Registers {
         self.general_purpose[13] = self.r13_bank[to_bank_idx];
         self.general_purpose[14] = self.r14_bank[to_bank_idx];
 
+        // Swap control registers as well
+        if swap_spsr {
+            match from_mode {
+                Mode::User | Mode::System => {}
+                _ => {
+                    self.spsr_bank[from_mode.to_spsr_index()] = self.spsr;
+                }
+            }
+
+            match to_mode {
+                Mode::User | Mode::System => {
+                    // Not sure if we should re-create the PSR.
+                    // self.registers.spsr = PSR::new();
+                }
+                _ => {
+                    self.spsr = self.spsr_bank[to_mode.to_spsr_index()];
+                }
+            }
+        }
+
         true
     }
 
@@ -155,6 +175,15 @@ impl Registers {
             }
         }
     }
+
+    /// Write to the CPSR, and if the new mode is different from the current mode, swap the register banks.
+    #[inline]
+    pub(crate) fn write_cpsr(&mut self, value: u32) {
+        let old_mode = self.cpsr.mode();
+        self.cpsr = value.into();
+
+        self.swap_register_banks(old_mode, self.cpsr.mode(), true);
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
@@ -179,13 +208,13 @@ impl From<u8> for State {
 /// Triggered by different exceptions.
 #[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
 pub enum Mode {
-    User = 0b10000,
-    FIQ = 0b10001,
-    IRQ = 0b10010,
-    Supervisor = 0b10011,
-    Abort = 0b10111,
-    Undefined = 0b11011,
-    System = 0b11111,
+    User = 0b1_0000,
+    FIQ = 0b1_0001,
+    IRQ = 0b1_0010,
+    Supervisor = 0b1_0011,
+    Abort = 0b1_0111,
+    Undefined = 0b1_1011,
+    System = 0b1_1111,
 }
 
 impl Mode {

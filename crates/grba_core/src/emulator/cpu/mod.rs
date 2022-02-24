@@ -169,28 +169,11 @@ impl CPU {
         let old_mode = self.registers.cpsr.mode();
 
         // Try to swap, if we're already in the same mode this'll fail.
-        if !self.registers.swap_register_banks(old_mode, new_mode) {
+        if !self.registers.swap_register_banks(old_mode, new_mode, true) {
             return;
         }
 
         self.registers.cpsr.set_mode(new_mode);
-
-        match old_mode {
-            Mode::User | Mode::System => {}
-            _ => {
-                self.registers.spsr_bank[old_mode.to_spsr_index()] = self.registers.spsr;
-            }
-        }
-
-        match new_mode {
-            Mode::User | Mode::System => {
-                // Not sure if we should re-create the PSR.
-                // self.registers.spsr = PSR::new();
-            }
-            _ => {
-                self.registers.spsr = self.registers.spsr_bank[old_mode.to_spsr_index()];
-            }
-        }
     }
 
     /// Switches between ARM and Thumb mode.
