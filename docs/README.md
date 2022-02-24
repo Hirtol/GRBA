@@ -1,8 +1,9 @@
 # Resource Links
 
 ## CPU
+* [ARM Reference Manual](arm.pdf)
 * [ARMv7 Datasheet](ARM7TDMI_Recent.pdf)
-* [ARMv7 Instructions](arm-instructionset.pdf)
+* [ARMv7 Instructions](arm-instructionset.pdf) (PSR instructions are wrong, see [ARM Reference Manual](arm.pdf))
 * [ARMv7(Thumb) Datasheet](ARM7TDMI_Datasheet.pdf)
 * [ARMv7 Timings](ARM7TDMI_Instruction_Timings.pdf)
 
