@@ -17,12 +17,12 @@ impl ArmV4 {
         let base_address = cpu.read_reg(reg_base);
 
         if is_byte_read {
-            let current_mem = bus.read(base_address);
+            let current_mem = bus.read(base_address, cpu);
 
             bus.write(base_address, source_content as u8);
             cpu.write_reg(reg_dst, current_mem as u32, bus);
         } else {
-            let current_mem = bus.read_32(base_address);
+            let current_mem = bus.read_32(base_address, cpu);
 
             bus.write_32(base_address, source_content);
             cpu.write_reg(reg_dst, current_mem, bus);

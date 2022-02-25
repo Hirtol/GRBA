@@ -1,6 +1,7 @@
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::arm::{ArmInstruction, ArmV4};
 use crate::emulator::cpu::common::ShiftType;
+use crate::emulator::cpu::registers::PC_REG;
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 use num_traits::FromPrimitive;
@@ -8,7 +9,6 @@ use num_traits::FromPrimitive;
 impl ArmV4 {
     #[allow(clippy::collapsible_else_if)]
     pub fn single_data_transfer(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        crate::cpu_log!("Executing instruction: Single Data Transfer");
         let (reg_base, reg_dest) = (
             instruction.get_bits(16, 19) as usize,
             instruction.get_bits(12, 15) as usize,
@@ -52,17 +52,19 @@ impl ArmV4 {
         // Actual Operations:
         if is_load {
             if is_byte_transfer {
-                let value = bus.read(address) as u32;
+                let value = bus.read(address & 0xFFFF_FFFC, cpu) as u32;
                 cpu.write_reg(reg_dest, value, bus);
             } else {
-                let value = bus.read_32(address);
+                let value = bus.read_32(address & 0xFFFF_FFFC, cpu);
                 // The byte at the address will always be at bits 0..=7, if unaligned access then the rest will be shifted.
                 let final_val = value.rotate_right(8 * (address.get_bits(0, 1)));
                 cpu.write_reg(reg_dest, final_val, bus);
             }
         } else {
-            //TODO: When R15 is the source register (Rd) of a register store (STR) instruction, the stored
-            // value will be address of the instruction plus 12. (Currently it would be +8)
+            // For store instructions, when R15 is specified in r_d it should be 3 words ahead of the current instruction.
+            // Usually it's +2, thus we need to temporarily add 4 to the address
+            cpu.registers.general_purpose[PC_REG] += 4;
+
             if is_byte_transfer {
                 let data = cpu.read_reg(reg_dest) as u8;
                 bus.write(address, data);
@@ -71,21 +73,24 @@ impl ArmV4 {
                 // TODO: Check if force align is necessary
                 bus.write_32(address & 0xFFFF_FFFC, data);
             }
+
+            cpu.registers.general_purpose[PC_REG] -= 4;
         }
 
-        // TODO: verify if we interpreted the post index correctly.
-        // Resolve post indexing and write back
-        if !is_preindexed {
-            let addr = if is_up { base_address.wrapping_add(offset) } else { base_address.wrapping_sub(offset) };
+        // No writeback occurs if the base and destination register are the same AND it's a load instruction.
+        if (is_load && reg_base != reg_dest) || !is_load {
+            // Resolve post indexing and write back
+            if !is_preindexed {
+                let addr = if is_up { base_address.wrapping_add(offset) } else { base_address.wrapping_sub(offset) };
 
-            cpu.write_reg(reg_base, addr, bus);
-        } else if has_writeback {
-            cpu.write_reg(reg_base, address, bus);
+                cpu.write_reg(reg_base, addr, bus);
+            } else if has_writeback {
+                cpu.write_reg(reg_base, address, bus);
+            }
         }
     }
 
     pub fn halfword_and_signed_register(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        crate::cpu_log!("Executing instruction: Halfword and Signed Data Transfer Register");
         let is_preindexed = instruction.check_bit(24);
         let is_up = instruction.check_bit(23);
         let has_writeback = instruction.check_bit(21);
@@ -128,7 +133,6 @@ impl ArmV4 {
     }
 
     pub fn halfword_and_signed_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        crate::cpu_log!("Executing instruction: Halfword and Signed Data Transfer Immediate");
         let is_preindexed = instruction.check_bit(24);
         let is_up = instruction.check_bit(23);
         let has_writeback = instruction.check_bit(21);
@@ -187,7 +191,7 @@ impl ArmV4 {
             SwapType::Swp => todo!("Swap instruction in halfword and signed register?: {:#X?}", instruction),
             SwapType::UnsignedU16 => {
                 if is_load {
-                    let value = bus.read_16(address) as u32;
+                    let value = bus.read_16(address, cpu) as u32;
                     cpu.write_reg(reg_dest, value, bus);
                 } else {
                     let value = cpu.read_reg(reg_dest) as u16;
@@ -196,13 +200,13 @@ impl ArmV4 {
             }
             SwapType::Signedi8 => {
                 // Load bit *shouldn't* be low, so we'll just ignore it!
-                let value = bus.read(address) as i8;
+                let value = bus.read(address, cpu) as i8;
                 // Sign extension should take place, but since we're casting from a smaller int to larger int this is done automatically.
                 cpu.write_reg(reg_dest, value as i32 as u32, bus);
             }
             SwapType::Signedi16 => {
                 // Load bit *shouldn't* be low, so we'll just ignore it!
-                let value = bus.read(address) as i16;
+                let value = bus.read(address, cpu) as i16;
                 // Sign extension should take place, but since we're casting from a smaller int to larger int this is done automatically.
                 cpu.write_reg(reg_dest, value as i32 as u32, bus);
             }

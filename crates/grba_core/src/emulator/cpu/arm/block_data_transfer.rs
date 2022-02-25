@@ -64,7 +64,7 @@ impl ArmV4 {
 
                 let reg_dest = i as usize;
                 if is_load {
-                    let value = bus.read_32(address);
+                    let value = bus.read_32(address, cpu);
                     cpu.write_reg(reg_dest, value, bus);
                 } else {
                     let value = cpu.read_reg(reg_dest);
@@ -134,7 +134,7 @@ impl ArmV4 {
 
                 let reg_dest = i as usize;
                 if is_load {
-                    let value = bus.read_32(address);
+                    let value = bus.read_32(address, cpu);
                     cpu.write_reg(reg_dest, value, bus);
                 } else {
                     let value = cpu.read_reg(reg_dest);

@@ -44,13 +44,13 @@ impl ThumbV4 {
 
         if is_sign_extended {
             if h_flag {
-                cpu.write_reg(r_d, sign_extend32(bus.read_16(target_addr) as u32, 8) as u32, bus);
+                cpu.write_reg(r_d, sign_extend32(bus.read_16(target_addr, cpu) as u32, 8) as u32, bus);
             } else {
-                cpu.write_reg(r_d, sign_extend32(bus.read(target_addr) as u32, 8) as u32, bus);
+                cpu.write_reg(r_d, sign_extend32(bus.read(target_addr, cpu) as u32, 8) as u32, bus);
             }
         } else {
             if h_flag {
-                cpu.write_reg(r_d, bus.read_16(target_addr) as u32, bus);
+                cpu.write_reg(r_d, bus.read_16(target_addr, cpu) as u32, bus);
             } else {
                 bus.write_16(target_addr, cpu.read_reg(r_d) as u16);
             }
@@ -67,7 +67,7 @@ impl ThumbV4 {
         let target_addr = cpu.read_reg(r_base).wrapping_add(offset);
 
         if is_load {
-            cpu.write_reg(r_d, bus.read_16(target_addr) as u32, bus);
+            cpu.write_reg(r_d, bus.read_16(target_addr, cpu) as u32, bus);
         } else {
             bus.write_16(target_addr, cpu.read_reg(r_d) as u16);
         }
@@ -82,7 +82,7 @@ impl ThumbV4 {
         let target_addr = cpu.read_reg(SP_REG).wrapping_add(offset);
 
         if is_load {
-            cpu.write_reg(r_d, bus.read_32(target_addr), bus);
+            cpu.write_reg(r_d, bus.read_32(target_addr, cpu), bus);
         } else {
             bus.write_32(target_addr, cpu.read_reg(r_d));
         }
@@ -126,9 +126,9 @@ impl ThumbV4 {
     ) {
         if is_load {
             if is_byte_transfer {
-                cpu.write_reg(r_d, bus.read(target_addr) as u32, bus);
+                cpu.write_reg(r_d, bus.read(target_addr, cpu) as u32, bus);
             } else {
-                cpu.write_reg(r_d, bus.read_32(target_addr), bus);
+                cpu.write_reg(r_d, bus.read_32(target_addr, cpu), bus);
             }
         } else {
             if is_byte_transfer {

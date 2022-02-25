@@ -1,3 +1,4 @@
+use crate::emulator::bus::BiosData;
 use crate::{InputKeys, CLOCKS_PER_FRAME};
 use bus::Bus;
 use cartridge::Cartridge;
@@ -16,7 +17,12 @@ pub(crate) type MemoryAddress = u32;
 
 #[derive(Debug)]
 pub struct EmuOptions {
+    /// Whether to skip the bios.
+    /// This is automatically enabled if no BIOS is provided.
     pub skip_bios: bool,
+    /// BIOS to use.
+    /// If none is provided then the bios region of memory will be zeroed out, and `skip_bios` will be forcefully enabled.
+    pub bios: Option<Vec<u8>>,
     /// `true` if the emulator should run in debug mode.
     /// This will enable breakpoints.
     pub debugging: bool,
@@ -26,6 +32,7 @@ impl Default for EmuOptions {
     fn default() -> Self {
         EmuOptions {
             skip_bios: true,
+            bios: None,
             debugging: false,
         }
     }
@@ -39,11 +46,12 @@ pub struct GBAEmulator {
 }
 
 impl GBAEmulator {
-    pub fn new(rom: Cartridge, options: EmuOptions) -> Self {
-        let mut mmu = Bus::new(rom);
+    pub fn new(rom: Cartridge, mut options: EmuOptions) -> Self {
+        let has_bios = options.bios.is_some();
+        let mut mmu = Bus::new(rom, vec_to_bios_data(options.bios.take()));
 
         GBAEmulator {
-            cpu: CPU::new(options.skip_bios, &mut mmu),
+            cpu: CPU::new(options.skip_bios || !has_bios, &mut mmu),
             bus: mmu,
             options,
         }
@@ -92,14 +100,9 @@ impl GBAEmulator {
     pub fn frame_buffer_ref(&mut self) -> &mut Vec<u8> {
         todo!()
     }
-
-    #[inline(always)]
-    fn frame_data(&mut self) -> FrameData {
-        FrameData { mmu: &mut self.bus }
-    }
 }
 
-#[repr(transparent)]
-pub(crate) struct FrameData<'a> {
-    pub mmu: &'a mut Bus,
+fn vec_to_bios_data(data: Option<Vec<u8>>) -> Box<BiosData> {
+    let data = data.unwrap_or_else(|| vec![0; std::mem::size_of::<BiosData>()]);
+    Box::try_from(data.into_boxed_slice()).unwrap()
 }

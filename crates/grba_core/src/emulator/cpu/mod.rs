@@ -15,11 +15,11 @@ mod thumb;
 // * Instruction timings
 
 pub struct CPU {
-    registers: Registers,
+    pub registers: Registers,
     /// GBA has a pipeline of execute-decode-fetch.
-    pipeline: [u32; 3],
-    arm_lut: ArmLUT,
-    thumb_lut: ThumbLUT,
+    pub pipeline: [u32; 3],
+    pub arm_lut: ArmLUT,
+    pub thumb_lut: ThumbLUT,
 }
 
 impl CPU {
@@ -69,7 +69,7 @@ impl CPU {
                 self.execute_arm(bus, self.pipeline[0]);
             }
             State::Thumb => {
-                self.execute_thumb(bus, self.pipeline[0] as u16);
+                self.execute_thumb(bus, self.pipeline[0] as ThumbInstruction);
             }
         }
     }
@@ -85,8 +85,8 @@ impl CPU {
 
         // Prefetch the next instruction
         self.pipeline[2] = match self.state() {
-            State::Arm => bus.read_32(self.registers.pc()),
-            State::Thumb => bus.read_16(self.registers.pc()) as u32,
+            State::Arm => bus.read_32(self.registers.pc(), self),
+            State::Thumb => bus.read_16(self.registers.pc(), self) as u32,
         };
     }
 
@@ -98,14 +98,14 @@ impl CPU {
 
         match self.state() {
             State::Arm => {
-                self.pipeline[1] = bus.read_32(self.registers.pc());
+                self.pipeline[1] = bus.read_32(self.registers.pc(), self);
                 self.registers.advance_pc();
-                self.pipeline[2] = bus.read_32(self.registers.pc());
+                self.pipeline[2] = bus.read_32(self.registers.pc(), self);
             }
             State::Thumb => {
-                self.pipeline[1] = bus.read_16(self.registers.pc()) as u32;
+                self.pipeline[1] = bus.read_16(self.registers.pc(), self) as u32;
                 self.registers.advance_pc();
-                self.pipeline[2] = bus.read_16(self.registers.pc()) as u32;
+                self.pipeline[2] = bus.read_16(self.registers.pc(), self) as u32;
             }
         }
     }

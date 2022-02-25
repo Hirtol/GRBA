@@ -3,6 +3,8 @@ use crate::format::{DiffItem, DiffItemWithInstr};
 use crate::InstructionSnapshot;
 use anyhow::Context;
 use grba_core::emulator::{EmuOptions, GBAEmulator};
+use std::fs::read;
+use std::panic;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -10,6 +12,9 @@ use std::time::Instant;
 pub struct RunCommand {
     /// The path to the GRBA log file to parse
     rom_path: PathBuf,
+    /// The path to the GBA Bios
+    #[clap(long, env)]
+    bios: Option<PathBuf>,
     /// The path to the other emulator's log file.
     /// This will be used as the reference.
     #[clap(short, long, env, default_value = "./other.logbin")]
@@ -51,7 +56,7 @@ pub struct RunExecutor {
 impl RunExecutor {
     /// Execute the `Run` command.
     pub fn run(mut self) -> anyhow::Result<()> {
-        let mut emulator = create_emulator(&self.cmd.rom_path)?;
+        let mut emulator = create_emulator(&self.cmd.rom_path, self.cmd.bios.as_deref())?;
 
         let other_log =
             crate::open_mmap(&self.cmd.other_log).context("Could not find the other log, is the path correct?")?;
@@ -122,9 +127,16 @@ impl RunExecutor {
     }
 }
 
-fn create_emulator(rom: &Path) -> anyhow::Result<GBAEmulator> {
+fn create_emulator(rom: &Path, bios: Option<&Path>) -> anyhow::Result<GBAEmulator> {
     let rom_data = std::fs::read(rom)?;
     let ram_data = vec![0u8; grba_core::emulator::cartridge::CARTRIDGE_RAM_SIZE];
     let cartridge = grba_core::emulator::cartridge::Cartridge::new(rom_data, Box::new(ram_data));
-    Ok(grba_core::emulator::GBAEmulator::new(cartridge, EmuOptions::default()))
+
+    let mut emu_opts = EmuOptions::default();
+    if let Some(bios) = bios {
+        let bios_data = std::fs::read(bios)?;
+        emu_opts.bios = Some(bios_data);
+    }
+
+    Ok(grba_core::emulator::GBAEmulator::new(cartridge, emu_opts))
 }

@@ -120,13 +120,13 @@ impl WorkRam {
     }
 
     #[inline(always)]
-    fn board_addr_to_index(addr: MemoryAddress) -> usize {
+    const fn board_addr_to_index(addr: MemoryAddress) -> usize {
         // Accesses are mirrored across the range 0x0203_FFFF - 0x0200_0000
         addr as usize & (ON_BOARD_RAM_END - ON_BOARD_RAM_START)
     }
 
     #[inline(always)]
-    fn chip_addr_to_index(addr: MemoryAddress) -> usize {
+    const fn chip_addr_to_index(addr: MemoryAddress) -> usize {
         // Accesses are mirrored across the range 0x03007FFF - 0x03000000
         addr as usize & (ON_CHIP_RAM_END - ON_CHIP_RAM_START)
     }
