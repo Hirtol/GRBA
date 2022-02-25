@@ -181,19 +181,6 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
     result
 }
 
-/// Returns the two most significant bit registers of an instruction.
-/// Since all ARM instructions follow this kind of format:
-/// * `0000_0000_0000_XXXX_YYYY_0000_0000_ZZZZ`
-///
-/// This function will return `(XXXX, YYYY)`
-/// See [get_low_registers] for `ZZZZ`.
-#[inline(always)]
-pub(crate) fn get_high_registers(instruction: ArmInstruction) -> (usize, usize) {
-    let rn = ((instruction >> 16) & 0xF) as usize;
-    let rd = ((instruction >> 12) & 0xF) as usize;
-    (rn, rd)
-}
-
 #[cfg(test)]
 mod tests {
     use crate::emulator::cpu::arm::ArmV4;
