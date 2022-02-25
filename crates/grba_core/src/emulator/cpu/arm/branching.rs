@@ -7,7 +7,6 @@ use crate::utils::{sign_extend32, BitOps};
 
 impl ArmV4 {
     pub fn branch_and_exchange(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        crate::cpu_log!("Executing instruction: Branch and exchange");
         let r_n = instruction.get_bits(0, 3) as usize;
         let reg_contents = cpu.read_reg(r_n);
 
@@ -15,7 +14,6 @@ impl ArmV4 {
     }
 
     pub fn branch_and_link(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        crate::cpu_log!("Executing instruction: Branch and Link");
         let is_link = instruction.check_bit(24);
         let offset = sign_extend32(instruction.get_bits(0, 23), 24) << 2;
         let pc = cpu.read_reg(PC_REG);

@@ -189,24 +189,36 @@ impl ArmV4 {
             SwapType::Swp => todo!("Swap instruction in halfword and signed register?: {:#X?}", instruction),
             SwapType::UnsignedU16 => {
                 if is_load {
-                    let value = bus.read_16(address, cpu) as u32;
-                    cpu.write_reg(reg_dest, value, bus);
+                    let value = bus.read_16(address & 0xFFFF_FFFE, cpu) as u32;
+                    // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
+                    let final_val = value.rotate_right(8 * (address.check_bit(0) as u32));
+                    cpu.write_reg(reg_dest, final_val, bus);
                 } else {
                     let value = cpu.read_reg(reg_dest) as u16;
-                    bus.write_16(address, value);
+                    bus.write_16(address & 0xFFFF_FFFE, value);
                 }
             }
             SwapType::Signedi8 => {
                 // Load bit *shouldn't* be low, so we'll just ignore it!
-                let value = bus.read(address, cpu) as i8;
                 // Sign extension should take place, but since we're casting from a smaller int to larger int this is done automatically.
-                cpu.write_reg(reg_dest, value as i32 as u32, bus);
+                let value = bus.read(address, cpu) as i8 as u32;
+
+                cpu.write_reg(reg_dest, value, bus);
+            }
+            // Special case, if we're unaligned then only the odd byte is read, and then sign-extended
+            SwapType::Signedi16 if address.check_bit(0) => {
+                // Load bit *shouldn't* be low, so we'll just ignore it!
+                // Sign extension should take place, but since we're casting from a smaller int to larger int this is done automatically.
+                let value = bus.read(address, cpu) as i8 as u32;
+
+                cpu.write_reg(reg_dest, value as u32, bus);
             }
             SwapType::Signedi16 => {
                 // Load bit *shouldn't* be low, so we'll just ignore it!
-                let value = bus.read(address, cpu) as i16;
                 // Sign extension should take place, but since we're casting from a smaller int to larger int this is done automatically.
-                cpu.write_reg(reg_dest, value as i32 as u32, bus);
+                let value = bus.read_16(address & 0xFFFF_FFFE, cpu) as i16 as u32;
+
+                cpu.write_reg(reg_dest, value, bus);
             }
         }
 
