@@ -222,13 +222,15 @@ impl ArmV4 {
             }
         }
 
-        // Resolve post indexing and write back
-        if !is_preindexed {
-            let addr = if is_up { address.wrapping_add(offset) } else { address.wrapping_sub(offset) };
+        if (is_load && reg_base != reg_dest) || !is_load {
+            // Resolve post indexing and write back
+            if !is_preindexed {
+                let addr = if is_up { address.wrapping_add(offset) } else { address.wrapping_sub(offset) };
 
-            cpu.write_reg(reg_base, addr, bus);
-        } else if has_writeback {
-            cpu.write_reg(reg_base, address, bus);
+                cpu.write_reg(reg_base, addr, bus);
+            } else if has_writeback {
+                cpu.write_reg(reg_base, address, bus);
+            }
         }
     }
 }
