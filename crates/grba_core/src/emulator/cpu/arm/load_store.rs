@@ -29,12 +29,10 @@ impl ArmV4 {
 
             // Immediate Shift
             let shift_amount = instruction.get_bits(7, 11) as u8;
-            let (offset, carry) =
+            // No flags are set by the LDR/STR instructions.
+            let (offset, _) =
                 shift_type.perform_shift(cpu.read_reg(reg_offset), shift_amount, cpu.registers.cpsr.carry());
 
-            //TODO: This might cause issues if we have an arithmetic instruction which doesn't set condition codes,
-            // as the previous carry value would be overwritten.
-            cpu.registers.cpsr.set_carry(carry);
             offset
         };
 
@@ -70,7 +68,7 @@ impl ArmV4 {
                 bus.write(address, data);
             } else {
                 let data = cpu.read_reg(reg_dest);
-                // TODO: Check if force align is necessary
+                // Force align the address
                 bus.write_32(address & 0xFFFF_FFFC, data);
             }
 

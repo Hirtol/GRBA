@@ -103,14 +103,12 @@ impl Bus {
 
     #[inline(always)]
     fn open_bus_read(&self, addr: MemoryAddress, cpu: &CPU) -> u8 {
-        // Open bus read, return prefetched Opcode
-        //TODO: Handle THUMB mode special cases
         self.open_bus_read_32(cpu).to_le_bytes()[addr as usize % 4]
     }
 
     #[inline(always)]
     fn get_mem_range(addr: MemoryAddress) -> u32 {
-        // Upper four bits of the address bus are unused
+        // TODO: Upper four bits of the address bus are unused, should we mask them off?
         addr >> 24
     }
 }
