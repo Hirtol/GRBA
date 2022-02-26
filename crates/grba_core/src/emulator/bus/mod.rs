@@ -41,6 +41,7 @@ impl Bus {
     }
 
     pub fn read(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
+        crate::cpu_log!("bus-logging"; "Reading from {:#X}", addr);
         match Self::get_mem_range(addr) {
             0 if GbaBios::is_in_bios_region(addr) => self.bios.read(addr, cpu),
             0 => self.open_bus_read(addr, cpu),
@@ -73,6 +74,7 @@ impl Bus {
     }
 
     pub fn write(&mut self, addr: MemoryAddress, data: u8) {
+        crate::cpu_log!("bus-logging"; "Writing to {:#X} - Value: {:#X}", addr, data);
         match Self::get_mem_range(addr) {
             0 => todo!("BIOS WRITE"),
             2 => self.ram.write_board(addr, data),

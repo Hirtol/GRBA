@@ -95,7 +95,7 @@ impl ArmV4 {
         let (writeback_address, address) =
             Self::calculate_addresses(is_preindexed, is_up, register_count, cpu.read_reg(reg_base));
 
-        // Handle edge case of empty register list.
+        // Handle edge case of empty register list. (Note, pretty sure no real game uses this edge case, can probably remove)
         // Empty register list is interpreted as PC_REG being transferred.
         if register_list == 0 {
             register_list = 1 << PC_REG;

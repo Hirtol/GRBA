@@ -5,10 +5,13 @@ pub const BIN_TARGET_DEFAULT: &str = "default";
 
 #[macro_export]
 macro_rules! cpu_log {
-    ($($arg:tt)*) => {
-        #[cfg(feature = "cpu-logging")]
+    ($feature:expr; $($arg:tt)*) => {
+        #[cfg(feature = $feature)]
         println!($($arg)*);
-    }
+    };
+    ($($arg:tt)*) => {
+        crate::cpu_log!("cpu-logging"; $($arg)*);
+    };
 }
 
 #[macro_export]

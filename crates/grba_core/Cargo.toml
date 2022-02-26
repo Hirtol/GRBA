@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 default = ["cpu-logging"]
 cpu-logging = []
+bus-logging = []
 bin-logging = []
 
 [dev-dependencies]
