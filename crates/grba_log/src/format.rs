@@ -256,13 +256,17 @@ impl<'a> tabled::Tabled for DiffItemWithInstr<'a> {
                 .disasm_all(&self.instr.to_le_bytes(), self.diff_item.emu_instr.r15 as u64)
                 .unwrap();
 
-            out.push(format!(
-                "{} {}\n{:?}\n{:#X}",
-                disassembled[0].mnemonic().unwrap(),
-                disassembled[0].op_str().unwrap(),
-                current_mode,
-                self.instr
-            ));
+            if let Some(instr) = disassembled.get(0) {
+                out.push(format!(
+                    "{} {}\n{:?}\n{:#X}",
+                    instr.mnemonic().unwrap(),
+                    instr.op_str().unwrap(),
+                    current_mode,
+                    self.instr
+                ));
+            } else {
+                out.push(format!("ERROR\n{:?}\n{:#X}", current_mode, self.instr));
+            }
 
             out
         }

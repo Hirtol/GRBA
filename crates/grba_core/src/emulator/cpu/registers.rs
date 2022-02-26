@@ -302,41 +302,49 @@ impl PSR {
         PSR::from(raw)
     }
 
+    /// N bit (31)
     #[inline(always)]
     pub fn sign(&self) -> bool {
         self.sign
     }
 
+    /// Z bit (30)
     #[inline(always)]
     pub fn zero(&self) -> bool {
         self.zero
     }
 
+    /// C bit (29)
     #[inline(always)]
     pub fn carry(&self) -> bool {
         self.carry
     }
 
+    /// V bit (28)
     #[inline(always)]
     pub fn overflow(&self) -> bool {
         self.overflow
     }
 
+    /// I bit (7)
     #[inline(always)]
     pub fn irq_disable(&self) -> bool {
         self.irq_disable
     }
 
+    /// F bit (6)
     #[inline(always)]
     pub fn fiq_disable(&self) -> bool {
         self.fiq_disable
     }
 
+    /// T bit (5)
     #[inline(always)]
     pub fn state(&self) -> State {
         self.state
     }
 
+    /// Mode bits (0..=4)
     #[inline(always)]
     pub fn mode(&self) -> Mode {
         self.mode
