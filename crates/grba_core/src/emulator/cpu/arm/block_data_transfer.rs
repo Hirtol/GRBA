@@ -70,7 +70,7 @@ impl ArmV4 {
         }
 
         // Handle all registers
-        Self::iterate_registers(cpu, bus, is_load, register_list, is_preindexed, address);
+        Self::iterate_registers(cpu, bus, is_load, register_list, address & 0xFFFF_FFFC);
 
         if has_writeback {
             cpu.write_reg(reg_base, writeback_address, bus);
@@ -131,7 +131,7 @@ impl ArmV4 {
         }
 
         // Handle all registers
-        Self::iterate_registers(cpu, bus, is_load, register_list, is_preindexed, address);
+        Self::iterate_registers(cpu, bus, is_load, register_list, address & 0xFFFF_FFFC);
 
         if swapped_banks {
             // In theory has_writeback should be false, but can't hurt to pre-emptively swap back.
@@ -148,10 +148,13 @@ impl ArmV4 {
     fn calculate_addresses(is_preindexed: bool, is_up: bool, register_count: u32, start_address: u32) -> (u32, u32) {
         if is_up {
             if register_count != 0 {
-                (start_address.wrapping_add(4 * register_count), start_address)
+                let final_address = start_address.wrapping_add(4 * register_count);
+                let start_address = if is_preindexed { start_address + 4 } else { start_address };
+
+                (final_address, start_address)
             } else {
-                // Handle edge case where register list is empty (Note: Probably not worth keeping for future optimisation)
-                (start_address + 0x40, start_address)
+                // Handle edge case where register list is empty. If we're pre-indexed we do a branchless initial add.
+                (start_address + 0x40, start_address + (4 * is_preindexed as u32))
             }
         } else {
             let final_address = if register_count != 0 {
@@ -162,8 +165,8 @@ impl ArmV4 {
             };
 
             let start_address = if is_preindexed {
-                // Pre increment will need to  be one lower
-                final_address.wrapping_sub(4)
+                // Pre decrement will start at the final address
+                final_address
             } else {
                 // Post decrement starts one higher than pre decrement, but both end at same address
                 final_address.wrapping_add(4)
@@ -174,31 +177,22 @@ impl ArmV4 {
     }
 
     #[inline(always)]
-    fn iterate_registers(
-        cpu: &mut CPU,
-        bus: &mut Bus,
-        is_load: bool,
-        register_list: u16,
-        is_preindexed: bool,
-        mut address: u32,
-    ) {
-        // Inefficient iteration for now, TODO: Optimise.
-        for i in 0..16 {
-            if register_list.check_bit(i) {
-                if is_preindexed {
+    fn iterate_registers(cpu: &mut CPU, bus: &mut Bus, is_load: bool, register_list: u16, mut address: u32) {
+        if is_load {
+            for i in 0..16 {
+                if register_list.check_bit(i) {
+                    let value = bus.read_32(address, cpu);
+                    cpu.write_reg(i as usize, value, bus);
+
                     address = address.wrapping_add(4)
                 }
-
-                let reg_dest = i as usize;
-                if is_load {
-                    let value = bus.read_32(address, cpu);
-                    cpu.write_reg(reg_dest, value, bus);
-                } else {
-                    let value = cpu.read_reg(reg_dest);
+            }
+        } else {
+            for i in 0..16 {
+                if register_list.check_bit(i) {
+                    let value = cpu.read_reg(i as usize);
                     bus.write_32(address, value);
-                }
 
-                if !is_preindexed {
                     address = address.wrapping_add(4)
                 }
             }
