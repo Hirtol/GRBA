@@ -57,7 +57,7 @@ impl ThumbV4 {
             for i in 0..8 {
                 if register_list.check_bit(i) {
                     cpu.write_reg(i as usize, bus.read_32(base_address, cpu), bus);
-                    //TODO: Should this be adding or subtracting? (Store is definitely incrementing)
+
                     base_address = base_address.wrapping_add(4);
                 }
             }

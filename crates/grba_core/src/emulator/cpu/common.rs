@@ -1,7 +1,9 @@
 //! Contains values common for the ARM and THUMB instruction sets.
 
 use crate::emulator::cpu::CPU;
+use crate::emulator::MemoryAddress;
 use crate::utils::BitOps;
+use std::ops::Deref;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
 pub enum ShiftType {
@@ -219,3 +221,48 @@ pub mod common_behaviour {
         cpu.write_reg(PC_REG, address, bus);
     }
 }
+
+#[derive(Copy, Clone, Debug)]
+#[repr(transparent)]
+pub struct AlignedAddress(MemoryAddress);
+
+#[derive(Copy, Clone, Debug)]
+#[repr(transparent)]
+pub struct HalfAlignedAddress(MemoryAddress);
+
+impl AlignedAddress {
+    #[inline(always)]
+    pub fn from_address(address: MemoryAddress) -> Self {
+        AlignedAddress(address & 0xFFFF_FFFC)
+    }
+}
+
+impl HalfAlignedAddress {
+    #[inline(always)]
+    pub fn from_address(address: MemoryAddress) -> Self {
+        HalfAlignedAddress(address & 0xFFFF_FFFE)
+    }
+}
+
+macro_rules! newtype {
+    ($new:ty) => {
+        impl Deref for $new {
+            type Target = u32;
+
+            #[inline(always)]
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl From<MemoryAddress> for $new {
+            #[inline(always)]
+            fn from(address: MemoryAddress) -> Self {
+                <$new>::from_address(address)
+            }
+        }
+    };
+}
+
+newtype!(AlignedAddress);
+newtype!(HalfAlignedAddress);

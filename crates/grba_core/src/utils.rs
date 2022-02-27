@@ -1,4 +1,5 @@
 use crate::{check_bit, get_bits};
+use std::fmt::Debug;
 
 /// Check if a sign overflow occurred
 /// TODO: Verify if this is correct
@@ -68,17 +69,18 @@ impl_bitops!(u8, u16, u32, u64, i8, i16, i32, i64, usize, isize);
 #[macro_export]
 macro_rules! box_array {
     ($val:expr ; $len:expr) => {{
-        // Use a generic function so that the pointer cast remains type-safe
-        fn vec_to_boxed_array<T>(vec: Vec<T>) -> Box<[T; $len]> {
-            let boxed_slice = vec.into_boxed_slice();
-
-            let ptr = ::std::boxed::Box::into_raw(boxed_slice) as *mut [T; $len];
-
-            unsafe { Box::from_raw(ptr) }
-        }
-
-        vec_to_boxed_array(vec![$val; $len])
+        crate::utils::alloc_array::<_, $len>($val)
     }};
+}
+
+/// Allocate a sized array on the heap, without first creating a stack-allocated array.
+///
+/// Useful for large allocations which would otherwise overflow the stack.
+pub fn alloc_array<T: Clone + Debug, const N: usize>(default_val: T) -> Box<[T; N]> {
+    vec![default_val; N]
+        .into_boxed_slice()
+        .try_into()
+        .expect("Incorrect array size")
 }
 
 #[cfg(test)]
