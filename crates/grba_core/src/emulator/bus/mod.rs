@@ -4,7 +4,9 @@ use crate::emulator::cpu::CPU;
 use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
 
+use crate::emulator::ppu::{LCD_IO_END, LCD_IO_START, PPU};
 pub use bios::BiosData;
+
 mod bios;
 mod ram;
 
@@ -12,6 +14,7 @@ pub struct Bus {
     ram: ram::WorkRam,
     rom: Cartridge,
     bios: GbaBios,
+    ppu: PPU,
     pub scheduler: Scheduler,
 }
 
@@ -21,6 +24,7 @@ impl Bus {
             ram: ram::WorkRam::new(),
             rom,
             bios: GbaBios::new(bios),
+            ppu: PPU::new(),
             scheduler: Scheduler::new(),
         }
     }
@@ -47,7 +51,7 @@ impl Bus {
             0 => self.open_bus_read(addr, cpu),
             2 => self.ram.read_board(addr),
             3 => self.ram.read_chip(addr),
-            4 => todo!("IO READ"),
+            4 => self.read_io(addr, cpu),
             5 => todo!("BG/OBJ READ"),
             6 => todo!("VRAM READ"),
             7 => todo!("OAM READ"),
@@ -81,6 +85,7 @@ impl Bus {
             3 => self.ram.write_chip(addr, data),
             4 => {
                 crate::cpu_log!("IO WRITE: {:#X}", data);
+                self.write_io(addr, data);
             }
             5 => {
                 crate::cpu_log!("BG/OBJ WRITE: {:#X}", data);
@@ -92,6 +97,22 @@ impl Bus {
             0xC | 0xD => todo!("ROM WRITE 3"),
             0xE | 0xF => self.rom.write_sram(addr, data),
             _ => todo!("Not implemented mem range!"),
+        }
+    }
+
+    #[inline]
+    pub fn read_io(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
+        match addr {
+            LCD_IO_START..=LCD_IO_END => self.ppu.read_io(addr),
+            _ => todo!("IO READ"),
+        }
+    }
+
+    #[inline]
+    pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
+        match addr {
+            LCD_IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
+            _ => todo!("IO Write"),
         }
     }
 

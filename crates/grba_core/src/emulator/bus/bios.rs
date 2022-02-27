@@ -37,10 +37,9 @@ impl GbaBios {
 
     pub fn read(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         let pc_in_bios = Self::is_in_bios_region(cpu.registers.pc());
+        let addr = addr as usize;
 
         if pc_in_bios {
-            let addr = addr as usize;
-
             let read_byte = self.data[addr];
             // Reading from bios, so we should update the latest read opcode
             let mut current_opcode: [u8; 4] = self.latest_read_instr.to_le_bytes();
@@ -50,7 +49,7 @@ impl GbaBios {
 
             read_byte
         } else {
-            self.latest_read_instr.to_le_bytes()[addr as usize % 4]
+            self.latest_read_instr.to_le_bytes()[addr % 4]
         }
     }
 
