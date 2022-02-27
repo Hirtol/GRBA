@@ -1,9 +1,11 @@
+use crate::emulator::ppu::registers::{LcdControl, LcdStatus, VerticalCounter, GREEN_SWAP_START};
 use crate::emulator::MemoryAddress;
 
-pub const LCD_IO_START: MemoryAddress = 0x4000000;
+pub const LCD_IO_START: MemoryAddress = 0x0400_0000;
 pub const LCD_IO_END: MemoryAddress = 0x4000056;
 pub const DISPLAY_WIDTH: u32 = 240;
 pub const DISPLAY_HEIGHT: u32 = 160;
+
 // 15 bit colour
 // 96KB of VRAM
 // 256 BG palette and 256 OBJ palette
@@ -16,12 +18,25 @@ pub const DISPLAY_HEIGHT: u32 = 160;
 // * Mode 0..=2: Tiles modes
 // * Mode 3..=5: Bitmap modes
 
+mod registers;
+
 #[derive(Debug, Clone, Copy)]
-pub struct PPU {}
+pub struct PPU {
+    control: LcdControl,
+    status: LcdStatus,
+    vertical_counter: VerticalCounter,
+    /// Not emulated
+    green_swap: u16,
+}
 
 impl PPU {
     pub fn new() -> Self {
-        PPU {}
+        PPU {
+            control: LcdControl::new(),
+            status: LcdStatus::new(),
+            vertical_counter: VerticalCounter::new(),
+            green_swap: 0,
+        }
     }
 
     pub fn read_vram(&mut self, address: MemoryAddress) -> u8 {
@@ -34,7 +49,15 @@ impl PPU {
 
     #[inline]
     pub fn read_io(&mut self, address: MemoryAddress) -> u8 {
-        unimplemented!()
+        let addr = address as usize;
+        let address = address - LCD_IO_START;
+        match address {
+            0x0..=0x1 => self.control.into_bytes()[addr % 2] as u8,
+            0x2..=0x3 => self.green_swap.to_le_bytes()[addr % 2] as u8,
+            0x4..=0x5 => self.status.into_bytes()[addr % 2] as u8,
+            0x6..=0x7 => self.vertical_counter.into_bytes()[addr % 2] as u8,
+            _ => todo!(),
+        }
     }
 
     #[inline]
