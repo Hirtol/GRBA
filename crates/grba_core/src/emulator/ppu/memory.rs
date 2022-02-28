@@ -1,0 +1,97 @@
+use crate::emulator::ppu::{OAM_RAM_SIZE, PALETTE_RAM_SIZE, PPU, VRAM_SIZE};
+use crate::emulator::MemoryAddress;
+
+pub const PALETTE_START: MemoryAddress = 0x0500_0000;
+pub const PALETTE_END: MemoryAddress = 0x0500_03FF;
+pub const LCD_VRAM_START: MemoryAddress = 0x0600_0000;
+pub const LCD_VRAM_END: MemoryAddress = 0x0601_7FFF;
+pub const OAM_START: MemoryAddress = 0x0700_0000;
+pub const OAM_END: MemoryAddress = 0x0700_03FF;
+pub const LCD_IO_START: MemoryAddress = 0x0400_0000;
+pub const LCD_IO_END: MemoryAddress = 0x4000056;
+
+impl PPU {
+    #[inline]
+    pub fn read_io(&mut self, address: MemoryAddress) -> u8 {
+        let addr = address as usize;
+        // Note that IO is not mirrored, therefore a subtract instead of a modulo
+        let address = address - LCD_IO_START;
+        match address {
+            0x0..=0x1 => self.control.into_bytes()[addr % 2] as u8,
+            0x2..=0x3 => self.green_swap.to_le_bytes()[addr % 2] as u8,
+            0x4..=0x5 => self.status.into_bytes()[addr % 2] as u8,
+            0x6..=0x7 => self.vertical_counter.into_bytes()[addr % 2] as u8,
+            _ => todo!(),
+        }
+    }
+
+    #[inline]
+    pub fn write_io(&mut self, address: MemoryAddress, value: u8) {
+        todo!()
+    }
+
+    #[inline]
+    pub fn read_palette(&self, address: MemoryAddress) -> u8 {
+        let addr = address as usize % PALETTE_RAM_SIZE;
+
+        self.palette_ram[addr]
+    }
+
+    #[inline]
+    pub fn write_palette(&mut self, address: MemoryAddress, value: u8) {
+        // When writing to palette ram with only a u8 the value is written to both the upper and lower bytes.
+        let final_value = ((value as u16) << 8) | value as u16;
+
+        self.write_palette_16(address, final_value);
+    }
+
+    #[inline]
+    pub fn write_palette_16(&mut self, address: MemoryAddress, value: u16) {
+        let addr = address as usize % PALETTE_RAM_SIZE;
+        let data = value.to_le_bytes();
+
+        self.palette_ram[addr] = data[0];
+        self.palette_ram[addr + 1] = data[1];
+    }
+
+    #[inline]
+    pub fn read_vram(&mut self, address: MemoryAddress) -> u8 {
+        let addr = (address - LCD_VRAM_START) as usize;
+
+        self.vram[addr]
+    }
+
+    #[inline]
+    pub fn write_vram(&mut self, address: MemoryAddress, value: u8) {
+        // When writing to vram ram with only a u8 the value is written to both the upper and lower bytes.
+        //TODO: Potentially ignore 8 bit writes to OBJ (6010000h-6017FFFh) (or 6014000h-6017FFFh in Bitmap mode)
+        let final_value = ((value as u16) << 8) | value as u16;
+
+        self.write_vram_16(address, final_value);
+    }
+
+    #[inline]
+    pub fn write_vram_16(&mut self, address: MemoryAddress, value: u16) {
+        let addr = address as usize % VRAM_SIZE;
+        let data = value.to_le_bytes();
+
+        self.vram[addr] = data[0];
+        self.vram[addr + 1] = data[1];
+    }
+
+    #[inline]
+    pub fn read_oam(&mut self, address: MemoryAddress) -> u8 {
+        let addr = (address - OAM_START) as usize;
+
+        self.oam_ram[addr]
+    }
+
+    #[inline]
+    pub fn write_oam_16(&mut self, address: MemoryAddress, value: u16) {
+        let addr = address as usize % OAM_RAM_SIZE;
+        let data = value.to_le_bytes();
+
+        self.oam_ram[addr] = data[0];
+        self.oam_ram[addr + 1] = data[1];
+    }
+}

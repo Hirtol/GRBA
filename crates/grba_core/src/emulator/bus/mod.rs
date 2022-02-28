@@ -52,9 +52,9 @@ impl Bus {
             2 => self.ram.read_board(addr),
             3 => self.ram.read_chip(addr),
             4 => self.read_io(addr, cpu),
-            5 => todo!("BG/OBJ READ"),
-            6 => todo!("VRAM READ"),
-            7 => todo!("OAM READ"),
+            5 => self.ppu.read_palette(addr),
+            6 => self.ppu.read_vram(addr),
+            7 => self.ppu.read_oam(addr),
             8 | 9 => self.rom.read(addr),
             0xA | 0xB => todo!("ROM READ 2"),
             0xC | 0xD => todo!("ROM READ 3"),
@@ -65,16 +65,22 @@ impl Bus {
 
     pub fn write_32(&mut self, addr: MemoryAddress, data: u32) {
         let data: [u8; 4] = data.to_le_bytes();
-        self.write(addr, data[0]);
-        self.write(addr.wrapping_add(1), data[1]);
-        self.write(addr.wrapping_add(2), data[2]);
-        self.write(addr.wrapping_add(3), data[3]);
+
+        self.write_16(addr, u16::from_le_bytes([data[0], data[1]]));
+        self.write_16(addr.wrapping_add(2), u16::from_le_bytes([data[2], data[3]]));
     }
 
     pub fn write_16(&mut self, addr: MemoryAddress, data: u16) {
-        let data: [u8; 2] = data.to_le_bytes();
-        self.write(addr, data[0]);
-        self.write(addr.wrapping_add(1), data[1]);
+        match Self::get_mem_range(addr) {
+            5 => self.ppu.write_palette_16(addr, data),
+            6 => self.ppu.write_vram_16(addr, data),
+            7 => self.ppu.write_oam_16(addr, data),
+            _ => {
+                let data: [u8; 2] = data.to_le_bytes();
+                self.write(addr, data[0]);
+                self.write(addr.wrapping_add(1), data[1]);
+            }
+        }
     }
 
     pub fn write(&mut self, addr: MemoryAddress, data: u8) {
@@ -83,15 +89,13 @@ impl Bus {
             0 => todo!("BIOS WRITE"),
             2 => self.ram.write_board(addr, data),
             3 => self.ram.write_chip(addr, data),
-            4 => {
-                crate::cpu_log!("IO WRITE: {:#X}", data);
-                self.write_io(addr, data);
+            4 => self.write_io(addr, data),
+            5 => self.ppu.write_palette(addr, data),
+            6 => self.ppu.write_vram(addr, data),
+            7 => {
+                // 8 Bit OAM writes are ignored
+                crate::cpu_log!("bus-logging"; "Ignored 8 bit OAM write to address: {:#X} with value: {}", addr, data)
             }
-            5 => {
-                crate::cpu_log!("BG/OBJ WRITE: {:#X}", data);
-            }
-            6 => todo!("VRAM WRITE"),
-            7 => todo!("OAM WRITE"),
             8 | 9 => todo!("ROM WRITE 1"),
             0xA | 0xB => todo!("ROM WRITE 2"),
             0xC | 0xD => todo!("ROM WRITE 3"),

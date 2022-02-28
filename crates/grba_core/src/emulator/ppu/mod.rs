@@ -1,11 +1,14 @@
-use crate::emulator::ppu::registers::{LcdControl, LcdStatus, VerticalCounter, GREEN_SWAP_START};
-use crate::emulator::MemoryAddress;
+use crate::emulator::ppu::registers::{
+    AlphaBlendCoefficients, BgControl, BgRotationParam, BgRotationRef, BgScrolling, BrightnessCoefficients,
+    ColorSpecialSelection, LcdControl, LcdStatus, MosaicFunction, VerticalCounter, WindowControl, WindowDimensions,
+};
+pub use memory::*;
 
-pub const LCD_IO_START: MemoryAddress = 0x0400_0000;
-pub const LCD_IO_END: MemoryAddress = 0x4000056;
 pub const DISPLAY_WIDTH: u32 = 240;
 pub const DISPLAY_HEIGHT: u32 = 160;
 pub const VRAM_SIZE: usize = 96 * 1024;
+pub const PALETTE_RAM_SIZE: usize = 1024;
+pub const OAM_RAM_SIZE: usize = 1024;
 
 // 15 bit colour
 // 96KB of VRAM
@@ -19,52 +22,69 @@ pub const VRAM_SIZE: usize = 96 * 1024;
 // * Mode 0..=2: Tiles modes
 // * Mode 3..=5: Bitmap modes
 
+mod memory;
 mod registers;
 
 #[derive(Debug, Clone)]
 pub struct PPU {
+    // Ram
+    palette_ram: Box<[u8; PALETTE_RAM_SIZE]>,
+    oam_ram: Box<[u8; OAM_RAM_SIZE]>,
     vram: Box<[u8; VRAM_SIZE]>,
+
+    // Registers
     control: LcdControl,
     /// Not emulated
     green_swap: u16,
     status: LcdStatus,
     vertical_counter: VerticalCounter,
+    /// The background control registers, for backgrounds 0..=3
+    bg_control: [BgControl; 4],
+    /// The background scrolling/offset registers, where `[0]` is X, and `[1]` is Y when indexing a particular background
+    bg_offset: [[BgScrolling; 2]; 4],
+    /// The background rotation references, where `[0]` is `BG2`, and `[1]` is `BG3`
+    bg_rotation_x: [BgRotationParam; 2],
+    bg_rotation_y: [BgRotationParam; 2],
+    /// Internal background rotation/scaling for `BG2`
+    bg_rotation_reference_bg2: [BgRotationRef; 4],
+    /// Internal background rotation/scaling for `BG3`
+    bg_rotation_reference_bg3: [BgRotationRef; 4],
+
+    window_horizontal: [WindowDimensions; 2],
+    window_vertical: [WindowDimensions; 2],
+    window_control_inside: WindowControl,
+    window_control_outside: WindowControl,
+
+    mosaic_function: MosaicFunction,
+    special: ColorSpecialSelection,
+    alpha: AlphaBlendCoefficients,
+    brightness: BrightnessCoefficients,
 }
 
 impl PPU {
     pub fn new() -> Self {
         PPU {
+            palette_ram: crate::box_array![0; PALETTE_RAM_SIZE],
+            oam_ram: crate::box_array![0; OAM_RAM_SIZE],
             vram: crate::box_array![0; VRAM_SIZE],
             control: LcdControl::new(),
+            green_swap: 0,
             status: LcdStatus::new(),
             vertical_counter: VerticalCounter::new(),
-            green_swap: 0,
+            bg_control: [BgControl::new(); 4],
+            bg_offset: [[BgScrolling::new(); 2]; 4],
+            bg_rotation_x: [BgRotationParam::new(); 2],
+            bg_rotation_y: [BgRotationParam::new(); 2],
+            bg_rotation_reference_bg2: [BgRotationRef::new(); 4],
+            bg_rotation_reference_bg3: [BgRotationRef::new(); 4],
+            window_horizontal: [WindowDimensions::new(); 2],
+            window_vertical: [WindowDimensions::new(); 2],
+            window_control_inside: WindowControl::new(),
+            window_control_outside: WindowControl::new(),
+            mosaic_function: MosaicFunction::new(),
+            special: ColorSpecialSelection::new(),
+            alpha: AlphaBlendCoefficients::new(),
+            brightness: BrightnessCoefficients::new(),
         }
-    }
-
-    pub fn read_vram(&mut self, address: MemoryAddress) -> u8 {
-        unimplemented!()
-    }
-
-    pub fn write_vram(&mut self, address: MemoryAddress, value: u8) {
-        unimplemented!()
-    }
-
-    #[inline]
-    pub fn read_io(&mut self, address: MemoryAddress) -> u8 {
-        let addr = address as usize;
-        let address = address - LCD_IO_START;
-        match address {
-            0x0..=0x1 => self.control.into_bytes()[addr % 2] as u8,
-            0x2..=0x3 => self.green_swap.to_le_bytes()[addr % 2] as u8,
-            0x4..=0x5 => self.status.into_bytes()[addr % 2] as u8,
-            0x6..=0x7 => self.vertical_counter.into_bytes()[addr % 2] as u8,
-            _ => todo!(),
-        }
-    }
-
-    #[inline]
-    pub fn write_io(&mut self, address: MemoryAddress, value: u8) {
-        unimplemented!()
     }
 }

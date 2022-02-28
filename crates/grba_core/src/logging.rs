@@ -7,10 +7,12 @@ pub const BIN_TARGET_DEFAULT: &str = "default";
 macro_rules! cpu_log {
     ($feature:expr; $($arg:tt)*) => {
         #[cfg(feature = $feature)]
-        println!($($arg)*);
+        {
+            println!($($arg)*);
+        }
     };
     ($($arg:tt)*) => {
-        crate::cpu_log!("cpu-logging"; $($arg)*);
+        crate::cpu_log!("cpu-logging"; $($arg)*)
     };
 }
 

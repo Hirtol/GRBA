@@ -172,7 +172,7 @@ pub struct BgScrolling {
 #[repr(u32)]
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
-pub struct BgRotationRef {
+pub struct BgRotationParam {
     #[skip]
     unused: B4,
     sign: bool,
@@ -184,7 +184,7 @@ pub struct BgRotationRef {
 #[repr(u16)]
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
-pub struct BgRotationParam {
+pub struct BgRotationRef {
     sign: bool,
     integer_portion: B7,
     fractional_portion: u8,
