@@ -5,6 +5,7 @@ pub const LCD_IO_START: MemoryAddress = 0x0400_0000;
 pub const LCD_IO_END: MemoryAddress = 0x4000056;
 pub const DISPLAY_WIDTH: u32 = 240;
 pub const DISPLAY_HEIGHT: u32 = 160;
+pub const VRAM_SIZE: usize = 96 * 1024;
 
 // 15 bit colour
 // 96KB of VRAM
@@ -20,18 +21,20 @@ pub const DISPLAY_HEIGHT: u32 = 160;
 
 mod registers;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PPU {
+    vram: Box<[u8; VRAM_SIZE]>,
     control: LcdControl,
-    status: LcdStatus,
-    vertical_counter: VerticalCounter,
     /// Not emulated
     green_swap: u16,
+    status: LcdStatus,
+    vertical_counter: VerticalCounter,
 }
 
 impl PPU {
     pub fn new() -> Self {
         PPU {
+            vram: crate::box_array![0; VRAM_SIZE],
             control: LcdControl::new(),
             status: LcdStatus::new(),
             vertical_counter: VerticalCounter::new(),

@@ -1,8 +1,6 @@
-use crate::{check_bit, get_bits};
 use std::fmt::Debug;
 
 /// Check if a sign overflow occurred
-/// TODO: Verify if this is correct
 #[inline(always)]
 pub const fn has_sign_overflowed(val1: u32, val2: u32, result: u32) -> bool {
     ((val1 ^ result) & (val2 ^ result)) >> 31 != 0
@@ -47,12 +45,12 @@ macro_rules! impl_bitops {
 
                 #[inline(always)]
                 fn get_bits(self, begin: u8, end_inclusive: u8) -> $t {
-                    get_bits!(self, begin, end_inclusive)
+                    (self >> begin) & ((1 << (end_inclusive - begin + 1)) - 1)
                 }
 
                 #[inline(always)]
                 fn check_bit(self, bit: u8) -> bool {
-                    check_bit!(self, bit)
+                    (self & (1 << bit)) != 0
                 }
             }
         )*
