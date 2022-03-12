@@ -258,6 +258,7 @@ pub struct PSR {
     overflow: bool,
     irq_disable: bool,
     fiq_disable: bool,
+    /// Also called the `T` bit.
     state: State,
     mode: Mode,
 

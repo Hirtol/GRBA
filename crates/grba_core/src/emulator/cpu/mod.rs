@@ -232,6 +232,7 @@ pub enum Exception {
     SoftwareInterrupt,
     UndefinedInstruction,
     PrefetchAbort,
+    /// Unused in GBA, only IRQ is used
     FastInterrupt,
     Interrupt,
     DataAbort,

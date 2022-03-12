@@ -59,6 +59,26 @@ macro_rules! impl_bitops {
 
 impl_bitops!(u8, u16, u32, u64, i8, i16, i32, i64, usize, isize);
 
+pub trait ModularBitUpdate {
+    fn update_byte(&mut self, index: usize, value: u8);
+}
+
+/// Efficient byte wise update for bitfields
+#[macro_export]
+macro_rules! bitfield_update {
+    ($($t:ty),*) => {
+        use crate::utils::ModularBitUpdate;
+        $(
+            impl ModularBitUpdate for $t {
+                #[inline(always)]
+                fn update_byte(&mut self, index: usize, value: u8) {
+                    self.bytes[index] = value;
+                }
+            }
+        )*
+    };
+}
+
 /// A macro similar to `vec![$elem; $size]` which returns a boxed array.
 ///
 /// ```rustc

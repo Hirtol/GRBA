@@ -4,16 +4,20 @@ use crate::emulator::cpu::CPU;
 use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
 
+use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
 use crate::emulator::ppu::{LCD_IO_END, LCD_IO_START, PPU};
+use crate::utils::ModularBitUpdate;
 pub use bios::BiosData;
 
 mod bios;
+mod interrupts;
 mod ram;
 
 pub struct Bus {
-    ram: ram::WorkRam,
-    rom: Cartridge,
     bios: GbaBios,
+    rom: Cartridge,
+    pub interrupts: InterruptManager,
+    ram: ram::WorkRam,
     ppu: PPU,
     pub scheduler: Scheduler,
 }
@@ -26,6 +30,7 @@ impl Bus {
             bios: GbaBios::new(bios),
             ppu: PPU::new(),
             scheduler: Scheduler::new(),
+            interrupts: InterruptManager::new(),
         }
     }
 
@@ -108,6 +113,9 @@ impl Bus {
     pub fn read_io(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         match addr {
             LCD_IO_START..=LCD_IO_END => self.ppu.read_io(addr),
+            IE_START..=IE_END => self.interrupts.read_ie(addr),
+            IF_START..=IF_END => self.interrupts.read_if(addr),
+            IME_START..=IME_END => self.interrupts.read_ime(addr),
             _ => todo!("IO READ"),
         }
     }
@@ -116,6 +124,9 @@ impl Bus {
     pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
         match addr {
             LCD_IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
+            IE_START..=IE_END => self.interrupts.enable.update_byte((addr % 2) as usize, data),
+            IF_START..=IF_END => self.interrupts.flags.update_byte((addr % 2) as usize, data),
+            IME_START..=IME_END => self.interrupts.master_enable.update_byte((addr % 2) as usize, data),
             _ => todo!("IO Write"),
         }
     }

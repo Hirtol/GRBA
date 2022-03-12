@@ -18,7 +18,7 @@ pub struct Scheduler {
 impl Scheduler {
     pub fn new() -> Self {
         Scheduler {
-            current_time: 0.into(),
+            current_time: 0u32.into(),
             event_queue: BinaryHeap::with_capacity_min(MAX_EVENTS),
         }
     }
@@ -145,6 +145,12 @@ pub struct EmuTime(pub u64);
 impl From<u64> for EmuTime {
     fn from(time: u64) -> Self {
         EmuTime(time)
+    }
+}
+
+impl From<u32> for EmuTime {
+    fn from(time: u32) -> Self {
+        EmuTime(time as u64)
     }
 }
 
