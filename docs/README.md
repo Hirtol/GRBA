@@ -40,3 +40,7 @@ Make sure not to miss it
 Is it defined by ARM7TDMI or ARMv4T?
 It's defined in the ARMv4 spec
 ```
+
+### TODO:
+
+* GBA System Control (HALTing, Waitstate, etc)

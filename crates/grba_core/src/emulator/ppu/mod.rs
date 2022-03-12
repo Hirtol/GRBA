@@ -1,7 +1,9 @@
+use crate::emulator::bus::interrupts::{InterruptManager, Interrupts};
 use crate::emulator::ppu::registers::{
     AlphaBlendCoefficients, BgControl, BgRotationParam, BgRotationRef, BgScrolling, BrightnessCoefficients,
     ColorSpecialSelection, LcdControl, LcdStatus, MosaicFunction, VerticalCounter, WindowControl, WindowDimensions,
 };
+use crate::scheduler::{EmuTime, EventTag, Scheduler};
 pub use memory::*;
 
 pub const DISPLAY_WIDTH: u32 = 240;
@@ -9,6 +11,14 @@ pub const DISPLAY_HEIGHT: u32 = 160;
 pub const VRAM_SIZE: usize = 96 * 1024;
 pub const PALETTE_RAM_SIZE: usize = 1024;
 pub const OAM_RAM_SIZE: usize = 1024;
+
+pub const CYCLES_PER_PIXEL: u32 = 4;
+/// 960 Cycles per drawing scanline
+pub const HDRAW_CYCLES: u32 = DISPLAY_WIDTH * CYCLES_PER_PIXEL;
+pub const HBLANK_CYCLES: u32 = 272;
+pub const SCANLINE_CYCLES: u32 = HDRAW_CYCLES + HBLANK_CYCLES;
+pub const VBLANK_CYCLES: u32 = 83776;
+pub const FRAME_CYCLES: u32 = 280896;
 
 // 15 bit colour
 // 96KB of VRAM
@@ -21,6 +31,7 @@ pub const OAM_RAM_SIZE: usize = 1024;
 // 6 video modes:
 // * Mode 0..=2: Tiles modes
 // * Mode 3..=5: Bitmap modes
+// One frame is 280896 cycles
 
 mod memory;
 mod registers;
@@ -86,5 +97,38 @@ impl PPU {
             alpha: AlphaBlendCoefficients::new(),
             brightness: BrightnessCoefficients::new(),
         }
+    }
+
+    pub fn hblank_start(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
+        self.status.set_h_blank_flag(true);
+
+        // Schedule HBlank interrupt if it's desired
+        if self.status.h_blank_irq_enable() {
+            interrupts.request_interrupt(Interrupts::Hblank, scheduler);
+        }
+
+        // Render a scanline if we're not yet at the final line
+        if self.vertical_counter.current_scanline() < (DISPLAY_HEIGHT - 1) as u8 {
+            self.render_scanline();
+        }
+
+        scheduler.schedule_relative(EventTag::HBlankEnd, EmuTime::from(HBLANK_CYCLES));
+    }
+
+    pub fn hblank_end(&mut self, scheduler: &mut Scheduler) {
+        self.status.set_h_blank_flag(false);
+
+        if self.vertical_counter.current_scanline() == (DISPLAY_HEIGHT - 1) as u8 {
+            // Next up is vblank, starts at beginning of next scanline thus only HBLANK_CYCLES
+            scheduler.schedule_relative(EventTag::VBlank, EmuTime::from(0u32));
+        } else {
+            scheduler.schedule_relative(EventTag::HBlank, EmuTime::from(HDRAW_CYCLES));
+        }
+    }
+
+    pub fn vblank(&mut self, scheduler: &mut Scheduler) {}
+
+    fn render_scanline(&self) {
+        todo!()
     }
 }

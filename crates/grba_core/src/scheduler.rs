@@ -102,6 +102,9 @@ pub enum EventTag {
 
     VBlank,
     HBlank,
+    HBlankEnd,
+    /// Check for interrupts, will be set whenever an interrupt write happens to ensure the CPU can handle it.
+    PollInterrupt,
 }
 
 #[derive(Debug, Copy, Clone, Eq)]

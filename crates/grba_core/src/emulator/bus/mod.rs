@@ -10,7 +10,7 @@ use crate::utils::ModularBitUpdate;
 pub use bios::BiosData;
 
 mod bios;
-mod interrupts;
+pub mod interrupts;
 mod ram;
 
 pub struct Bus {
@@ -125,7 +125,7 @@ impl Bus {
         match addr {
             LCD_IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
             IE_START..=IE_END => self.interrupts.enable.update_byte((addr % 2) as usize, data),
-            IF_START..=IF_END => self.interrupts.flags.update_byte((addr % 2) as usize, data),
+            IF_START..=IF_END => self.interrupts.write_if(addr, data, &mut self.scheduler),
             IME_START..=IME_END => self.interrupts.master_enable.update_byte((addr % 2) as usize, data),
             _ => todo!("IO Write"),
         }

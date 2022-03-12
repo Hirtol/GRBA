@@ -128,43 +128,6 @@ impl CPU {
         self.thumb_lut[lut_index](self, instruction, bus);
     }
 
-    fn raise_exception(&mut self, bus: &mut Bus, exception: Exception) {
-        const RESET_ADDR: u32 = 0x00000000;
-        const UNDEFINED_INSTRUCTION_ADDR: u32 = 0x00000004;
-        const SOFTWARE_INTERRUPT_ADDR: u32 = 0x00000008;
-        const PREFETCH_ABORT_ADDR: u32 = 0x0000000C;
-        const DATA_ABORT_ADDR: u32 = 0x00000010;
-        const RESERVED_ADDR: u32 = 0x00000014;
-        const IRQ_ADDR: u32 = 0x00000018;
-        const FIQ_ADDR: u32 = 0x0000001C;
-
-        match exception {
-            Exception::SoftwareInterrupt => {
-                crate::cpu_log!("Raising Software Interrupt");
-                let pipeline_subtraction = match self.state() {
-                    State::Arm => 4,
-                    State::Thumb => 2,
-                };
-
-                let link_reg_value = self.read_reg(PC_REG) - pipeline_subtraction;
-                let old_cpsr = self.registers.cpsr;
-                // Change CPU state to ARM (if not already)
-                self.switch_state(State::Arm, bus);
-                // Enter supervisor mode
-                self.switch_mode(Mode::Supervisor, bus);
-                // Set the link register to the next instruction
-                self.write_reg(LINK_REG, link_reg_value, bus);
-                // Jump to the exception handler
-                self.write_reg(PC_REG, SOFTWARE_INTERRUPT_ADDR, bus);
-                // Disable any further interrupts
-                self.registers.cpsr.set_irq_disable(true);
-                // Preserve our old cpsr
-                self.registers.spsr = old_cpsr;
-            }
-            _ => todo!("{:?}", exception),
-        }
-    }
-
     fn switch_mode(&mut self, new_mode: registers::Mode, _bus: &mut Bus) {
         let old_mode = self.registers.cpsr.mode();
 
@@ -182,6 +145,69 @@ impl CPU {
         if self.state() != new_state {
             self.registers.cpsr.set_state(new_state);
             // TODO: Do we need to flush pipeline here? At the very least probably need to align PC to new state?
+        }
+    }
+
+    fn raise_exception(&mut self, bus: &mut Bus, exception: Exception) {
+        // SoftwareInterrupt and IRQ are the only exceptions that can be raised (besides UndefinedInstruction) in the GBA
+        const SOFTWARE_INTERRUPT_ADDR: u32 = 0x00000008;
+        const IRQ_ADDR: u32 = 0x00000018;
+
+        let (pipeline_subtraction, jump_addr, new_mode) = match exception {
+            Exception::SoftwareInterrupt => {
+                crate::cpu_log!("Raising Software Interrupt");
+                let pipeline_subtraction = match self.state() {
+                    State::Arm => 4,
+                    State::Thumb => 2,
+                };
+
+                (pipeline_subtraction, SOFTWARE_INTERRUPT_ADDR, Mode::Supervisor)
+            }
+            Exception::Interrupt => {
+                crate::cpu_log!("Raising IRQ");
+                // In this case users should return to the PC before this interrupt would be executed using the SUBS, r14, #4 instruction.
+                // For Thumb we therefore need to not subtract anything, and for ARM only 4.
+                let pipeline_subtraction = match self.state() {
+                    State::Arm => 4,
+                    State::Thumb => 0,
+                };
+
+                (pipeline_subtraction, IRQ_ADDR, Mode::IRQ)
+            }
+            _ => todo!("Other exceptions aren't used in the GBA? {:?}", exception),
+        };
+
+        let link_reg_value = self.read_reg(PC_REG) - pipeline_subtraction;
+        let old_cpsr = self.registers.cpsr;
+        // Change CPU state to ARM (if not already)
+        self.switch_state(State::Arm, bus);
+        // Enter supervisor mode
+        self.switch_mode(new_mode, bus);
+        // Set the link register to the next instruction
+        self.write_reg(LINK_REG, link_reg_value, bus);
+        // Jump to the exception handler
+        self.write_reg(PC_REG, jump_addr, bus);
+        // Disable any further interrupts
+        self.registers.cpsr.set_irq_disable(true);
+        // Preserve our old cpsr
+        self.registers.spsr = old_cpsr;
+    }
+
+    pub fn poll_interrupts(&mut self, bus: &mut Bus) {
+        let ie: u16 = bus.interrupts.enable.into();
+        let iflags: u16 = bus.interrupts.flags.into();
+
+        // Check if an interrupt in `iflags` has been raised, and that it has also been enabled in `ie`
+        if ie & iflags != 0 {
+            // TODO: Take out of HALT mode, then check if interrupts are enabled
+
+            // If master interrupts are disabled, then just don't bother.
+            if self.registers.cpsr.irq_disable() || !bus.interrupts.master_enable.interrupt_enable() {
+                return;
+            }
+
+            // Otherwise, raise the IRQ exception
+            self.raise_exception(bus, Exception::Interrupt);
         }
     }
 
@@ -231,10 +257,12 @@ fn log_cpu_state(cpu: &CPU) {
 pub enum Exception {
     SoftwareInterrupt,
     UndefinedInstruction,
+    /// Unused in GBA
     PrefetchAbort,
     /// Unused in GBA, only IRQ is used
     FastInterrupt,
     Interrupt,
+    /// Unused in GBA
     DataAbort,
     Reset,
 }

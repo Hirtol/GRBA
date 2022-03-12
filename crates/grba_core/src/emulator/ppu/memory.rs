@@ -1,5 +1,6 @@
 use crate::emulator::ppu::{OAM_RAM_SIZE, PALETTE_RAM_SIZE, PPU, VRAM_SIZE};
 use crate::emulator::MemoryAddress;
+use crate::utils::ModularBitUpdate;
 
 pub const PALETTE_START: MemoryAddress = 0x0500_0000;
 pub const PALETTE_END: MemoryAddress = 0x0500_03FF;
@@ -21,13 +22,24 @@ impl PPU {
             0x2..=0x3 => self.green_swap.to_le_bytes()[addr % 2] as u8,
             0x4..=0x5 => self.status.into_bytes()[addr % 2] as u8,
             0x6..=0x7 => self.vertical_counter.into_bytes()[addr % 2] as u8,
+            0x8..=0xF => self.bg_control[(addr % 8) / 2].into_bytes()[addr % 2] as u8,
             _ => todo!(),
         }
     }
 
     #[inline]
     pub fn write_io(&mut self, address: MemoryAddress, value: u8) {
-        todo!()
+        let addr = address as usize;
+        // Note that IO is not mirrored, therefore a subtract instead of a modulo
+        let address = address - LCD_IO_START;
+        match address {
+            0x0..=0x1 => self.control.update_byte(addr % 2, value),
+            0x2..=0x3 => self.green_swap &= (value as u16) << ((addr % 2) * 8) as u16,
+            0x4..=0x5 => self.status.update_byte(addr % 2, value),
+            0x6..=0x7 => self.vertical_counter.update_byte(addr % 2, value),
+            0x8..=0xF => self.bg_control[(addr % 8) / 2].update_byte(addr % 2, value),
+            _ => todo!(),
+        }
     }
 
     #[inline]
@@ -49,6 +61,8 @@ impl PPU {
     pub fn write_palette_16(&mut self, address: MemoryAddress, value: u16) {
         let addr = address as usize % PALETTE_RAM_SIZE;
         let data = value.to_le_bytes();
+        // Better assembly
+        assert!(addr < (PALETTE_RAM_SIZE - 1));
 
         self.palette_ram[addr] = data[0];
         self.palette_ram[addr + 1] = data[1];
@@ -74,6 +88,8 @@ impl PPU {
     pub fn write_vram_16(&mut self, address: MemoryAddress, value: u16) {
         let addr = address as usize % VRAM_SIZE;
         let data = value.to_le_bytes();
+        // Better assembly
+        assert!(addr < (VRAM_SIZE - 1));
 
         self.vram[addr] = data[0];
         self.vram[addr + 1] = data[1];
@@ -90,6 +106,8 @@ impl PPU {
     pub fn write_oam_16(&mut self, address: MemoryAddress, value: u16) {
         let addr = address as usize % OAM_RAM_SIZE;
         let data = value.to_le_bytes();
+        // Better assembly
+        assert!(addr < (OAM_RAM_SIZE - 1));
 
         self.oam_ram[addr] = data[0];
         self.oam_ram[addr + 1] = data[1];
