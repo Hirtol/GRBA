@@ -1138,7 +1138,7 @@ dependencies = [
  "blip_buf",
  "criterion",
  "log",
- "modular-bitfield-msb",
+ "modular-bitfield",
  "num-derive",
  "num-traits",
  "once_cell",
@@ -1588,20 +1588,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "modular-bitfield-msb"
+name = "modular-bitfield"
 version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4f8c4275b0126bb0086e739ee3210114e8f97965779de613d0e8c6bcf06ca5d"
+source = "git+https://github.com/Hirtol/modular-bitfield#04eb38df8e9bbd08ab5e084cffe6426adea70317"
 dependencies = [
- "modular-bitfield-msb-impl",
+ "modular-bitfield-impl",
  "static_assertions",
 ]
 
 [[package]]
-name = "modular-bitfield-msb-impl"
+name = "modular-bitfield-impl"
 version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6239283b0bafd6b3a55a6a02bfce9a3e7fc6ebeffa6f75fe91a104267fcebbd"
+source = "git+https://github.com/Hirtol/modular-bitfield#04eb38df8e9bbd08ab5e084cffe6426adea70317"
 dependencies = [
  "proc-macro2",
  "quote",

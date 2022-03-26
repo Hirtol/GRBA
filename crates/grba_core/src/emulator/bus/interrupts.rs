@@ -1,6 +1,6 @@
 use crate::emulator::MemoryAddress;
 use crate::scheduler::{EmuTime, EventTag, Scheduler};
-use modular_bitfield_msb::prelude::*;
+use modular_bitfield::prelude::*;
 
 pub const IE_START: MemoryAddress = 0x04000200;
 pub const IE_END: MemoryAddress = 0x04000201;
@@ -26,15 +26,15 @@ impl InterruptManager {
     }
 
     pub fn read_ie(&self, address: MemoryAddress) -> u8 {
-        self.enable.into_bytes()[(address - IE_START) as usize]
+        self.enable.to_le_bytes()[(address - IE_START) as usize]
     }
 
     pub fn read_if(&self, address: MemoryAddress) -> u8 {
-        self.flags.into_bytes()[(address - IF_START) as usize]
+        self.flags.to_le_bytes()[(address - IF_START) as usize]
     }
 
     pub fn read_ime(&self, address: MemoryAddress) -> u8 {
-        self.master_enable.into_bytes()[(address - IME_START) as usize]
+        self.master_enable.to_le_bytes()[(address - IME_START) as usize]
     }
 
     pub fn write_if(&mut self, address: MemoryAddress, value: u8, scheduler: &mut Scheduler) {
@@ -42,7 +42,7 @@ impl InterruptManager {
         // By writing a `1` to a bit that was already set, you indicate the interrupt has been handled.
         let new_value = current_value & !value;
 
-        self.flags.update_byte((address % 2) as usize, new_value);
+        self.flags.update_byte_le((address % 2) as usize, new_value);
 
         // Since a potential interrupt could've been left unhandled it's necessary to immediately check for more interrupts.
         scheduler.schedule_event(EventTag::PollInterrupt, EmuTime(0));
@@ -83,29 +83,29 @@ pub enum Interrupts {
     Vblank = 1,
 }
 
-/// If a flag is `false` then the interrup is disabled.
+/// If a flag is `false` then the interrupt is disabled.
 #[bitfield(bits = 16)]
 #[repr(u16)]
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 pub struct InterruptEnable {
-    #[skip]
-    unused: B2,
+    pub vblank: bool,
+    pub hblank: bool,
+    pub vcounter_match: bool,
+    pub timer_0: bool,
+    pub timer_1: bool,
+    pub timer_2: bool,
+    pub timer_3: bool,
+    pub serial_communication: bool,
+    pub dma_0: bool,
+    pub dma_1: bool,
+    pub dma_2: bool,
+    pub dma_3: bool,
+    pub keypad: bool,
     /// External IRQ Source
     pub game_pak: bool,
-    pub keypad: bool,
-    pub dma_3: bool,
-    pub dma_2: bool,
-    pub dma_1: bool,
-    pub dma_0: bool,
-    pub serial_communication: bool,
-    pub timer_3: bool,
-    pub timer_2: bool,
-    pub timer_1: bool,
-    pub timer_0: bool,
-    pub vcounter_match: bool,
-    pub hblank: bool,
-    pub vblank: bool,
+    #[skip]
+    unused: B2,
 }
 
 /// If a flag is `true` then request interrupt
@@ -114,23 +114,23 @@ pub struct InterruptEnable {
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 pub struct InterruptRequestFlags {
-    #[skip]
-    unused: B2,
+    pub vblank: bool,
+    pub hblank: bool,
+    pub vcounter_match: bool,
+    pub timer_0: bool,
+    pub timer_1: bool,
+    pub timer_2: bool,
+    pub timer_3: bool,
+    pub serial_communication: bool,
+    pub dma_0: bool,
+    pub dma_1: bool,
+    pub dma_2: bool,
+    pub dma_3: bool,
+    pub keypad: bool,
     /// External IRQ Source
     pub game_pak: bool,
-    pub keypad: bool,
-    pub dma_3: bool,
-    pub dma_2: bool,
-    pub dma_1: bool,
-    pub dma_0: bool,
-    pub serial_communication: bool,
-    pub timer_3: bool,
-    pub timer_2: bool,
-    pub timer_1: bool,
-    pub timer_0: bool,
-    pub vcounter_match: bool,
-    pub hblank: bool,
-    pub vblank: bool,
+    #[skip]
+    unused: B2,
 }
 
 #[bitfield(bits = 32)]
@@ -138,12 +138,10 @@ pub struct InterruptRequestFlags {
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 pub struct InterruptMasterEnable {
-    #[skip]
-    unused: B31,
     /// If `false` -> disable all interrupts
     ///
     /// if `true` -> See [InterruptEnableRegister] register
     pub interrupt_enable: bool,
+    #[skip]
+    unused: B31,
 }
-
-crate::bitfield_update!(InterruptEnable, InterruptRequestFlags, InterruptMasterEnable);

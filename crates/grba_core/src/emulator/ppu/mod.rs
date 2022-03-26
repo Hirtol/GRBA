@@ -108,7 +108,7 @@ impl PPU {
         }
 
         // Render a scanline if we're not yet at the final line
-        if self.vertical_counter.current_scanline() < (DISPLAY_HEIGHT - 1) as u8 {
+        if self.vertical_counter.current_scanline() < DISPLAY_HEIGHT as u8 {
             self.render_scanline();
         }
 
@@ -118,8 +118,11 @@ impl PPU {
     pub fn hblank_end(&mut self, scheduler: &mut Scheduler) {
         self.status.set_h_blank_flag(false);
 
-        if self.vertical_counter.current_scanline() == (DISPLAY_HEIGHT - 1) as u8 {
-            // Next up is vblank, starts at beginning of next scanline thus only HBLANK_CYCLES
+        self.vertical_counter
+            .set_current_scanline(self.vertical_counter.current_scanline() + 1);
+
+        if self.vertical_counter.current_scanline() == DISPLAY_HEIGHT as u8 {
+            // Next up is vblank
             scheduler.schedule_relative(EventTag::VBlank, EmuTime::from(0u32));
         } else {
             scheduler.schedule_relative(EventTag::HBlank, EmuTime::from(HDRAW_CYCLES));
