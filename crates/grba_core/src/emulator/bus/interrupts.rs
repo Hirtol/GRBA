@@ -37,6 +37,10 @@ impl InterruptManager {
         self.master_enable.to_le_bytes()[(address - IME_START) as usize]
     }
 
+    pub fn write_ie(&mut self, address: MemoryAddress, value: u8) {
+        self.enable.update_byte_le((address % 2) as usize, value);
+    }
+
     pub fn write_if(&mut self, address: MemoryAddress, value: u8, scheduler: &mut Scheduler) {
         let current_value = self.read_if(address);
         // By writing a `1` to a bit that was already set, you indicate the interrupt has been handled.
@@ -46,6 +50,10 @@ impl InterruptManager {
 
         // Since a potential interrupt could've been left unhandled it's necessary to immediately check for more interrupts.
         scheduler.schedule_event(EventTag::PollInterrupt, EmuTime(0));
+    }
+
+    pub fn write_ime(&mut self, address: MemoryAddress, value: u8) {
+        self.master_enable.update_byte_le((address % 2) as usize, value);
     }
 
     /// Schedule an interrupt to be checked by the CPU.

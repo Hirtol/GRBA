@@ -124,9 +124,9 @@ impl Bus {
     pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
         match addr {
             LCD_IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
-            IE_START..=IE_END => self.interrupts.enable.update_byte_le((addr % 2) as usize, data),
+            IE_START..=IE_END => self.interrupts.write_ie(addr, data),
             IF_START..=IF_END => self.interrupts.write_if(addr, data, &mut self.scheduler),
-            IME_START..=IME_END => self.interrupts.master_enable.update_byte_le((addr % 2) as usize, data),
+            IME_START..=IME_END => self.interrupts.write_ime(addr, data),
             _ => todo!("IO Write"),
         }
     }
