@@ -73,6 +73,12 @@ impl GBAEmulator {
     }
 
     pub fn step_instruction(&mut self) -> bool {
+        self.cpu.step_instruction(&mut self.bus);
+
+        // Very basic cycle counting to get things going. In the future ought to count cycles properly.
+        //TODO: Instruction timing
+        self.bus.scheduler.add_time(2);
+
         while let Some(event) = self.bus.scheduler.pop_current() {
             match event.tag {
                 EventTag::Exit => {
@@ -98,14 +104,6 @@ impl GBAEmulator {
             }
         }
 
-        self.cpu.step_instruction(&mut self.bus);
-
-        // Very basic cycle counting to get things going. In the future ought to count cycles properly.
-        //TODO: Instruction timing
-        self.bus.scheduler.add_time(2);
-
-        // Temporary measure to get some frames.
-        // (self.bus.scheduler.current_time.0 % CLOCKS_PER_FRAME as u64) == 0
         false
     }
 
