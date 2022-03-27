@@ -73,6 +73,7 @@ impl PPU {
 
     #[inline]
     pub fn read_vram(&mut self, address: MemoryAddress) -> u8 {
+        //TODO: Vram mirroring is awkward at 64KB + 32KB + 32KB, where the 32KB are mirrors of each other.
         let addr = (address - LCD_VRAM_START) as usize;
 
         self.vram[addr]
@@ -100,7 +101,8 @@ impl PPU {
 
     #[inline]
     pub fn read_oam(&mut self, address: MemoryAddress) -> u8 {
-        let addr = (address - OAM_START) as usize;
+        // Memory is mirrored
+        let addr = address as usize % OAM_RAM_SIZE;
 
         self.oam_ram[addr]
     }

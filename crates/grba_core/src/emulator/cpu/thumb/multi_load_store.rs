@@ -12,21 +12,22 @@ impl ThumbV4 {
         let register_list = instruction.get_bits(0, 7) as u8;
 
         if is_load {
-            if store_lr_load_pc {
-                let sp = cpu.read_reg(SP_REG);
-                cpu.write_reg(PC_REG, bus.read_32(sp, cpu), bus);
+            let mut sp = cpu.read_reg(SP_REG);
 
-                cpu.write_reg(SP_REG, sp.wrapping_add(4), bus);
+            if store_lr_load_pc {
+                sp = sp.wrapping_add(4);
+                cpu.write_reg(PC_REG, bus.read_32(sp, cpu), bus);
             }
 
             for i in 0..8 {
                 if register_list.check_bit(i) {
-                    let sp = cpu.read_reg(SP_REG);
-                    cpu.write_reg(i as usize, bus.read_32(sp, cpu), bus);
+                    sp = sp.wrapping_add(4);
 
-                    cpu.write_reg(SP_REG, sp.wrapping_add(4), bus);
+                    cpu.write_reg(i as usize, bus.read_32(sp, cpu), bus);
                 }
             }
+
+            cpu.write_reg(SP_REG, sp, bus);
         } else {
             if store_lr_load_pc {
                 let sp = cpu.read_reg(SP_REG);
@@ -34,7 +35,7 @@ impl ThumbV4 {
                 cpu.write_reg(SP_REG, sp.wrapping_sub(4), bus);
             }
 
-            for i in 0..8 {
+            for i in (0..8).rev() {
                 if register_list.check_bit(i) {
                     let reg_value = cpu.read_reg(i as usize);
                     let sp = cpu.read_reg(SP_REG);
