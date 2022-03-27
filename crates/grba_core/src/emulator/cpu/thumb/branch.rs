@@ -78,7 +78,7 @@ impl ThumbV4 {
     }
 
     pub fn long_branch_with_link_low(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
-        let offset = sign_extend32((instruction.get_bits(0, 10) as u32) << 1, 12);
+        let offset = (instruction.get_bits(0, 10) as u32) << 1;
         let lr = cpu.read_reg(LINK_REG);
         let final_value = lr.wrapping_add(offset as u32);
         let next_instruction_address = cpu.read_reg(PC_REG).wrapping_sub(2);
