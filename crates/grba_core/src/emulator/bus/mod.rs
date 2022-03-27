@@ -106,7 +106,7 @@ impl Bus {
                 crate::cpu_log!("bus-logging"; "Ignored 8 bit OAM write to address: {:#X} with value: {}", addr, data)
             }
             8 | 9 => {
-                // todo!("ROM WRITE 1")
+                todo!("ROM WRITE 1")
             }
             0xA | 0xB => todo!("ROM WRITE 2"),
             0xC | 0xD => todo!("ROM WRITE 3"),

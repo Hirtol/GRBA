@@ -40,6 +40,19 @@ Make sure not to miss it
 Is it defined by ARM7TDMI or ARMv4T?
 It's defined in the ARMv4 spec
 ```
+#### GBA Bios:
+```
+Well that was bloody annoying. 
+You'd think that given I pass all the cpu tests I can find and can boot the majority of 
+roms that don't depend on eeprom checks that my cpu would be well hardened.
+
+Nope. 
+Apparently the bios does a thumb branch and link directly leading into a BX PC to return to arm mode. 
+If you forget to mask out the bottom bit on Thumb BL then the second branch will stay as thumb and go wrong. 
+Masking R15 nearly everywhere else meant that this only failed now
+
+Still, I've got a bootable bios now
+```
 
 ### TODO:
 
