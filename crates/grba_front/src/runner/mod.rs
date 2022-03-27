@@ -2,6 +2,7 @@ use crate::runner::messages::{EmulatorMessage, EmulatorResponse};
 use crossbeam::channel::{bounded, unbounded, Receiver, Sender};
 
 use grba_core::emulator::cartridge::Cartridge;
+use grba_core::emulator::ppu::RGBA;
 use grba_core::emulator::EmuOptions;
 use grba_core::emulator::GBAEmulator;
 use grba_core::InputKeys;
@@ -12,11 +13,12 @@ pub mod messages;
 
 pub struct EmulatorRunner {
     rom: Cartridge,
+    bios: Option<Vec<u8>>,
 }
 
 impl EmulatorRunner {
-    pub fn new(rom: Cartridge) -> Self {
-        Self { rom }
+    pub fn new(rom: Cartridge, bios: Option<Vec<u8>>) -> Self {
+        Self { rom, bios }
     }
 
     pub fn run(self) -> RunnerHandle {
@@ -26,7 +28,13 @@ impl EmulatorRunner {
 
         let emu_thread = std::thread::spawn(move || {
             profiling::register_thread!("Emulator Thread");
-            let mut emulator = create_emulator(self.rom, EmuOptions::default());
+
+            let emu_options = EmuOptions {
+                bios: self.bios,
+                ..Default::default()
+            };
+
+            let mut emulator = create_emulator(self.rom, emu_options);
             run_emulator(&mut emulator, frame_sender, response_sender, request_receiver);
         });
 
@@ -41,7 +49,7 @@ impl EmulatorRunner {
 
 pub struct RunnerHandle {
     current_thread: JoinHandle<()>,
-    pub frame_receiver: Receiver<Vec<u8>>,
+    pub frame_receiver: Receiver<Box<[RGBA; grba_core::FRAMEBUFFER_SIZE]>>,
     pub request_sender: Sender<EmulatorMessage>,
     pub response_receiver: Receiver<EmulatorResponse>,
 }
@@ -74,7 +82,7 @@ impl RunnerHandle {
 
 fn run_emulator(
     emu: &mut GBAEmulator,
-    frame_sender: Sender<Vec<u8>>,
+    frame_sender: Sender<Box<[RGBA; grba_core::FRAMEBUFFER_SIZE]>>,
     _response_sender: Sender<EmulatorResponse>,
     request_receiver: Receiver<EmulatorMessage>,
 ) {
@@ -82,8 +90,8 @@ fn run_emulator(
         profiling::scope!("Emulator Loop");
         emu.run_to_vblank();
 
-        if let Err(e) = frame_sender.send(emu.frame_buffer()) {
-            log::error!("Failed to transfer framebuffer due to: {:?}", e);
+        if let Err(e) = frame_sender.send(emu.take_frame_buffer()) {
+            log::error!("Failed to transfer framebuffer due to: {:#}", e);
             break;
         }
 

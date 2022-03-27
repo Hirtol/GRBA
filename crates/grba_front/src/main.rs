@@ -6,6 +6,7 @@ use grba_core::emulator::cartridge::header::CartridgeHeader;
 use grba_core::emulator::cartridge::Cartridge;
 use log::LevelFilter;
 
+use grba_core::emulator::ppu::RGBA;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
@@ -40,6 +41,7 @@ pub struct Application {
     input: winit_input_helper::WinitInputHelper,
     event_loop: EventLoop<()>,
     wait_to: Instant,
+    start: Instant,
 }
 
 impl Application {
@@ -54,6 +56,7 @@ impl Application {
             input,
             event_loop,
             wait_to: Instant::now(),
+            start: Instant::now(),
         })
     }
 
@@ -106,7 +109,7 @@ impl Application {
                         // No emu, don't draw excessively.
                         *control_flow = ControlFlow::Wait;
 
-                        let render_result = self.renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE]);
+                        let render_result = self.renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE * 4]);
 
                         // Basic error handling
                         if render_result.is_err() {
@@ -142,11 +145,15 @@ impl Application {
 
                     for _ in 0..frames_to_render {
                         let frame = emu.frame_receiver.recv().unwrap();
-                        let render_result = self.renderer.render_pixels(&frame);
+                        let frame: Box<[u8; grba_core::FRAMEBUFFER_SIZE * std::mem::size_of::<RGBA>()]> =
+                            unsafe { std::mem::transmute(frame) };
+
+                        let render_result = self.renderer.render_pixels(&*frame);
 
                         // Basic error handling
-                        if render_result.is_err() {
+                        if let Err(e) = render_result {
                             *control_flow = ControlFlow::Exit;
+                            log::error!("Failed to render {:#}", e);
                         }
                     }
                 }
@@ -214,8 +221,10 @@ impl State {
 
     pub fn load_cartridge(&mut self, cartridge: Cartridge) {
         self.current_header = Some(cartridge.header().clone());
+        //TODO: User supplied bios location
+        let bios = std::fs::read("roms/gba_bios.bin").unwrap();
 
-        let runner = EmulatorRunner::new(cartridge);
+        let runner = EmulatorRunner::new(cartridge, Some(bios));
         self.current_emu = Some(runner.run());
     }
 }

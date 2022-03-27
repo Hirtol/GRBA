@@ -226,7 +226,7 @@ fn render_scanline_mode4(ppu: &mut PPU) {
             red: get_5_to_8_bit_color(palette.get_bits(0, 4) as u8),
             green: get_5_to_8_bit_color(palette.get_bits(5, 9) as u8),
             blue: get_5_to_8_bit_color(palette.get_bits(10, 14) as u8),
-            alpha: 0,
+            alpha: 255,
         };
     }
 }

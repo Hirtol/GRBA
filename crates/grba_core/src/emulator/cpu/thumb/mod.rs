@@ -29,18 +29,18 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
     let mut result: ThumbLUT = [dead_fn as LutInstruction; THUMB_LUT_SIZE];
 
     for i in 0..THUMB_LUT_SIZE {
-        // Move Shifted Register:
-        // 000X_XXXX
-        if (i & 0xE0) == 0b0000_0000 {
-            result[i] = ThumbV4::move_shifted_reg;
-            continue;
-        }
-
         // Add/Subtract
         // 0001_1XXX
         if (i & 0xF8) == 0b0001_1000 {
             //TODO: Split on Opcode/Immediate value
             result[i] = ThumbV4::add_subtract;
+            continue;
+        }
+
+        // Move Shifted Register:
+        // 000X_XXXX
+        if (i & 0xE0) == 0b0000_0000 {
+            result[i] = ThumbV4::move_shifted_reg;
             continue;
         }
 

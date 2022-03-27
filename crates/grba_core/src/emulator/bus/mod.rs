@@ -105,7 +105,9 @@ impl Bus {
                 // 8 Bit OAM writes are ignored
                 crate::cpu_log!("bus-logging"; "Ignored 8 bit OAM write to address: {:#X} with value: {}", addr, data)
             }
-            8 | 9 => todo!("ROM WRITE 1"),
+            8 | 9 => {
+                // todo!("ROM WRITE 1")
+            }
             0xA | 0xB => todo!("ROM WRITE 2"),
             0xC | 0xD => todo!("ROM WRITE 3"),
             0xE | 0xF => self.rom.write_sram(addr, data),
@@ -120,7 +122,7 @@ impl Bus {
             IE_START..=IE_END => self.interrupts.read_ie(addr),
             IF_START..=IF_END => self.interrupts.read_if(addr),
             IME_START..=IME_END => self.interrupts.read_ime(addr),
-            _ => todo!("IO READ"),
+            _ => todo!("IO READ {:#X}", addr),
         }
     }
 

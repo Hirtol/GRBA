@@ -18,7 +18,7 @@ impl From<u16> for ShiftOpcode {
             0x0 => ShiftOpcode::Lsl,
             0x1 => ShiftOpcode::Lsr,
             0x2 => ShiftOpcode::Asr,
-            _ => panic!("Invalid opcode"),
+            _ => panic!("Invalid opcode {}", val),
         }
     }
 }
