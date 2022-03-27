@@ -7,8 +7,8 @@ mod utils;
 pub use emulator::ppu::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
 pub use joypad::InputKeys;
 /// The total framebuffer size that would be returned each frame.
-/// Format is `RGBA_u8`.
-pub const FRAMEBUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT * 4) as usize;
+/// Format is [crate::emulator::ppu::RGBA].
+pub const FRAMEBUFFER_SIZE: usize = (DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize;
 /// The amount of frames per second a normal GBA would display.
 pub const REFRESH_RATE: f32 = 59.7275;
 /// The clock speed of the ARM7TDMI CPU in Hz.

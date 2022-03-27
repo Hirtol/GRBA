@@ -71,7 +71,7 @@ pub trait ModularBitUpdate {
 #[macro_export]
 macro_rules! box_array {
     ($val:expr ; $len:expr) => {{
-        crate::utils::alloc_array::<_, $len>($val)
+        crate::utils::alloc_array::<_, { $len }>($val)
     }};
 }
 

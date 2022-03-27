@@ -1590,7 +1590,7 @@ dependencies = [
 [[package]]
 name = "modular-bitfield"
 version = "0.11.2"
-source = "git+https://github.com/Hirtol/modular-bitfield#04eb38df8e9bbd08ab5e084cffe6426adea70317"
+source = "git+https://github.com/Hirtol/modular-bitfield#9996832499252579057a3ea4a47ef4ef812ac1a1"
 dependencies = [
  "modular-bitfield-impl",
  "static_assertions",
@@ -1599,7 +1599,7 @@ dependencies = [
 [[package]]
 name = "modular-bitfield-impl"
 version = "0.11.2"
-source = "git+https://github.com/Hirtol/modular-bitfield#04eb38df8e9bbd08ab5e084cffe6426adea70317"
+source = "git+https://github.com/Hirtol/modular-bitfield#9996832499252579057a3ea4a47ef4ef812ac1a1"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -1,5 +1,7 @@
 use crate::emulator::bus::BiosData;
-use crate::{InputKeys, CLOCKS_PER_FRAME};
+use crate::emulator::ppu::RGBA;
+use crate::scheduler::EventTag;
+use crate::{InputKeys, CLOCKS_PER_FRAME, FRAMEBUFFER_SIZE};
 use bus::Bus;
 use cartridge::Cartridge;
 use cpu::CPU;
@@ -71,6 +73,31 @@ impl GBAEmulator {
     }
 
     pub fn step_instruction(&mut self) -> bool {
+        while let Some(event) = self.bus.scheduler.pop_current() {
+            match event.tag {
+                EventTag::Exit => {
+                    panic!("Exit shouldn't ever be triggered!");
+                }
+                EventTag::VBlank => {
+                    self.bus.ppu.vblank(&mut self.bus.scheduler, &mut self.bus.interrupts);
+                    return true;
+                }
+                EventTag::HBlank => {
+                    self.bus
+                        .ppu
+                        .hblank_start(&mut self.bus.scheduler, &mut self.bus.interrupts);
+                }
+                EventTag::HBlankEnd => {
+                    self.bus
+                        .ppu
+                        .hblank_end(&mut self.bus.scheduler, &mut self.bus.interrupts);
+                }
+                EventTag::PollInterrupt => {
+                    self.cpu.poll_interrupts(&mut self.bus);
+                }
+            }
+        }
+
         self.cpu.step_instruction(&mut self.bus);
 
         // Very basic cycle counting to get things going. In the future ought to count cycles properly.
@@ -78,7 +105,8 @@ impl GBAEmulator {
         self.bus.scheduler.add_time(2);
 
         // Temporary measure to get some frames.
-        (self.bus.scheduler.current_time.0 % CLOCKS_PER_FRAME as u64) == 0
+        // (self.bus.scheduler.current_time.0 % CLOCKS_PER_FRAME as u64) == 0
+        false
     }
 
     pub fn step_instruction_debug(&mut self) -> bool {
@@ -93,8 +121,12 @@ impl GBAEmulator {
         //TODO
     }
 
-    pub fn frame_buffer(&self) -> Vec<u8> {
-        vec![180; crate::FRAMEBUFFER_SIZE]
+    pub fn take_frame_buffer(&mut self) -> Box<[RGBA; FRAMEBUFFER_SIZE]> {
+        self.bus.ppu.take_frame_buffer()
+    }
+
+    pub fn frame_buffer(&mut self) -> &mut Box<[RGBA; FRAMEBUFFER_SIZE]> {
+        self.bus.ppu.frame_buffer()
     }
 
     pub fn frame_buffer_ref(&mut self) -> &mut Vec<u8> {

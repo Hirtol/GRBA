@@ -77,9 +77,9 @@ pub enum BgMode {
 #[repr(u16)]
 #[derive(Debug, Copy, Clone)]
 pub struct LcdStatus {
-    /// (Read only) (1=VBlank) (set in line 160..226; not 227)
+    /// (Read only) (1=VBlank) (set in line 160..=226; not 227)
     pub v_blank_flag: bool,
-    /// (Read only) (1=HBlank) (toggled in all lines, 0..227)
+    /// (Read only) (1=HBlank) (toggled in all lines, 0..=227)
     pub h_blank_flag: bool,
     /// (Read only) (1=Match)  (set in selected line)
     pub v_counter_flag: bool,
@@ -89,7 +89,7 @@ pub struct LcdStatus {
     /// Unused in GBA, used for NDS
     #[skip]
     unused: B2,
-    /// The V-Count-Setting value is much the same as LYC of older gameboys.
+    /// The V-Count-Setting value is much the same as LYC of older GameBoys.
     ///
     /// When its value is identical to the content of the VCOUNT register then the V-Counter flag is set (Bit 2), and (if enabled in Bit 5) an interrupt is requested.
     /// Although the drawing time is only 960 cycles (240*4), the H-Blank flag is "0" for a total of 1006 cycles.
@@ -97,7 +97,7 @@ pub struct LcdStatus {
 }
 
 /// Indicates the currently drawn scanline
-#[bitfield(bits = 16)]
+#[bitfield(bits = 16, packed = false)]
 #[repr(u16)]
 #[derive(Debug, Copy, Clone)]
 pub struct VerticalCounter {

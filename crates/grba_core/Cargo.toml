@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["cpu-logging"]
+default = ["ppu-logging"]
 cpu-logging = []
 bus-logging = []
+ppu-logging = []
 bin-logging = []
 
 [dev-dependencies]

@@ -15,23 +15,27 @@ mod ram;
 
 pub struct Bus {
     bios: GbaBios,
-    rom: Cartridge,
+    pub rom: Cartridge,
     pub interrupts: InterruptManager,
     ram: ram::WorkRam,
-    ppu: PPU,
+    pub ppu: PPU,
     pub scheduler: Scheduler,
 }
 
 impl Bus {
     pub fn new(rom: Cartridge, bios: Box<BiosData>) -> Self {
-        Self {
+        let mut result = Self {
             ram: ram::WorkRam::new(),
             rom,
             bios: GbaBios::new(bios),
             ppu: PPU::new(),
             scheduler: Scheduler::new(),
             interrupts: InterruptManager::new(),
-        }
+        };
+
+        result.ppu.initial_startup(&mut result.scheduler);
+
+        result
     }
 
     pub fn read_32(&mut self, addr: MemoryAddress, cpu: &CPU) -> u32 {
