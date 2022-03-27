@@ -1,22 +1,25 @@
+pub use bios::BiosData;
+
 use crate::emulator::bus::bios::GbaBios;
+use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
+use crate::emulator::bus::keypad::{Keypad, KEYINTERRUPT_END, KEYINTERRUPT_START, KEYSTATUS_END, KEYSTATUS_START};
 use crate::emulator::cartridge::Cartridge;
 use crate::emulator::cpu::CPU;
+use crate::emulator::ppu::{LCD_IO_END, LCD_IO_START, PPU};
 use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
-
-use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
-use crate::emulator::ppu::{LCD_IO_END, LCD_IO_START, PPU};
 use crate::utils::ModularBitUpdate;
-pub use bios::BiosData;
 
 mod bios;
 pub mod interrupts;
+pub mod keypad;
 mod ram;
 
 pub struct Bus {
     bios: GbaBios,
     pub rom: Cartridge,
     pub interrupts: InterruptManager,
+    pub keypad: Keypad,
     ram: ram::WorkRam,
     pub ppu: PPU,
     pub scheduler: Scheduler,
@@ -31,6 +34,7 @@ impl Bus {
             ppu: PPU::new(),
             scheduler: Scheduler::new(),
             interrupts: InterruptManager::new(),
+            keypad: Keypad::default(),
         };
 
         result.ppu.initial_startup(&mut result.scheduler);
@@ -119,10 +123,16 @@ impl Bus {
     pub fn read_io(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         match addr {
             LCD_IO_START..=LCD_IO_END => self.ppu.read_io(addr),
+            KEYSTATUS_START..=KEYSTATUS_END => self.keypad.status.to_le_bytes()[(addr - KEYSTATUS_START) as usize],
+            KEYINTERRUPT_START..=KEYINTERRUPT_END => {
+                self.keypad.interrupt_control.to_le_bytes()[(addr - KEYINTERRUPT_START) as usize]
+            }
             IE_START..=IE_END => self.interrupts.read_ie(addr),
             IF_START..=IF_END => self.interrupts.read_if(addr),
             IME_START..=IME_END => self.interrupts.read_ime(addr),
-            _ => todo!("IO READ {:#X}", addr),
+            _ => {
+                todo!("IO READ {:#X}", addr)
+            }
         }
     }
 
@@ -130,6 +140,13 @@ impl Bus {
     pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
         match addr {
             LCD_IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
+            KEYSTATUS_START..=KEYSTATUS_END => {
+                crate::cpu_log!("bus-logging"; "Ignored write to keypad status register: {}", data);
+            }
+            KEYINTERRUPT_START..=KEYINTERRUPT_END => self
+                .keypad
+                .interrupt_control
+                .update_byte_le((addr - KEYINTERRUPT_START) as usize, data),
             IE_START..=IE_END => self.interrupts.write_ie(addr, data),
             IF_START..=IF_END => self.interrupts.write_if(addr, data, &mut self.scheduler),
             IME_START..=IME_END => self.interrupts.write_ime(addr, data),

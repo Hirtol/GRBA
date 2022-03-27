@@ -111,12 +111,16 @@ impl GBAEmulator {
         self.step_instruction()
     }
 
-    pub fn key_down(&self, _key: InputKeys) {
-        //TODO
+    pub fn key_down(&mut self, key: InputKeys) {
+        self.bus
+            .keypad
+            .button_changed(key, true, &mut self.bus.scheduler, &mut self.bus.interrupts);
     }
 
-    pub fn key_up(&self, _key: InputKeys) {
-        //TODO
+    pub fn key_up(&mut self, key: InputKeys) {
+        self.bus
+            .keypad
+            .button_changed(key, false, &mut self.bus.scheduler, &mut self.bus.interrupts);
     }
 
     pub fn take_frame_buffer(&mut self) -> Box<[RGBA; FRAMEBUFFER_SIZE]> {

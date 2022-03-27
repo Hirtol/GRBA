@@ -57,3 +57,4 @@ Still, I've got a bootable bios now
 ### TODO:
 
 * GBA System Control (HALTing, Waitstate, etc)
+* VSync loop detection? https://github.com/Arisotura/arm7wrestler/blob/05137604887ee1d184ec5c26899782151dca270f/arm7/source/armwrestler-ds.s#L174

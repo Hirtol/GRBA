@@ -119,6 +119,12 @@ impl Application {
                         return;
                     };
 
+                    // If paused just wait
+                    if self.state.paused {
+                        *control_flow = ControlFlow::WaitUntil(Instant::now() + FRAME_DURATION);
+                        return;
+                    }
+
                     // Determine if we need to wait.
                     match self.state.run_state {
                         RunningState::FrameLimited | RunningState::FastForward(_) => {
@@ -285,6 +291,7 @@ fn handle_key(input: KeyboardInput, state: &mut State, renderer: &mut Renderer) 
             }
         }
         VirtualKeyCode::K if input.state == ElementState::Released => {
+            log::debug!("K pressed, pause: {}", state.paused);
             state.paused.toggle();
         }
         VirtualKeyCode::F11 if input.state == ElementState::Released => renderer.toggle_fullscreen(),
