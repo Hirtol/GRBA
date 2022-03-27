@@ -68,8 +68,6 @@ impl ThumbV4 {
         cpu.write_reg(r_d, to_write, bus);
     }
 
-    //15 14 13 12 11
-    // 0  0  1  O  P
     pub fn move_compare_add_subtract(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
         enum Opcode {
             Mov = 0b00,
@@ -86,6 +84,7 @@ impl ThumbV4 {
         match opcode {
             0b00 => {
                 cpu.write_reg(r_d, offset, bus);
+                cpu.set_zero_and_sign(offset);
             }
             0b01 => {
                 // Same as sub, only write flags however
