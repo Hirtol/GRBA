@@ -234,6 +234,7 @@ fn render_scanline_mode4(ppu: &mut PPU) {
 /// Convert the 5-bit colour values to 8 bit values which we work with.
 ///
 /// Follows the method described [here](https://near.sh/articles/video/color-emulation)
+/// TODO: Do the correction for washed out colours as well.
 #[inline(always)]
 pub const fn get_5_to_8_bit_color(color_5: u8) -> u8 {
     let final_color = color_5 << 3;

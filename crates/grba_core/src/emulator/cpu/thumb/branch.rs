@@ -46,16 +46,6 @@ impl ThumbV4 {
         }
     }
 
-    pub fn pc_relative_load(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
-        let r_d = instruction.get_bits(8, 10) as usize;
-
-        let imm_value = instruction.get_bits(0, 7) << 2;
-        // PC value must always be word aligned for this addition
-        let pc_value = cpu.registers.pc() & 0xFFFFFFFC;
-
-        cpu.write_reg(r_d, pc_value.wrapping_add(imm_value as u32), bus);
-    }
-
     pub fn conditional_branch(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
         let condition = instruction.get_bits(8, 11);
         let offset = sign_extend32((instruction.get_bits(0, 7) << 1) as u32, 9);

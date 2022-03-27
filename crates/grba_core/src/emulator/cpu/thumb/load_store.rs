@@ -5,6 +5,18 @@ use crate::emulator::cpu::CPU;
 use crate::utils::{sign_extend32, BitOps};
 
 impl ThumbV4 {
+    pub fn pc_relative_load(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
+        let r_d = instruction.get_bits(8, 10) as usize;
+
+        let imm_value = instruction.get_bits(0, 7) << 2;
+        // PC value must always be word aligned for this addition
+        let pc_value = cpu.registers.pc() & 0xFFFFFFFC;
+
+        let address = pc_value.wrapping_add(imm_value as u32);
+        // Read the value at the specified address and write it to r_d
+        cpu.write_reg(r_d, bus.read_32(address, cpu), bus);
+    }
+
     pub fn load_store_with_reg_offset(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
         let is_load = instruction.check_bit(11);
         let is_byte_transfer = instruction.check_bit(10);
