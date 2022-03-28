@@ -73,8 +73,7 @@ impl PPU {
 
     #[inline]
     pub fn read_vram(&mut self, address: MemoryAddress) -> u8 {
-        //TODO: Vram mirroring is awkward at 64KB + 32KB + 32KB, where the 32KB are mirrors of each other.
-        let addr = (address - LCD_VRAM_START) as usize;
+        let addr = get_vram_address(address);
 
         self.vram[addr]
     }
@@ -90,7 +89,7 @@ impl PPU {
 
     #[inline]
     pub fn write_vram_16(&mut self, address: MemoryAddress, value: u16) {
-        let addr = address as usize % VRAM_SIZE;
+        let addr = get_vram_address(address);
         let data = value.to_le_bytes();
         // Better assembly
         assert!(addr < (VRAM_SIZE - 1));
@@ -117,4 +116,16 @@ impl PPU {
         self.oam_ram[addr] = data[0];
         self.oam_ram[addr + 1] = data[1];
     }
+}
+
+#[inline(always)]
+fn get_vram_address(address: MemoryAddress) -> usize {
+    // VRAM mirroring is awkward at 64KB + 32KB + 32KB, where the 32KB are mirrors of each other.
+    let mut addr = (address & 0x1FFFF) as usize;
+
+    if addr >= VRAM_SIZE {
+        addr -= 0x8000;
+    }
+
+    addr
 }

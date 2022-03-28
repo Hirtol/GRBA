@@ -191,11 +191,13 @@ impl PPU {
 
     fn render_scanline(&mut self) {
         crate::cpu_log!("ppu-logging"; "Rendering scanline {} - Mode: {:?}", self.vertical_counter.current_scanline(), self.control.bg_mode());
+        // TODO: Backdrop color (when no background has rendered a pixel there (all transparent) should be filled with palette 0)
+        // Only really relevant for Mode0..=2
         match self.control.bg_mode() {
             BgMode::Mode0 => {}
             BgMode::Mode1 => {}
             BgMode::Mode2 => {}
-            BgMode::Mode3 => {}
+            BgMode::Mode3 => render_scanline_mode3(self),
             BgMode::Mode4 => render_scanline_mode4(self),
             BgMode::Mode5 => {}
         }
@@ -213,8 +215,25 @@ impl PPU {
     }
 }
 
+pub fn render_scanline_mode3(ppu: &mut PPU) {
+    let vram_index = ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
+    //TODO: Fix colours being wrong?
+    for i in 0..DISPLAY_WIDTH as usize {
+        // * 2 since we're rendering one pixel per two bytes
+        let index = (vram_index + i) * 2;
+        let pixel = u16::from_le_bytes(ppu.vram[index..=index + 1].try_into().unwrap());
+
+        ppu.current_scanline[i] = RGBA {
+            red: get_5_to_8_bit_color(pixel.get_bits(0, 4) as u8),
+            green: get_5_to_8_bit_color(pixel.get_bits(5, 9) as u8),
+            blue: get_5_to_8_bit_color(pixel.get_bits(10, 14) as u8),
+            alpha: 255,
+        };
+    }
+}
+
 /// Render a full scanline of mode 4.
-fn render_scanline_mode4(ppu: &mut PPU) {
+pub fn render_scanline_mode4(ppu: &mut PPU) {
     const FRAME_0_ADDR: usize = 0x0;
     const FRAME_1_ADDR: usize = 0xA000;
 
@@ -247,5 +266,5 @@ fn render_scanline_mode4(ppu: &mut PPU) {
 #[inline(always)]
 pub const fn get_5_to_8_bit_color(color_5: u8) -> u8 {
     let final_color = color_5 << 3;
-    (final_color | color_5 >> 2)
+    final_color | (color_5 >> 2)
 }
