@@ -63,7 +63,7 @@ impl Keypad {
 
             if self.interrupt_control.button_irq_condition() {
                 // Logical and, interrupt requested if ALL of the desired buttons are pressed
-                if buttons == irq_buttons {
+                if (buttons & irq_buttons) == irq_buttons {
                     interrupt.request_interrupt(Interrupts::Keypad, scheduler);
                 }
             } else if buttons & irq_buttons != 0 {
