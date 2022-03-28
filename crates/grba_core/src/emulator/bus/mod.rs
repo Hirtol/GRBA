@@ -99,7 +99,9 @@ impl Bus {
     pub fn write(&mut self, addr: MemoryAddress, data: u8) {
         crate::cpu_log!("bus-logging"; "Writing to {:#X} - Value: {:#X}", addr, data);
         match Self::get_mem_range(addr) {
-            0 => todo!("BIOS WRITE"),
+            0 => {
+                crate::cpu_log!("bus-logging"; "Bios write: {:#X} - Data: {:#X}", addr, data)
+            }
             2 => self.ram.write_board(addr, data),
             3 => self.ram.write_chip(addr, data),
             4 => self.write_io(addr, data),

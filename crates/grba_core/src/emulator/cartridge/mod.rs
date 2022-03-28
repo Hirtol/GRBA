@@ -3,11 +3,12 @@ use crate::emulator::MemoryAddress;
 
 pub mod header;
 
+pub const MAX_ROM_SIZE: usize = 1024 * 1024 * 32;
 /// Maximum of `64KB` of additional SRAM
 pub const CARTRIDGE_RAM_SIZE: usize = 1024 * 64;
 
-pub const CARTRIDGE_ROM_START: MemoryAddress = 0x08000000;
-pub const CARTRIDGE_SRAM_START: MemoryAddress = 0x0E000000;
+pub const CARTRIDGE_ROM_START: MemoryAddress = 0x0800_0000;
+pub const CARTRIDGE_SRAM_START: MemoryAddress = 0x0E00_0000;
 
 pub struct Cartridge {
     header: CartridgeHeader,
@@ -23,8 +24,14 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn new(rom: Vec<u8>, ram: Box<dyn std::ops::DerefMut<Target = [u8]> + Send>) -> Self {
+    pub fn new(mut rom: Vec<u8>, ram: Box<dyn std::ops::DerefMut<Target = [u8]> + Send>) -> Self {
         let header = CartridgeHeader::new(&rom);
+
+        // Since games like to do out of bound reads we need to pre-emptively fill the data
+        if rom.len() < MAX_ROM_SIZE {
+            fill_rom_out_of_bounds(&mut rom);
+        }
+
         Self {
             header,
             rom,
@@ -71,11 +78,25 @@ impl Cartridge {
         u32::from_le_bytes((&self.rom[addr..addr + 4]).try_into().unwrap())
     }
 
-    fn cartridge_sram_addr_to_index(addr: MemoryAddress) -> usize {
-        (addr - CARTRIDGE_SRAM_START) as usize
+    #[inline(always)]
+    const fn cartridge_sram_addr_to_index(addr: MemoryAddress) -> usize {
+        addr as usize % CARTRIDGE_RAM_SIZE
     }
 
-    fn cartridge_rom_addr_to_index(addr: MemoryAddress) -> usize {
-        (addr - CARTRIDGE_ROM_START) as usize
+    #[inline(always)]
+    const fn cartridge_rom_addr_to_index(addr: MemoryAddress) -> usize {
+        addr as usize % MAX_ROM_SIZE
     }
+}
+
+/// Fill a ROM with OoB data for reads.
+///
+/// Implementation translated from [open_agb](https://github.com/profi200/open_agb_firm/blob/a9fcf853bb2b21623f528ac23675c8af05180297/source/arm11/open_agb_firm.c#L119)
+pub fn fill_rom_out_of_bounds(rom: &mut Vec<u8>) {
+    let original_length = rom.len();
+    rom.reserve(MAX_ROM_SIZE - rom.len());
+
+    // TODO: ROM Mirroring for the NES Series? See implementation in [open_agb]
+    // TODO: Use proper ROM values (Address/2 & 0xFFFF)
+    rom.resize(MAX_ROM_SIZE, 0xFF);
 }

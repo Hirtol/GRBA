@@ -169,7 +169,7 @@ impl PPU {
     }
 
     pub fn vblank(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
-        crate::cpu_log!("ppu-logging"; "Vblank fired! first pixel: {:?}", self.frame_buffer[0]);
+        crate::cpu_log!("ppu-logging"; "Vblank fired at time: {:?}", scheduler.current_time);
         self.status.set_v_blank_flag(true);
 
         if self.status.v_blank_irq_enable() {
@@ -190,6 +190,7 @@ impl PPU {
     }
 
     fn render_scanline(&mut self) {
+        crate::cpu_log!("ppu-logging"; "Rendering scanline {} - Mode: {:?}", self.vertical_counter.current_scanline(), self.control.bg_mode());
         match self.control.bg_mode() {
             BgMode::Mode0 => {}
             BgMode::Mode1 => {}
@@ -214,8 +215,16 @@ impl PPU {
 
 /// Render a full scanline of mode 4.
 fn render_scanline_mode4(ppu: &mut PPU) {
-    crate::cpu_log!("ppu-logging"; "Rendering scanline BG-4 {}", ppu.vertical_counter.current_scanline());
-    let vram_index = ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
+    const FRAME_0_ADDR: usize = 0x0;
+    const FRAME_1_ADDR: usize = 0xA000;
+
+    // If Frame 1 is selected (`display_frame_select` is true) then the frame buffer is located at 0xA000, otherwise
+    // it will point to 0x0 for FRAME_0 due to the multiplication.
+    let vram_index_base = ppu.control.display_frame_select() as usize * FRAME_1_ADDR;
+
+    crate::cpu_log!("ppu-logging"; "Vram Index Base: {:#X}", vram_index_base);
+
+    let vram_index = vram_index_base + (ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize);
 
     for i in 0..DISPLAY_WIDTH as usize {
         let palette_index = ppu.vram[vram_index + i];
