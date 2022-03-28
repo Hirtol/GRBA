@@ -68,10 +68,22 @@ impl Bus {
             5 => self.ppu.read_palette(addr),
             6 => self.ppu.read_vram(addr),
             7 => self.ppu.read_oam(addr),
-            8 | 9 => self.rom.read(addr),
-            0xA | 0xB => todo!("ROM READ 2"),
-            0xC | 0xD => todo!("ROM READ 3"),
-            0xE | 0xF => todo!("Game Pak SRAM"),
+            8 | 9 => {
+                // Wait state 1
+                self.rom.read(addr)
+            }
+            0xA | 0xB => {
+                // Wait state 2
+                self.rom.read(addr)
+            }
+            0xC | 0xD => {
+                // Wait state 3
+                self.rom.read(addr)
+            }
+            0xE | 0xF => {
+                // Game pack SRAM
+                self.rom.read_sram(addr)
+            }
             _ => self.open_bus_read(addr, cpu),
         }
     }
@@ -112,10 +124,14 @@ impl Bus {
                 crate::cpu_log!("bus-logging"; "Ignored 8 bit OAM write to address: {:#X} with value: {}", addr, data)
             }
             8 | 9 => {
-                todo!("ROM WRITE 1")
+                // todo!("ROM WRITE 1")
             }
-            0xA | 0xB => todo!("ROM WRITE 2"),
-            0xC | 0xD => todo!("ROM WRITE 3"),
+            0xA | 0xB => {
+                // todo!("ROM WRITE 2")
+            }
+            0xC | 0xD => {
+                // todo!("ROM WRITE 3")
+            }
             0xE | 0xF => self.rom.write_sram(addr, data),
             _ => todo!("Not implemented mem range!"),
         }
