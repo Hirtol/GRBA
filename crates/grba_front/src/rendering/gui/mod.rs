@@ -1,4 +1,4 @@
-use egui::{ClippedMesh, CtxRef};
+use egui::{ClippedMesh, Context, TexturesDelta};
 use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
 use winit::window::Window;
@@ -9,11 +9,12 @@ mod debug;
 /// Manages all state required for rendering egui over `Pixels`.
 pub struct Framework {
     // State for egui.
-    egui_ctx: CtxRef,
+    egui_ctx: Context,
     egui_state: egui_winit::State,
     screen_descriptor: ScreenDescriptor,
     rpass: RenderPass,
     paint_jobs: Vec<ClippedMesh>,
+    textures: TexturesDelta,
 
     // State for the GUI
     gui: Gui,
@@ -28,8 +29,8 @@ struct Gui {
 impl Framework {
     /// Create egui.
     pub(crate) fn new(width: u32, height: u32, scale_factor: f32, pixels: &pixels::Pixels) -> Self {
-        let egui_ctx = CtxRef::default();
-        let egui_state = egui_winit::State::from_pixels_per_point(scale_factor);
+        let egui_ctx = Context::default();
+        let egui_state = egui_winit::State::from_pixels_per_point(2048, scale_factor);
         let screen_descriptor = ScreenDescriptor {
             physical_width: width,
             physical_height: height,
@@ -44,6 +45,7 @@ impl Framework {
             screen_descriptor,
             rpass,
             paint_jobs: Vec::new(),
+            textures: Default::default(),
             gui,
         }
     }
@@ -70,13 +72,15 @@ impl Framework {
     pub(crate) fn prepare(&mut self, window: &Window) {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
-        let (output, paint_commands) = self.egui_ctx.run(raw_input, |egui_ctx| {
+        let full_output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
             self.gui.ui(egui_ctx);
         });
 
-        self.egui_state.handle_output(window, &self.egui_ctx, output);
-        self.paint_jobs = self.egui_ctx.tessellate(paint_commands);
+        self.textures.append(full_output.textures_delta);
+        self.egui_state
+            .handle_platform_output(window, &self.egui_ctx, full_output.platform_output);
+        self.paint_jobs = self.egui_ctx.tessellate(full_output.shapes);
     }
 
     /// Render egui.
@@ -88,8 +92,8 @@ impl Framework {
     ) -> Result<(), BackendError> {
         // Upload all resources to the GPU.
         self.rpass
-            .update_texture(&context.device, &context.queue, &self.egui_ctx.font_image());
-        self.rpass.update_user_textures(&context.device, &context.queue);
+            .add_textures(&context.device, &context.queue, &self.textures)?;
+
         self.rpass.update_buffers(
             &context.device,
             &context.queue,
@@ -97,9 +101,12 @@ impl Framework {
             &self.screen_descriptor,
         );
 
-        // Record all render passes.
+        // Record all render passes. TODO: Make use of clear color here?
         self.rpass
-            .execute(encoder, render_target, &self.paint_jobs, &self.screen_descriptor, None)
+            .execute(encoder, render_target, &self.paint_jobs, &self.screen_descriptor, None)?;
+
+        let textures = std::mem::take(&mut self.textures);
+        self.rpass.remove_textures(textures)
     }
 }
 
@@ -110,7 +117,7 @@ impl Gui {
     }
 
     /// Create the UI using egui.
-    fn ui(&mut self, ctx: &CtxRef) {
+    fn ui(&mut self, ctx: &Context) {
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {

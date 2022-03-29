@@ -202,7 +202,7 @@ impl PPU {
             BgMode::Mode5 => {}
         }
 
-        // May want to do this during HBlank if games uses mid-scanline writes like in the GB
+        // May want to do this during HBlank if games use mid-scanline writes like in the GB
         self.push_current_scanline_to_framebuffer();
     }
 
