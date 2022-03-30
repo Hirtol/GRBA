@@ -23,43 +23,44 @@ impl Keypad {
         interrupt: &mut InterruptManager,
     ) {
         let is_released = !pressed;
+
         match button {
             InputKeys::Start => {
-                self.status.buttons().set_start(is_released);
+                self.status.set_start(is_released);
             }
             InputKeys::Select => {
-                self.status.buttons().set_select(is_released);
+                self.status.set_select(is_released);
             }
             InputKeys::A => {
-                self.status.buttons().set_button_a(is_released);
+                self.status.set_button_a(is_released);
             }
             InputKeys::B => {
-                self.status.buttons().set_button_b(is_released);
+                self.status.set_button_b(is_released);
             }
             InputKeys::Up => {
-                self.status.buttons().set_up(is_released);
+                self.status.set_up(is_released);
             }
             InputKeys::Down => {
-                self.status.buttons().set_down(is_released);
+                self.status.set_down(is_released);
             }
             InputKeys::Left => {
-                self.status.buttons().set_left(is_released);
+                self.status.set_left(is_released);
             }
             InputKeys::Right => {
-                self.status.buttons().set_right(is_released);
+                self.status.set_right(is_released);
             }
             InputKeys::ShoulderLeft => {
-                self.status.buttons().set_shoulder_left(is_released);
+                self.status.set_shoulder_left(is_released);
             }
             InputKeys::ShoulderRight => {
-                self.status.buttons().set_shoulder_right(is_released);
+                self.status.set_shoulder_right(is_released);
             }
         }
 
         if self.interrupt_control.button_irq_enable() {
-            let irq_buttons = u16::from_le_bytes(self.interrupt_control.buttons().to_le_bytes());
+            let irq_buttons = u16::from_le_bytes(self.interrupt_control.to_le_bytes()) & 0x3FF;
             // We invert it to get it such that the bit is set if the button is pressed
-            let buttons = !u16::from_le_bytes(self.status.buttons().to_le_bytes());
+            let buttons = (!u16::from_le_bytes(self.status.to_le_bytes())) & 0x3FF;
 
             if self.interrupt_control.button_irq_condition() {
                 // Logical and, interrupt requested if ALL of the desired buttons are pressed
@@ -74,9 +75,13 @@ impl Keypad {
     }
 }
 
-#[modular_bitfield::bitfield(bits = 10)]
-#[derive(Debug, BitfieldSpecifier, Default, Copy, Clone)]
-pub struct KeypadButtons {
+/// Displays the status of keypad buttons.
+///
+/// Read only.
+#[modular_bitfield::bitfield(bits = 16)]
+#[repr(u16)]
+#[derive(Debug, Copy, Clone)]
+pub struct KeypadStatus {
     button_a: bool,
     button_b: bool,
     select: bool,
@@ -87,25 +92,31 @@ pub struct KeypadButtons {
     down: bool,
     shoulder_right: bool,
     shoulder_left: bool,
-}
-
-/// Displays the status of keypad buttons.
-///
-/// Read only.
-#[modular_bitfield::bitfield(bits = 16, packed = false)]
-#[repr(u16)]
-#[derive(Debug, Default, Copy, Clone)]
-pub struct KeypadStatus {
-    buttons: KeypadButtons,
     #[skip]
     unused: modular_bitfield::prelude::B6,
+}
+
+impl Default for KeypadStatus {
+    fn default() -> Self {
+        // Button bit: 1 == released, 0 == pressed
+        0x03FF.into()
+    }
 }
 
 #[modular_bitfield::bitfield(bits = 16)]
 #[repr(u16)]
 #[derive(Debug, Copy, Clone, Default)]
 pub struct KeypadInterruptControl {
-    buttons: KeypadButtons,
+    button_a: bool,
+    button_b: bool,
+    select: bool,
+    start: bool,
+    right: bool,
+    left: bool,
+    up: bool,
+    down: bool,
+    shoulder_right: bool,
+    shoulder_left: bool,
     #[skip]
     unused: modular_bitfield::prelude::B4,
     button_irq_enable: bool,

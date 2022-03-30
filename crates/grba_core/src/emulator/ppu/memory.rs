@@ -1,6 +1,5 @@
 use crate::emulator::ppu::{OAM_RAM_SIZE, PALETTE_RAM_SIZE, PPU, VRAM_SIZE};
 use crate::emulator::MemoryAddress;
-use crate::utils::ModularBitUpdate;
 
 pub const PALETTE_START: MemoryAddress = 0x0500_0000;
 pub const PALETTE_END: MemoryAddress = 0x0500_03FF;
@@ -24,7 +23,10 @@ impl PPU {
             0x4..=0x5 => self.status.to_le_bytes()[addr % 2] as u8,
             0x6..=0x7 => self.vertical_counter.to_le_bytes()[addr % 2] as u8,
             0x8..=0xF => self.bg_control[(addr % 8) / 2].to_le_bytes()[addr % 2] as u8,
-            _ => todo!(),
+            _ => {
+                crate::cpu_log!("ppu-logging"; "Unimplemented IO read at {:08X}", address);
+                0xFF
+            }
         }
     }
 

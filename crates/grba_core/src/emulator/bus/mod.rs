@@ -8,7 +8,6 @@ use crate::emulator::cpu::CPU;
 use crate::emulator::ppu::{LCD_IO_END, LCD_IO_START, PPU};
 use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
-use crate::utils::ModularBitUpdate;
 
 mod bios;
 pub mod interrupts;
@@ -16,11 +15,11 @@ pub mod keypad;
 mod ram;
 
 pub struct Bus {
-    bios: GbaBios,
+    pub bios: GbaBios,
     pub rom: Cartridge,
     pub interrupts: InterruptManager,
     pub keypad: Keypad,
-    ram: ram::WorkRam,
+    pub ram: ram::WorkRam,
     pub ppu: PPU,
     pub scheduler: Scheduler,
 }
@@ -149,7 +148,8 @@ impl Bus {
             IF_START..=IF_END => self.interrupts.read_if(addr),
             IME_START..=IME_END => self.interrupts.read_ime(addr),
             _ => {
-                todo!("IO READ {:#X}", addr)
+                crate::cpu_log!("bus-logging"; "Unhandled IO read from {:#X}", addr);
+                0xFF
             }
         }
     }
