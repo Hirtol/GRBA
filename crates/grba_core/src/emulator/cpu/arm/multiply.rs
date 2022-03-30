@@ -81,8 +81,11 @@ impl ArmV4 {
     ) {
         let registers = &mut cpu.registers.general_purpose;
         let result = if accumulate {
-            registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64
-                + (((registers[reg_high] as i32 as i64) << 32) | registers[reg_low] as i32 as i64)
+            // Note that we purposefully don't sign extend here, if the lower register would be sign-extended it could
+            // overwrite the high-register's value during the bitwise-or.
+            let addition = (((registers[reg_high] as i64) << 32) | registers[reg_low] as i64);
+
+            (registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64) + addition
         } else {
             registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64
         };

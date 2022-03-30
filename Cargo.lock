@@ -973,7 +973,7 @@ dependencies = [
 [[package]]
 name = "egui_memory_editor"
 version = "0.1.4"
-source = "git+https://github.com/Hirtol/egui_memory_editor#924f3bc30b7e319696221b74f70c921299360cb4"
+source = "git+https://github.com/Hirtol/egui_memory_editor#88bc0e7d1b70c0b01f86a3cb62ca7ea29a7d0e95"
 dependencies = [
  "egui",
 ]
