@@ -50,7 +50,7 @@ impl ArmV4 {
         // Actual Operations:
         if is_load {
             if is_byte_transfer {
-                let value = bus.read(address & 0xFFFF_FFFC, cpu) as u32;
+                let value = bus.read(address, cpu) as u32;
                 cpu.write_reg(reg_dest, value, bus);
             } else {
                 let value = bus.read_32(address & 0xFFFF_FFFC, cpu);
@@ -60,7 +60,7 @@ impl ArmV4 {
             }
         } else {
             // For store instructions, when R15 is specified in r_d it should be 3 words ahead of the current instruction.
-            // Usually it's +2, thus we need to temporarily add 4 to the address
+            // Usually it's +2, thus we need to temporarily add 4 bytes to the address
             cpu.registers.general_purpose[PC_REG] += 4;
 
             if is_byte_transfer {

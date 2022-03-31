@@ -23,7 +23,7 @@ impl ThumbV4 {}
 
 pub(crate) fn create_thumb_lut() -> ThumbLUT {
     fn dead_fn(_cpu: &mut CPU, instruction: ThumbInstruction, _bus: &mut Bus) {
-        panic!("Unimplemented thumb instruction: {:#06X}", instruction);
+        panic!("Unimplemented Thumb instruction: {:#06X}", instruction);
     }
 
     let mut result: ThumbLUT = [dead_fn as LutInstruction; THUMB_LUT_SIZE];

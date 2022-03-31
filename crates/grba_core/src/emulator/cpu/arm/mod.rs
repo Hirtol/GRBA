@@ -45,7 +45,7 @@ impl ArmV4 {
 /// Assumes `12-bit` indexing
 pub(crate) fn create_arm_lut() -> ArmLUT {
     fn dead_fn(_cpu: &mut CPU, instruction: ArmInstruction, _bus: &mut Bus) {
-        panic!("Unimplemented instruction: {:08x}", instruction);
+        panic!("Unimplemented Arm instruction: {:08x}", instruction);
     }
 
     let mut result = [dead_fn as LutInstruction; 4096];

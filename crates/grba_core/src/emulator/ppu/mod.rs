@@ -241,8 +241,6 @@ pub fn render_scanline_mode4(ppu: &mut PPU) {
     // it will point to 0x0 for FRAME_0 due to the multiplication.
     let vram_index_base = ppu.control.display_frame_select() as usize * FRAME_1_ADDR;
 
-    crate::cpu_log!("ppu-logging"; "Vram Index Base: {:#X}", vram_index_base);
-
     let vram_index = vram_index_base + (ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize);
 
     for i in 0..DISPLAY_WIDTH as usize {

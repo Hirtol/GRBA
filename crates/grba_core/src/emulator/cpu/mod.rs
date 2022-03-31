@@ -142,6 +142,7 @@ impl CPU {
     /// Switches between ARM and Thumb mode.
     pub fn switch_state(&mut self, new_state: State, _bus: &mut Bus) {
         // Switch to a new state
+        crate::cpu_log!("Switching CPU state to {:?}", new_state);
         if self.state() != new_state {
             self.registers.cpsr.set_state(new_state);
             // TODO: Do we need to flush pipeline here? At the very least probably need to align PC to new state?
