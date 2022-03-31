@@ -131,7 +131,7 @@ impl Gui {
 
     /// Create the UI using egui.
     fn ui(&mut self, ctx: &Context, request_sender: Option<&mut Sender<EmulatorMessage>>) {
-        let now = Instant::now();
+        // let now = Instant::now();
         let requests = self.debug_view.draw(ctx);
 
         if let Some(sender) = request_sender {
@@ -155,6 +155,6 @@ impl Gui {
                 });
             });
 
-        println!("Egui Draw: {:?}", now.elapsed());
+        // println!("Egui Draw: {:?}", now.elapsed());
     }
 }

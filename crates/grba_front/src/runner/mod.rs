@@ -5,6 +5,7 @@ use crate::rendering::gui::DebugViewManager;
 use crate::runner::frame_exchanger::{ExchangerReceiver, ExchangerSender};
 use grba_core::emulator::cartridge::Cartridge;
 use grba_core::emulator::debug::DebugEmulator;
+use grba_core::emulator::frame::RgbaFrame;
 use grba_core::emulator::ppu::RGBA;
 use grba_core::emulator::EmuOptions;
 use grba_core::emulator::GBAEmulator;
@@ -15,8 +16,6 @@ use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 pub mod frame_exchanger;
 pub mod messages;
-
-pub type RgbaFrame = Box<[RGBA; grba_core::FRAMEBUFFER_SIZE]>;
 
 pub struct EmulatorRunner {
     rom: Cartridge,
@@ -31,8 +30,7 @@ impl EmulatorRunner {
     pub fn run(self) -> RunnerHandle {
         let (request_sender, request_receiver) = unbounded::<EmulatorMessage>();
         let (response_sender, response_receiver) = unbounded::<EmulatorResponse>();
-        let (frame_sender, frame_receiver) =
-            frame_exchanger::exchangers(grba_core::box_array![RGBA::default(); grba_core::FRAMEBUFFER_SIZE]);
+        let (frame_sender, frame_receiver) = frame_exchanger::exchangers(RgbaFrame::default());
 
         let emu_thread = std::thread::spawn(move || {
             profiling::register_thread!("Emulator Thread");

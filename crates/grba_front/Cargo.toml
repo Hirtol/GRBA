@@ -32,6 +32,7 @@ egui = "0.17"
 egui_wgpu_backend = "0.17.0"
 egui-winit = { version = "0.17.0", default-features = false }
 egui_memory_editor = { git = "https://github.com/Hirtol/egui_memory_editor" }
+#egui_memory_editor = {path = "../../../../Emulation Projects/egui_memory_editor"}
 spin_sleep = "1.0.0"
 
 # Profiling

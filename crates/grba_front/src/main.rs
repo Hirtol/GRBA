@@ -47,6 +47,10 @@ pub struct Application {
 }
 
 impl Application {
+    // FRAME_DURATION == Duration::from_secs_f32(1.0 / grba_core::REFRESH_RATE);
+    // sadly, no f32 in const context :(
+    const FRAME_DURATION: Duration = Duration::from_nanos(16742706);
+
     pub fn new() -> anyhow::Result<Application> {
         let event_loop = EventLoop::new();
         let input = winit_input_helper::WinitInputHelper::new();
@@ -63,9 +67,7 @@ impl Application {
     }
 
     pub fn run(mut self) -> anyhow::Result<()> {
-        let FRAME_DURATION: Duration = Duration::from_secs_f32(1.0 / grba_core::REFRESH_RATE);
-
-        self.event_loop.run(move |event, _, control_flow| {
+        self.event_loop.run(move |event, window, control_flow| {
             // Handle input events
             if self.input.update(&event) {
                 // Close events
@@ -109,7 +111,7 @@ impl Application {
                         emu
                     } else {
                         // No emu, don't draw excessively.
-                        *control_flow = ControlFlow::WaitUntil(Instant::now() + FRAME_DURATION);
+                        *control_flow = ControlFlow::WaitUntil(Instant::now() + Self::FRAME_DURATION);
 
                         let render_result = self.renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE * 4], None);
 
@@ -123,61 +125,86 @@ impl Application {
 
                     // If paused just wait
                     if self.state.paused {
-                        *control_flow = ControlFlow::WaitUntil(Instant::now() + FRAME_DURATION);
-                        return;
-                    }
-
-                    // Determine if we need to wait.
-                    match self.state.run_state {
-                        RunningState::FrameLimited | RunningState::FastForward(_) => {
-                            let now = Instant::now();
-
-                            if now <= self.wait_to {
-                                *control_flow = ControlFlow::WaitUntil(self.wait_to);
-                                return;
-                            } else {
-                                self.wait_to += FRAME_DURATION;
-                            }
-                        }
-                        RunningState::AudioLimited => {
-                            todo!()
-                        }
-                        RunningState::Unbounded => {}
-                    }
-
-                    // Need to render a frame.
-                    let frames_to_render = match self.state.run_state {
-                        RunningState::FastForward(frames) => frames,
-                        _ => 1,
-                    };
-
-                    for _ in 0..frames_to_render {
-                        let frame = emu.frame_receiver.recv().unwrap();
-                        let frame: &mut Box<[u8; grba_core::FRAMEBUFFER_SIZE * std::mem::size_of::<RGBA>()]> =
-                            unsafe { std::mem::transmute(frame) };
-
-                        // Handle emulator responses to our messages
-                        while let Ok(response) = emu.response_receiver.try_recv() {
-                            match response {
-                                EmulatorResponse::Debug(msg) => {
-                                    self.renderer.framework.gui.debug_view.handle_response_message(msg)
-                                }
-                            }
-                        }
-
-                        // Render result and send debug requests
-                        let render_result = self.renderer.render_pixels(&**frame, Some(&mut emu.request_sender));
-
-                        // Basic error handling
-                        if let Err(e) = render_result {
-                            *control_flow = ControlFlow::Exit;
-                            log::error!("Failed to render {:#}", e);
-                        }
+                        Self::handle_paused(&mut self.state, &mut self.renderer, control_flow);
+                    } else {
+                        Self::handle_draw(&mut self.state, &mut self.renderer, &mut self.wait_to, control_flow);
                     }
                 }
                 _ => (),
             }
         });
+    }
+
+    fn handle_paused(state: &mut State, renderer: &mut Renderer, control_flow: &mut ControlFlow) -> anyhow::Result<()> {
+        *control_flow = ControlFlow::WaitUntil(Instant::now() + Self::FRAME_DURATION);
+
+        match &mut state.current_emu {
+            Some(emu) => {
+                // Try receive a frame to clear up the emulator in case it's waiting for a new frame to come in.
+                let frame = emu.frame_receiver.try_recv_or_recent().as_bytes();
+
+                // Handle emulator responses to our messages
+                while let Ok(response) = emu.response_receiver.try_recv() {
+                    match response {
+                        EmulatorResponse::Debug(msg) => renderer.framework.gui.debug_view.handle_response_message(msg),
+                    }
+                }
+
+                renderer.render_pixels(frame, Some(&mut emu.request_sender))?;
+            }
+            None => {
+                renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE * 4], None)?;
+            }
+        };
+
+        Ok(())
+    }
+
+    fn handle_draw(state: &mut State, renderer: &mut Renderer, wait_to: &mut Instant, control_flow: &mut ControlFlow) {
+        let mut emu = state.current_emu.as_mut().unwrap();
+
+        // Determine if we need to wait.
+        match state.run_state {
+            RunningState::FrameLimited | RunningState::FastForward(_) => {
+                let now = Instant::now();
+
+                if now <= *wait_to {
+                    *control_flow = ControlFlow::WaitUntil(*wait_to);
+                    return;
+                } else {
+                    *wait_to += Self::FRAME_DURATION;
+                }
+            }
+            RunningState::AudioLimited => {
+                todo!()
+            }
+            RunningState::Unbounded => {}
+        }
+
+        // Need to render a frame.
+        let frames_to_render = match state.run_state {
+            RunningState::FastForward(frames) => frames,
+            _ => 1,
+        };
+
+        for _ in 0..frames_to_render {
+            let frame = emu.frame_receiver.recv().unwrap();
+            // Handle emulator responses to our messages
+            while let Ok(response) = emu.response_receiver.try_recv() {
+                match response {
+                    EmulatorResponse::Debug(msg) => renderer.framework.gui.debug_view.handle_response_message(msg),
+                }
+            }
+
+            // Render result and send debug requests
+            let render_result = renderer.render_pixels(frame.as_bytes(), Some(&mut emu.request_sender));
+
+            // Basic error handling
+            if let Err(e) = render_result {
+                *control_flow = ControlFlow::Exit;
+                log::error!("Failed to render {:#}", e);
+            }
+        }
     }
 }
 
@@ -305,6 +332,15 @@ fn handle_key(input: KeyboardInput, state: &mut State, renderer: &mut Renderer) 
         VirtualKeyCode::K if input.state == ElementState::Released => {
             log::debug!("K pressed, pause: {}", state.paused);
             state.paused.toggle();
+
+            // Send a message to the emulator thread to pause/unpause
+            if let Some(emu) = &state.current_emu {
+                if state.paused {
+                    emu.pause();
+                } else {
+                    emu.unpause();
+                }
+            }
         }
         VirtualKeyCode::F11 if input.state == ElementState::Released => renderer.toggle_fullscreen(),
         _ => {}

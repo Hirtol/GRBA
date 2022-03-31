@@ -1,4 +1,5 @@
 use crate::emulator::bus::interrupts::{InterruptManager, Interrupts};
+use crate::emulator::frame::RgbaFrame;
 use crate::emulator::ppu::registers::{
     AlphaBlendCoefficients, BgControl, BgMode, BgRotationParam, BgRotationRef, BgScrolling, BrightnessCoefficients,
     ColorSpecialSelection, LcdControl, LcdStatus, MosaicFunction, VerticalCounter, WindowControl, WindowDimensions,
@@ -43,7 +44,7 @@ mod registers;
 #[derive(Debug, Clone)]
 pub struct PPU {
     // Ram
-    frame_buffer: Box<[RGBA; FRAMEBUFFER_SIZE as usize]>,
+    frame_buffer: RgbaFrame,
     current_scanline: Box<[RGBA; DISPLAY_WIDTH as usize]>,
     palette_ram: Box<[u8; PALETTE_RAM_SIZE]>,
     oam_ram: Box<[u8; OAM_RAM_SIZE]>,
@@ -81,7 +82,7 @@ pub struct PPU {
 impl PPU {
     pub fn new() -> Self {
         PPU {
-            frame_buffer: crate::box_array![RGBA::default(); FRAMEBUFFER_SIZE as usize],
+            frame_buffer: RgbaFrame::default(),
             current_scanline: crate::box_array![RGBA::default(); DISPLAY_WIDTH as usize],
             palette_ram: crate::box_array![0; PALETTE_RAM_SIZE],
             oam_ram: crate::box_array![0; OAM_RAM_SIZE],
@@ -112,7 +113,7 @@ impl PPU {
         scheduler.schedule_event(EventTag::HBlank, EmuTime::from(HDRAW_CYCLES));
     }
 
-    pub fn frame_buffer(&mut self) -> &mut Box<[RGBA; FRAMEBUFFER_SIZE as usize]> {
+    pub fn frame_buffer(&mut self) -> &mut RgbaFrame {
         &mut self.frame_buffer
     }
 

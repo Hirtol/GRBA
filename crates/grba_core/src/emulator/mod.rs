@@ -1,7 +1,7 @@
 use crate::emulator::bus::BiosData;
-use crate::emulator::ppu::RGBA;
+use crate::emulator::frame::RgbaFrame;
 use crate::scheduler::EventTag;
-use crate::{InputKeys, CLOCKS_PER_FRAME, FRAMEBUFFER_SIZE};
+use crate::{InputKeys, FRAMEBUFFER_SIZE};
 use bus::Bus;
 use cartridge::Cartridge;
 use cpu::CPU;
@@ -10,7 +10,7 @@ mod bus;
 pub mod cartridge;
 pub mod cpu;
 pub mod debug;
-pub mod debugging;
+pub mod frame;
 pub mod ppu;
 
 /// Refers to an *absolute* memory address.
@@ -124,7 +124,7 @@ impl GBAEmulator {
             .button_changed(key, false, &mut self.bus.scheduler, &mut self.bus.interrupts);
     }
 
-    pub fn frame_buffer(&mut self) -> &mut Box<[RGBA; FRAMEBUFFER_SIZE]> {
+    pub fn frame_buffer(&mut self) -> &mut RgbaFrame {
         self.bus.ppu.frame_buffer()
     }
 }

@@ -51,6 +51,11 @@ impl<T> ExchangerReceiver<T> {
     pub fn most_recent_received(&self) -> &T {
         &self.last_item
     }
+
+    pub fn try_recv_or_recent(&mut self) -> &T {
+        let _ = self.try_recv();
+        &self.last_item
+    }
 }
 
 pub struct ExchangerSender<T> {
