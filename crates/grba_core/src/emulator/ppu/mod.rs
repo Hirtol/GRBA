@@ -116,13 +116,6 @@ impl PPU {
         &mut self.frame_buffer
     }
 
-    pub fn take_frame_buffer(&mut self) -> Box<[RGBA; FRAMEBUFFER_SIZE as usize]> {
-        std::mem::replace(
-            &mut self.frame_buffer,
-            crate::box_array![RGBA::default(); FRAMEBUFFER_SIZE as usize],
-        )
-    }
-
     pub fn hblank_start(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
         crate::cpu_log!("ppu-logging"; "HBlank fired!");
         self.status.set_h_blank_flag(true);

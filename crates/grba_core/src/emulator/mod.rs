@@ -124,16 +124,8 @@ impl GBAEmulator {
             .button_changed(key, false, &mut self.bus.scheduler, &mut self.bus.interrupts);
     }
 
-    pub fn take_frame_buffer(&mut self) -> Box<[RGBA; FRAMEBUFFER_SIZE]> {
-        self.bus.ppu.take_frame_buffer()
-    }
-
     pub fn frame_buffer(&mut self) -> &mut Box<[RGBA; FRAMEBUFFER_SIZE]> {
         self.bus.ppu.frame_buffer()
-    }
-
-    pub fn frame_buffer_ref(&mut self) -> &mut Vec<u8> {
-        todo!()
     }
 }
 

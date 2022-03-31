@@ -1,15 +1,22 @@
 use crate::runner::messages::{EmulatorMessage, EmulatorResponse};
-use crossbeam::channel::{bounded, unbounded, Receiver, Sender};
+use crossbeam::channel::{unbounded, Receiver, Sender};
 
+use crate::rendering::gui::DebugViewManager;
+use crate::runner::frame_exchanger::{ExchangerReceiver, ExchangerSender};
 use grba_core::emulator::cartridge::Cartridge;
+use grba_core::emulator::debug::DebugEmulator;
 use grba_core::emulator::ppu::RGBA;
 use grba_core::emulator::EmuOptions;
 use grba_core::emulator::GBAEmulator;
 use grba_core::InputKeys;
 use std::thread::JoinHandle;
+use std::time::Duration;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
+pub mod frame_exchanger;
 pub mod messages;
+
+pub type RgbaFrame = Box<[RGBA; grba_core::FRAMEBUFFER_SIZE]>;
 
 pub struct EmulatorRunner {
     rom: Cartridge,
@@ -22,9 +29,10 @@ impl EmulatorRunner {
     }
 
     pub fn run(self) -> RunnerHandle {
-        let (frame_sender, frame_receiver) = bounded(1);
         let (request_sender, request_receiver) = unbounded::<EmulatorMessage>();
         let (response_sender, response_receiver) = unbounded::<EmulatorResponse>();
+        let (frame_sender, frame_receiver) =
+            frame_exchanger::exchangers(grba_core::box_array![RGBA::default(); grba_core::FRAMEBUFFER_SIZE]);
 
         let emu_thread = std::thread::spawn(move || {
             profiling::register_thread!("Emulator Thread");
@@ -49,7 +57,7 @@ impl EmulatorRunner {
 
 pub struct RunnerHandle {
     current_thread: JoinHandle<()>,
-    pub frame_receiver: Receiver<Box<[RGBA; grba_core::FRAMEBUFFER_SIZE]>>,
+    pub frame_receiver: ExchangerReceiver<RgbaFrame>,
     pub request_sender: Sender<EmulatorMessage>,
     pub response_receiver: Receiver<EmulatorResponse>,
 }
@@ -58,7 +66,7 @@ impl RunnerHandle {
     /// Inform the emulator of a keypress event.
     pub fn handle_input(&self, input: KeyboardInput) {
         let key = if let Some(key) = keyboard_to_input(input) { key } else { return };
-
+        println!("Sending input: {:?} - {:?}", key, input.state);
         if input.state == ElementState::Pressed {
             self.request_sender
                 .send(EmulatorMessage::KeyDown(key))
@@ -70,8 +78,22 @@ impl RunnerHandle {
         }
     }
 
+    /// Pause the emulator, but continue serving other requests.
+    pub fn pause(&self) -> anyhow::Result<()> {
+        self.request_sender.send(EmulatorMessage::Pause)?;
+
+        Ok(())
+    }
+
+    /// Unpause the emulator.
+    pub fn unpause(&self) -> anyhow::Result<()> {
+        self.request_sender.send(EmulatorMessage::Unpause)?;
+
+        Ok(())
+    }
+
     /// Stops the current emulator thread and blocks until it has completed.
-    pub fn stop(self) {
+    pub fn stop(mut self) {
         let _ = self.request_sender.send(EmulatorMessage::ExitRequest);
         // Since the emulation thread may be blocking trying to send a frame.
         let _ = self.frame_receiver.try_recv();
@@ -82,29 +104,77 @@ impl RunnerHandle {
 
 fn run_emulator(
     emu: &mut GBAEmulator,
-    frame_sender: Sender<Box<[RGBA; grba_core::FRAMEBUFFER_SIZE]>>,
-    _response_sender: Sender<EmulatorResponse>,
+    frame_sender: ExchangerSender<RgbaFrame>,
+    response_sender: Sender<EmulatorResponse>,
     request_receiver: Receiver<EmulatorMessage>,
 ) {
-    loop {
+    'mainloop: loop {
         profiling::scope!("Emulator Loop");
+
         emu.run_to_vblank();
 
-        if let Err(e) = frame_sender.send(emu.take_frame_buffer()) {
+        if let Err(e) = frame_sender.send(emu.frame_buffer()) {
             log::error!("Failed to transfer framebuffer due to: {:#}", e);
             break;
         }
 
         while let Ok(msg) = request_receiver.try_recv() {
             match msg {
-                EmulatorMessage::ExitRequest => break,
+                EmulatorMessage::ExitRequest => break 'mainloop,
                 EmulatorMessage::KeyDown(key) => emu.key_down(key),
                 EmulatorMessage::KeyUp(key) => emu.key_up(key),
                 EmulatorMessage::Debug(msg) => {
-                    println!("{:?}", msg);
+                    let mut emu = DebugEmulator(emu);
+                    let response = DebugViewManager::handle_ui_request_message(&mut emu, msg);
+
+                    response_sender
+                        .send(EmulatorResponse::Debug(response))
+                        .expect("Failed to send response");
+                }
+                EmulatorMessage::Pause => {
+                    if pause_loop(emu, &response_sender, &request_receiver) {
+                        break 'mainloop;
+                    }
+                }
+                EmulatorMessage::Unpause => {
+                    log::info!("Tried to unpause when not paused");
                 }
             }
         }
+    }
+}
+
+/// Enter into the pause loop for the emulator.
+///
+/// # Returns
+/// * `true` - If the emulator receives an exit command while it is paused.
+/// * `false` - When the emulator receives the unpause command.
+#[inline(never)]
+fn pause_loop(
+    emu: &mut GBAEmulator,
+    response_sender: &Sender<EmulatorResponse>,
+    request_receiver: &Receiver<EmulatorMessage>,
+) -> bool {
+    'pause_loop: loop {
+        while let Ok(msg) = request_receiver.try_recv() {
+            match msg {
+                EmulatorMessage::ExitRequest => break 'pause_loop true,
+                EmulatorMessage::KeyDown(key) => emu.key_down(key),
+                EmulatorMessage::KeyUp(key) => emu.key_up(key),
+                EmulatorMessage::Debug(msg) => {
+                    let mut emu = DebugEmulator(emu);
+                    let response = DebugViewManager::handle_ui_request_message(&mut emu, msg);
+
+                    response_sender
+                        .send(EmulatorResponse::Debug(response))
+                        .expect("Failed to send response");
+                }
+                EmulatorMessage::Pause => log::info!("Tried to pause when already paused"),
+                EmulatorMessage::Unpause => break 'pause_loop false,
+            }
+        }
+
+        std::thread::sleep(Duration::from_millis(1));
     }
 }
 

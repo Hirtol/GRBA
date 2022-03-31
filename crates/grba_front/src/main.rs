@@ -1,19 +1,21 @@
-use crate::rendering::{Renderer, RendererOptions};
-use crate::runner::{EmulatorRunner, RunnerHandle};
-use crate::utils::BoolUtils;
-
-use grba_core::emulator::cartridge::header::CartridgeHeader;
-use grba_core::emulator::cartridge::Cartridge;
-use log::LevelFilter;
-
-use grba_core::emulator::ppu::RGBA;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
+
+use log::LevelFilter;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 
-pub const WIDTH: u32 = 640;
-pub const HEIGHT: u32 = 480;
+use grba_core::emulator::cartridge::header::CartridgeHeader;
+use grba_core::emulator::cartridge::Cartridge;
+use grba_core::emulator::ppu::RGBA;
+
+use crate::rendering::{Renderer, RendererOptions};
+use crate::runner::messages::EmulatorResponse;
+use crate::runner::{EmulatorRunner, RunnerHandle};
+use crate::utils::BoolUtils;
+
+pub const WIDTH: u32 = 1280;
+pub const HEIGHT: u32 = 720;
 
 mod debug;
 mod rendering;
@@ -101,15 +103,15 @@ impl Application {
                 }
                 // Draw the current frame
                 Event::RedrawRequested(_) => {
-                    let emu = if let Some(emu) = &self.state.current_emu {
+                    let mut emu = if let Some(emu) = &mut self.state.current_emu {
                         // We have an emulator, so run as fast as we can.
                         *control_flow = ControlFlow::Poll;
                         emu
                     } else {
                         // No emu, don't draw excessively.
-                        *control_flow = ControlFlow::Wait;
+                        *control_flow = ControlFlow::WaitUntil(Instant::now() + FRAME_DURATION);
 
-                        let render_result = self.renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE * 4]);
+                        let render_result = self.renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE * 4], None);
 
                         // Basic error handling
                         if render_result.is_err() {
@@ -151,10 +153,20 @@ impl Application {
 
                     for _ in 0..frames_to_render {
                         let frame = emu.frame_receiver.recv().unwrap();
-                        let frame: Box<[u8; grba_core::FRAMEBUFFER_SIZE * std::mem::size_of::<RGBA>()]> =
+                        let frame: &mut Box<[u8; grba_core::FRAMEBUFFER_SIZE * std::mem::size_of::<RGBA>()]> =
                             unsafe { std::mem::transmute(frame) };
 
-                        let render_result = self.renderer.render_pixels(&*frame);
+                        // Handle emulator responses to our messages
+                        while let Ok(response) = emu.response_receiver.try_recv() {
+                            match response {
+                                EmulatorResponse::Debug(msg) => {
+                                    self.renderer.framework.gui.debug_view.handle_response_message(msg)
+                                }
+                            }
+                        }
+
+                        // Render result and send debug requests
+                        let render_result = self.renderer.render_pixels(&**frame, Some(&mut emu.request_sender));
 
                         // Basic error handling
                         if let Err(e) = render_result {

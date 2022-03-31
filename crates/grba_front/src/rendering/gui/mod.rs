@@ -1,29 +1,30 @@
+use crossbeam::channel::Sender;
 use egui::{ClippedMesh, Context, TexturesDelta};
 use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
+use std::time::Instant;
 use winit::window::Window;
 
-pub use debug::messages::DebugMessage;
+use crate::runner::messages::EmulatorMessage;
+pub use debug::messages::{DebugMessageResponse, DebugMessageUi};
+pub use debug::DebugViewManager;
+
 mod debug;
 
 /// Manages all state required for rendering egui over `Pixels`.
 pub struct Framework {
     // State for egui.
     egui_ctx: Context,
+    // Egui Winit helper
     egui_state: egui_winit::State,
-    screen_descriptor: ScreenDescriptor,
+    // Egui WebGPU backend
     rpass: RenderPass,
+    screen_descriptor: ScreenDescriptor,
     paint_jobs: Vec<ClippedMesh>,
     textures: TexturesDelta,
 
     // State for the GUI
-    gui: Gui,
-}
-
-/// Example application state. A real application will need a lot more state than this.
-struct Gui {
-    /// Only show the egui window when true.
-    window_open: bool,
+    pub gui: Gui,
 }
 
 impl Framework {
@@ -64,17 +65,18 @@ impl Framework {
     }
 
     /// Update scaling factor.
-    pub(crate) fn scale_factor(&mut self, scale_factor: f64) {
-        self.screen_descriptor.scale_factor = scale_factor as f32;
+    pub(crate) fn scale_factor(&mut self, scale_factor: f32) {
+        self.screen_descriptor.scale_factor = scale_factor;
+        self.egui_ctx.set_pixels_per_point(scale_factor);
     }
 
     /// Prepare egui.
-    pub(crate) fn prepare(&mut self, window: &Window) {
+    pub(crate) fn prepare(&mut self, window: &Window, request_sender: Option<&mut Sender<EmulatorMessage>>) {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let full_output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx);
+            self.gui.ui(egui_ctx, request_sender);
         });
 
         self.textures.append(full_output.textures_delta);
@@ -110,24 +112,33 @@ impl Framework {
     }
 }
 
+/// Example application state. A real application will need a lot more state than this.
+pub struct Gui {
+    /// Only show the egui window when true.
+    window_open: bool,
+
+    pub debug_view: DebugViewManager,
+}
+
 impl Gui {
     /// Create a `Gui`.
     fn new() -> Self {
-        Self { window_open: true }
+        Self {
+            window_open: true,
+            debug_view: DebugViewManager::new(),
+        }
     }
 
     /// Create the UI using egui.
-    fn ui(&mut self, ctx: &Context) {
-        egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("About...").clicked() {
-                        self.window_open = true;
-                        ui.close_menu();
-                    }
-                })
-            });
-        });
+    fn ui(&mut self, ctx: &Context, request_sender: Option<&mut Sender<EmulatorMessage>>) {
+        let now = Instant::now();
+        let requests = self.debug_view.draw(ctx);
+
+        if let Some(sender) = request_sender {
+            for request in requests {
+                sender.send(EmulatorMessage::Debug(request)).unwrap();
+            }
+        }
 
         egui::Window::new("Hello, egui!")
             .open(&mut self.window_open)
@@ -143,5 +154,7 @@ impl Gui {
                     ui.hyperlink("https://docs.rs/egui");
                 });
             });
+
+        println!("Egui Draw: {:?}", now.elapsed());
     }
 }

@@ -2,7 +2,7 @@ pub mod emulator;
 mod joypad;
 pub mod logging;
 pub mod scheduler;
-mod utils;
+pub mod utils;
 
 pub use emulator::ppu::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
 pub use joypad::InputKeys;

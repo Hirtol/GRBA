@@ -1,5 +1,7 @@
 use crate::rendering::framerate::FrameRate;
+use crate::runner::messages::EmulatorMessage;
 use anyhow::Context;
+use crossbeam::channel::Sender;
 use gui::Framework;
 use pixels::Pixels;
 use std::time::Instant;
@@ -8,6 +10,8 @@ use winit::window::{Fullscreen, Window, WindowId};
 
 mod framerate;
 pub mod gui;
+
+pub const SCALE_FACTOR_MULTIPLIER: f32 = 1.2;
 
 #[derive(Debug, Clone)]
 pub struct RendererOptions {
@@ -47,7 +51,7 @@ impl Renderer {
 
         let (pixels, framework) = {
             let window_size = window.inner_size();
-            let scale_factor = window.scale_factor() as f32;
+            let scale_factor = window.scale_factor() as f32 * SCALE_FACTOR_MULTIPLIER;
             let surface_texture = pixels::SurfaceTexture::new(window_size.width, window_size.height, &window);
 
             let pixels =
@@ -102,7 +106,8 @@ impl Renderer {
     pub fn after_window_update(&mut self, input: &winit_input_helper::WinitInputHelper) {
         // Update the scale factor
         if let Some(scale_factor) = input.scale_factor() {
-            self.framework.scale_factor(scale_factor);
+            self.framework
+                .scale_factor(scale_factor as f32 * SCALE_FACTOR_MULTIPLIER);
         }
 
         // Resize the window
@@ -124,12 +129,16 @@ impl Renderer {
     }
 
     /// Renders the main window's contents (The framebuffer).
-    pub fn render_pixels(&mut self, framebuffer: &[u8]) -> anyhow::Result<()> {
+    pub fn render_pixels(
+        &mut self,
+        framebuffer: &[u8],
+        request_sender: Option<&mut Sender<EmulatorMessage>>,
+    ) -> anyhow::Result<()> {
         let frame = self.pixels.get_frame();
 
         frame.copy_from_slice(framebuffer);
 
-        self.framework.prepare(&self.primary_window);
+        self.framework.prepare(&self.primary_window, request_sender);
 
         // Render everything together
         let result = self
