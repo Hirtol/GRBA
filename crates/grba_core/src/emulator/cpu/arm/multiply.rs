@@ -54,8 +54,9 @@ impl ArmV4 {
     ) {
         let registers = &mut cpu.registers.general_purpose;
         let result = if accumulate {
-            registers[reg_1] as u64 * registers[reg_2] as u64
-                + (((registers[reg_high] as u64) << 32) | registers[reg_low] as u64)
+            let addition = ((registers[reg_high] as u64) << 32) | registers[reg_low] as u64;
+
+            (registers[reg_1] as u64 * registers[reg_2] as u64).wrapping_add(addition)
         } else {
             registers[reg_1] as u64 * registers[reg_2] as u64
         };
@@ -85,7 +86,7 @@ impl ArmV4 {
             // overwrite the high-register's value during the bitwise-or.
             let addition = (((registers[reg_high] as i64) << 32) | registers[reg_low] as i64);
 
-            (registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64) + addition
+            (registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64).wrapping_add(addition)
         } else {
             registers[reg_1] as i32 as i64 * registers[reg_2] as i32 as i64
         };
