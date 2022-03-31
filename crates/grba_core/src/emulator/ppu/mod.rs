@@ -215,6 +215,7 @@ impl PPU {
     }
 }
 
+#[profiling::function]
 pub fn render_scanline_mode3(ppu: &mut PPU) {
     let vram_index = ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
     //TODO: Fix colours being wrong?
@@ -233,6 +234,7 @@ pub fn render_scanline_mode3(ppu: &mut PPU) {
 }
 
 /// Render a full scanline of mode 4.
+#[profiling::function]
 pub fn render_scanline_mode4(ppu: &mut PPU) {
     const FRAME_0_ADDR: usize = 0x0;
     const FRAME_1_ADDR: usize = 0xA000;
