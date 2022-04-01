@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use egui::Context;
+use egui::{Context, Ui};
 
 use crate::gui::debug::cpu_state::CpuStateView;
 use grba_core::emulator::debug::DebugEmulator;
@@ -106,6 +106,26 @@ impl DebugViewManager {
         }
     }
 
+    pub fn draw_menu_button(&mut self, ui: &mut Ui) {
+        ui.menu_button("View", |ui| {
+            if ui
+                .checkbox(&mut self.memory.is_open(), MemoryEditorView::NAME)
+                .clicked()
+            {
+                self.memory.set_open(!self.memory.is_open());
+                ui.close_menu();
+            }
+
+            if ui
+                .checkbox(&mut self.cpu_viewer.is_open(), CpuStateView::NAME)
+                .clicked()
+            {
+                self.cpu_viewer.set_open(!self.cpu_viewer.is_open());
+                ui.close_menu();
+            }
+        });
+    }
+
     /// Draw the debug views.
     ///
     /// # Returns
@@ -113,22 +133,6 @@ impl DebugViewManager {
     /// The data requests from all enabled debug views.
     pub fn draw(&mut self, ctx: &Context) -> Vec<DebugMessageUi> {
         let mut result = Vec::new();
-
-        egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("View", |ui| {
-                    if ui.button(MemoryEditorView::NAME).clicked() {
-                        self.memory.set_open(!self.memory.is_open());
-                        ui.close_menu();
-                    }
-
-                    if ui.button(CpuStateView::NAME).clicked() {
-                        self.cpu_viewer.set_open(!self.cpu_viewer.is_open());
-                        ui.close_menu();
-                    }
-                })
-            });
-        });
 
         if self.memory.is_open() {
             let response = self.memory.draw(ctx);

@@ -310,6 +310,20 @@ impl State {
         let runner = EmulatorRunner::new(cartridge, Some(bios));
         self.current_emu = Some(runner.run());
     }
+
+    pub fn pause(&mut self, pause: bool) {
+        log::debug!("Pausing: {}", pause);
+        self.paused = pause;
+
+        // Send a message to the emulator thread to pause/unpause
+        if let Some(emu) = &self.current_emu {
+            if pause {
+                emu.pause();
+            } else {
+                emu.unpause();
+            }
+        }
+    }
 }
 
 fn handle_file_drop(path: PathBuf) -> Option<Cartridge> {
@@ -368,17 +382,7 @@ fn handle_key(input: KeyboardInput, state: &mut State, renderer: &mut Renderer) 
             }
         }
         VirtualKeyCode::K if input.state == ElementState::Released => {
-            log::debug!("K pressed, pause: {}", state.paused);
-            state.paused.toggle();
-
-            // Send a message to the emulator thread to pause/unpause
-            if let Some(emu) = &state.current_emu {
-                if state.paused {
-                    emu.pause();
-                } else {
-                    emu.unpause();
-                }
-            }
+            state.pause(!state.paused);
         }
         VirtualKeyCode::F11 if input.state == ElementState::Released => renderer.toggle_fullscreen(),
         _ => {}

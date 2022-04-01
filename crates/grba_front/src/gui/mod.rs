@@ -132,6 +132,19 @@ impl Gui {
     /// Create the UI using egui.
     fn ui(&mut self, ctx: &Context, state: &mut crate::State) {
         // let now = Instant::now();
+        egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
+                ui.menu_button("Emulation", |ui| {
+                    if ui.checkbox(&mut state.paused, "Pause").clicked() {
+                        state.pause(state.paused);
+                        ui.close_menu()
+                    }
+                });
+
+                self.debug_view.draw_menu_button(ui);
+            });
+        });
+
         let requests = self.debug_view.draw(ctx);
 
         if let Some(emu) = state.current_emu.as_ref() {
