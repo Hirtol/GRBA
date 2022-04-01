@@ -17,7 +17,7 @@ pub type SpsrBank = [PSR; 5];
 
 /// Contains all CPU registers.
 /// More Info: [Here](https://problemkaputt.de/gbatek.htm#armcpuregisterset)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Registers {
     /// R0-R12 Registers (General Purpose Registers).
     /// These thirteen registers may be used for whatever general purposes.
@@ -139,7 +139,6 @@ impl Registers {
             match to_mode {
                 Mode::User | Mode::System => {
                     // Not sure if we should re-create the PSR.
-                    // self.registers.spsr = PSR::new();
                 }
                 _ => {
                     self.spsr = self.spsr_bank[to_mode.to_spsr_index()];
@@ -325,6 +324,12 @@ impl PSR {
     #[inline(always)]
     pub fn overflow(&self) -> bool {
         self.overflow
+    }
+
+    /// Reserved bits (27..=8)
+    #[inline(always)]
+    pub fn reserved(&self) -> u32 {
+        self.reserved
     }
 
     /// I bit (7)

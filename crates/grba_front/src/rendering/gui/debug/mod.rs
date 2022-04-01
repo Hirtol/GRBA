@@ -2,11 +2,14 @@ use std::fmt::Debug;
 
 use egui::Context;
 
+use crate::rendering::gui::debug::cpu_state::CpuStateView;
 use grba_core::emulator::debug::DebugEmulator;
 
-use crate::rendering::gui::debug::memory_view::DebugMemoryEditor;
+use crate::rendering::gui::debug::memory_view::MemoryEditorView;
 use crate::rendering::gui::debug::messages::{DebugMessageResponse, DebugMessageUi};
 
+mod colors;
+pub mod cpu_state;
 pub mod memory_view;
 pub mod messages;
 
@@ -55,7 +58,8 @@ pub trait DebugView {
 }
 
 pub struct DebugViewManager {
-    memory: DebugMemoryEditor,
+    memory: MemoryEditorView,
+    cpu_viewer: CpuStateView,
 }
 
 impl DebugViewManager {
@@ -65,13 +69,18 @@ impl DebugViewManager {
             DebugMessageUi::MemoryRequest(request, update) => {
                 // Update any memory that needs to be updated
                 if let Some(update) = update {
-                    DebugMemoryEditor::update_emu(emu, update);
+                    MemoryEditorView::update_emu(emu, update);
                 }
 
                 // Fill memory response with the requested memory
-                let result = DebugMemoryEditor::prepare_frame(emu, request);
+                let result = MemoryEditorView::prepare_frame(emu, request);
 
                 DebugMessageResponse::MemoryResponse(result)
+            }
+            DebugMessageUi::CpuRequest(request) => {
+                let result = CpuStateView::prepare_frame(emu, request);
+
+                DebugMessageResponse::CpuResponse(result)
             }
         }
     }
@@ -80,7 +89,8 @@ impl DebugViewManager {
 impl DebugViewManager {
     pub fn new() -> Self {
         Self {
-            memory: DebugMemoryEditor::new(Default::default()),
+            memory: MemoryEditorView::new(Default::default()),
+            cpu_viewer: CpuStateView::new(),
         }
     }
 
@@ -89,6 +99,9 @@ impl DebugViewManager {
         match msg {
             DebugMessageResponse::MemoryResponse(data) => {
                 self.memory.update_requested_data(data);
+            }
+            DebugMessageResponse::CpuResponse(data) => {
+                self.cpu_viewer.update_requested_data(data);
             }
         }
     }
@@ -104,8 +117,13 @@ impl DebugViewManager {
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("View", |ui| {
-                    if ui.button(DebugMemoryEditor::NAME).clicked() {
+                    if ui.button(MemoryEditorView::NAME).clicked() {
                         self.memory.set_open(!self.memory.is_open());
+                        ui.close_menu();
+                    }
+
+                    if ui.button(CpuStateView::NAME).clicked() {
+                        self.cpu_viewer.set_open(!self.cpu_viewer.is_open());
                         ui.close_menu();
                     }
                 })
@@ -117,6 +135,13 @@ impl DebugViewManager {
             let request = self.memory.request_information();
 
             result.push(DebugMessageUi::MemoryRequest(request, response));
+        }
+
+        if self.cpu_viewer.is_open() {
+            let _ = self.cpu_viewer.draw(ctx);
+            let request = self.cpu_viewer.request_information();
+
+            result.push(DebugMessageUi::CpuRequest(request));
         }
 
         result

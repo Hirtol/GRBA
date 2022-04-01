@@ -6,7 +6,7 @@ use grba_core::emulator::debug::DebugEmulator;
 use grba_core::emulator::MemoryAddress;
 use std::ops::Range;
 
-pub struct DebugMemoryEditor {
+pub struct MemoryEditorView {
     egui_editor: MemoryEditor,
     mem_contents: MemContents,
     last_visible_address: Range<Address>,
@@ -28,7 +28,7 @@ pub struct MemResponse {
     data: Vec<(MemoryAddress, u8)>,
 }
 
-impl DebugMemoryEditor {
+impl MemoryEditorView {
     pub fn new(options: MemoryEditorOptions) -> Self {
         let mem_contents = MemContents {
             visible_address_range: 0..0,
@@ -54,7 +54,7 @@ impl DebugMemoryEditor {
     }
 }
 
-impl DebugView for DebugMemoryEditor {
+impl DebugView for MemoryEditorView {
     const NAME: &'static str = "Memory Editor";
     type RequestedData = MemContents;
     type RequestInformation = MemRequest;
