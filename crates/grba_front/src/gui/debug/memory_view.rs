@@ -1,4 +1,4 @@
-use crate::rendering::gui::debug::DebugView;
+use crate::gui::debug::DebugView;
 use egui::Context;
 use egui_memory_editor::option_data::MemoryEditorOptions;
 use egui_memory_editor::{Address, MemoryEditor};

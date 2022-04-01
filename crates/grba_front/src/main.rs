@@ -1,3 +1,4 @@
+use image::EncodableLayout;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -9,6 +10,7 @@ use grba_core::emulator::cartridge::header::CartridgeHeader;
 use grba_core::emulator::cartridge::Cartridge;
 use grba_core::emulator::ppu::RGBA;
 
+use crate::gui::EguiFramework;
 use crate::rendering::{Renderer, RendererOptions};
 use crate::runner::messages::EmulatorResponse;
 use crate::runner::{EmulatorRunner, RunnerHandle};
@@ -18,6 +20,7 @@ pub const WIDTH: u32 = 1280;
 pub const HEIGHT: u32 = 720;
 
 mod debug;
+pub mod gui;
 mod rendering;
 mod runner;
 mod utils;
@@ -39,8 +42,11 @@ fn main() {
 
 pub struct Application {
     state: State,
+    gui: EguiFramework,
     renderer: Renderer,
+
     input: winit_input_helper::WinitInputHelper,
+
     event_loop: EventLoop<()>,
     wait_to: Instant,
     start: Instant,
@@ -55,9 +61,11 @@ impl Application {
         let event_loop = EventLoop::new();
         let input = winit_input_helper::WinitInputHelper::new();
         let renderer = Renderer::new(&event_loop, RendererOptions::default())?;
+        let gui = EguiFramework::new(crate::WIDTH, crate::HEIGHT, renderer.scale_factor(), &renderer.pixels);
 
         Ok(Application {
             state: State::new(),
+            gui,
             renderer,
             input,
             event_loop,
@@ -76,13 +84,13 @@ impl Application {
                     return;
                 }
                 // Update renderer state and request new frame.
-                self.renderer.after_window_update(&self.input);
+                self.renderer.after_window_update(&self.input, &mut self.gui);
             }
 
             match event {
                 Event::WindowEvent { event, window_id } => {
                     // Update egui inputs
-                    self.renderer.framework.handle_event(&event);
+                    self.gui.handle_event(&event);
 
                     if window_id != self.renderer.primary_window_id() {
                         return;
@@ -109,11 +117,23 @@ impl Application {
                         // No emu, don't draw excessively.
                         *control_flow = ControlFlow::WaitUntil(Instant::now() + Self::FRAME_DURATION);
 
-                        let render_result = self.renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE * 4], None);
+                        let now = Instant::now();
 
-                        // Basic error handling
-                        if render_result.is_err() {
-                            *control_flow = ControlFlow::Exit;
+                        if now <= self.wait_to {
+                            *control_flow = ControlFlow::WaitUntil(self.wait_to);
+
+                            let render_result = self.renderer.render_pixels(
+                                &[0; grba_core::FRAMEBUFFER_SIZE * 4],
+                                &mut self.gui,
+                                &mut self.state,
+                            );
+
+                            // Basic error handling
+                            if render_result.is_err() {
+                                *control_flow = ControlFlow::Exit;
+                            }
+                        } else {
+                            self.wait_to += Self::FRAME_DURATION;
                         }
 
                         return;
@@ -122,16 +142,22 @@ impl Application {
                         *control_flow = ControlFlow::Poll
                     }
 
-                    if self.state.paused {
+                    let error = if self.state.paused {
                         // If paused just wait
-                        Self::handle_paused(&mut self.state, &mut self.renderer, control_flow);
+                        Self::handle_paused(&mut self.state, &mut self.renderer, &mut self.gui, control_flow)
                     } else {
-                        if let Err(e) =
-                            Self::handle_draw(&mut self.state, &mut self.renderer, &mut self.wait_to, control_flow)
-                        {
-                            *control_flow = ControlFlow::Exit;
-                            log::error!("Failed to render {:#}", e);
-                        }
+                        Self::handle_draw(
+                            &mut self.state,
+                            &mut self.renderer,
+                            &mut self.gui,
+                            &mut self.wait_to,
+                            control_flow,
+                        )
+                    };
+
+                    if let Err(e) = error {
+                        *control_flow = ControlFlow::Exit;
+                        log::error!("Failed to render {:#}", e);
                     }
                 }
                 _ => (),
@@ -139,23 +165,27 @@ impl Application {
         });
     }
 
-    fn handle_paused(state: &mut State, renderer: &mut Renderer, control_flow: &mut ControlFlow) -> anyhow::Result<()> {
+    fn handle_paused(
+        state: &mut State,
+        renderer: &mut Renderer,
+        gui: &mut EguiFramework,
+        control_flow: &mut ControlFlow,
+    ) -> anyhow::Result<()> {
         *control_flow = ControlFlow::WaitUntil(Instant::now() + Self::FRAME_DURATION);
 
-        match &mut state.current_emu {
+        let frame = match &mut state.current_emu {
             Some(emu) => {
                 // Handle emulator responses to our messages
-                Self::handle_debug_messages(renderer, control_flow, emu);
+                Self::handle_debug_messages(gui, control_flow, emu);
 
                 // Try receive a frame to clear up the emulator in case it's waiting for a new frame to come in.
-                let frame = emu.frame_receiver.try_recv_or_recent().as_bytes();
-
-                renderer.render_pixels(frame, Some(&mut emu.request_sender))?;
+                // Converting to vec is dreadful, but pulling the emulator out of state is worse atm.
+                emu.frame_receiver.try_recv_or_recent().as_bytes().to_vec()
             }
-            None => {
-                renderer.render_pixels(&[0; grba_core::FRAMEBUFFER_SIZE * 4], None)?;
-            }
+            None => vec![0; grba_core::FRAMEBUFFER_SIZE * 4],
         };
+
+        renderer.render_pixels(&frame, gui, state)?;
 
         Ok(())
     }
@@ -163,11 +193,10 @@ impl Application {
     fn handle_draw(
         state: &mut State,
         renderer: &mut Renderer,
+        gui: &mut EguiFramework,
         wait_to: &mut Instant,
         control_flow: &mut ControlFlow,
     ) -> anyhow::Result<()> {
-        let mut emu = state.current_emu.as_mut().unwrap();
-
         // Determine if we need to wait.
         match state.run_state {
             RunningState::FrameLimited | RunningState::FastForward(_) => {
@@ -193,22 +222,25 @@ impl Application {
         };
 
         for _ in 0..frames_to_render {
-            // Handle emulator responses to our messages
-            Self::handle_debug_messages(renderer, control_flow, emu);
+            let frame = {
+                let mut emu = state.current_emu.as_mut().unwrap();
+                // Handle emulator responses to our messages
+                Self::handle_debug_messages(gui, control_flow, emu);
 
-            let frame = emu.frame_receiver.recv()?;
+                emu.frame_receiver.recv()?.as_bytes().to_vec()
+            };
 
             // Render result and send debug requests
-            renderer.render_pixels(frame.as_bytes(), Some(&mut emu.request_sender))?;
+            renderer.render_pixels(&frame, gui, state)?;
         }
 
         Ok(())
     }
 
-    fn handle_debug_messages(renderer: &mut Renderer, control_flow: &mut ControlFlow, emu: &mut RunnerHandle) {
+    fn handle_debug_messages(gui: &mut EguiFramework, control_flow: &mut ControlFlow, emu: &mut RunnerHandle) {
         while let Ok(response) = emu.response_receiver.try_recv() {
             match response {
-                EmulatorResponse::Debug(msg) => renderer.framework.gui.debug_view.handle_response_message(msg),
+                EmulatorResponse::Debug(msg) => gui.gui.debug_view.handle_response_message(msg),
             }
         }
     }
@@ -227,15 +259,15 @@ pub enum RunningState {
     Unbounded,
 }
 
-struct State {
+pub struct State {
     /// The current emulation that is running
-    pub(crate) current_emu: Option<RunnerHandle>,
+    pub current_emu: Option<RunnerHandle>,
     /// The title of the emulation that is running
-    pub(crate) current_header: Option<CartridgeHeader>,
+    pub current_header: Option<CartridgeHeader>,
     /// How to run the emulator
-    pub(crate) run_state: RunningState,
+    pub run_state: RunningState,
     /// Whether the emulator is paused
-    pub(crate) paused: bool,
+    pub paused: bool,
 }
 
 impl State {

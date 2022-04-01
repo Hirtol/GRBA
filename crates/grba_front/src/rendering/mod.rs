@@ -1,15 +1,15 @@
+use crate::gui::EguiFramework;
 use crate::rendering::framerate::FrameRate;
 use crate::runner::messages::EmulatorMessage;
+use crate::{gui, State};
 use anyhow::Context;
 use crossbeam::channel::Sender;
-use gui::Framework;
 use pixels::Pixels;
 use std::time::Instant;
 use winit::event_loop::EventLoop;
 use winit::window::{Fullscreen, Window, WindowId};
 
 mod framerate;
-pub mod gui;
 
 pub const SCALE_FACTOR_MULTIPLIER: f32 = 1.2;
 
@@ -31,8 +31,7 @@ impl Default for RendererOptions {
 }
 
 pub struct Renderer {
-    pub framework: Framework,
-    pixels: Pixels,
+    pub pixels: Pixels,
     primary_window: Window,
     framerate: framerate::FrameRate,
     last_title_update: Instant,
@@ -63,18 +62,86 @@ impl Renderer {
                     })
                     .present_mode(wgpu::PresentMode::Immediate)
                     .build()?;
-            let framework = gui::Framework::new(window_size.width, window_size.height, scale_factor, &pixels);
+            let framework = gui::EguiFramework::new(window_size.width, window_size.height, scale_factor, &pixels);
 
             (pixels, framework)
         };
 
         Ok(Self {
             pixels,
-            framework,
             primary_window: window,
             framerate: FrameRate::new(),
             last_title_update: Instant::now(),
         })
+    }
+
+    /// Renders the main window's contents (The framebuffer).
+    pub fn render_pixels(
+        &mut self,
+        framebuffer: &[u8],
+        gui: &mut EguiFramework,
+        state: &mut State,
+    ) -> anyhow::Result<()> {
+        let frame = self.pixels.get_frame();
+
+        frame.copy_from_slice(framebuffer);
+
+        gui.prepare(&self.primary_window, state);
+
+        // Render everything together
+        let result = self
+            .pixels
+            .render_with(|encoder, render_target, context| {
+                // Render the world texture
+                context.scaling_renderer.render(encoder, render_target);
+
+                // Render egui
+                gui.render(encoder, render_target, context)?;
+
+                Ok(())
+            })
+            .context("Failed to render pixels");
+
+        self.framerate.frame_finished();
+
+        result
+    }
+
+    /// For when using a second window as the Egui interface.
+    pub fn render_immediate_mode(&mut self) {
+        todo!()
+    }
+
+    /// To be called after `input.update(event)` returns `true`
+    ///
+    /// Will update the scale factor, as well as handle window resize events for both `egui` and `pixels`.
+    /// Lastly, it will request a redraw.
+    pub fn after_window_update(&mut self, input: &winit_input_helper::WinitInputHelper, gui: &mut EguiFramework) {
+        // Update the scale factor
+        if let Some(scale_factor) = input.scale_factor() {
+            gui.scale_factor(scale_factor as f32 * SCALE_FACTOR_MULTIPLIER);
+        }
+
+        // Resize the window
+        if let Some(size) = input.window_resized() {
+            self.pixels.resize_surface(size.width, size.height);
+            gui.resize(size.width, size.height);
+        }
+
+        // Update window title
+        if self.last_title_update.elapsed().as_secs() >= 1 {
+            let fps = self.framerate.fps();
+            self.primary_window
+                .set_title(&format!("GRBA - [{:.1} FPS | {:.0}%]", fps, fps / 60.0 * 100.0));
+            self.last_title_update = Instant::now();
+        }
+
+        // Update internal state and request a redraw
+        self.request_redraw();
+    }
+
+    pub fn scale_factor(&self) -> f32 {
+        self.primary_window.scale_factor() as f32 * SCALE_FACTOR_MULTIPLIER
     }
 
     pub fn fps(&self) -> f32 {
@@ -97,70 +164,5 @@ impl Renderer {
             }
             Some(_) => self.primary_window.set_fullscreen(None),
         }
-    }
-
-    /// To be called after `input.update(event)` returns `true`
-    ///
-    /// Will update the scale factor, as well as handle window resize events for both `egui` and `pixels`.
-    /// Lastly, it will request a redraw.
-    pub fn after_window_update(&mut self, input: &winit_input_helper::WinitInputHelper) {
-        // Update the scale factor
-        if let Some(scale_factor) = input.scale_factor() {
-            self.framework
-                .scale_factor(scale_factor as f32 * SCALE_FACTOR_MULTIPLIER);
-        }
-
-        // Resize the window
-        if let Some(size) = input.window_resized() {
-            self.pixels.resize_surface(size.width, size.height);
-            self.framework.resize(size.width, size.height);
-        }
-
-        // Update window title
-        if self.last_title_update.elapsed().as_secs() >= 1 {
-            let fps = self.framerate.fps();
-            self.primary_window
-                .set_title(&format!("GRBA - [{:.1} FPS | {:.0}%]", fps, fps / 60.0 * 100.0));
-            self.last_title_update = Instant::now();
-        }
-
-        // Update internal state and request a redraw
-        self.request_redraw();
-    }
-
-    /// Renders the main window's contents (The framebuffer).
-    pub fn render_pixels(
-        &mut self,
-        framebuffer: &[u8],
-        request_sender: Option<&mut Sender<EmulatorMessage>>,
-    ) -> anyhow::Result<()> {
-        let frame = self.pixels.get_frame();
-
-        frame.copy_from_slice(framebuffer);
-
-        self.framework.prepare(&self.primary_window, request_sender);
-
-        // Render everything together
-        let result = self
-            .pixels
-            .render_with(|encoder, render_target, context| {
-                // Render the world texture
-                context.scaling_renderer.render(encoder, render_target);
-
-                // Render egui
-                self.framework.render(encoder, render_target, context)?;
-
-                Ok(())
-            })
-            .context("Failed to render pixels");
-
-        self.framerate.frame_finished();
-
-        result
-    }
-
-    /// For when using a second window as the Egui interface.
-    pub fn render_immediate_mode(&mut self) {
-        todo!()
     }
 }

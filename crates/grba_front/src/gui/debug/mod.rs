@@ -2,11 +2,11 @@ use std::fmt::Debug;
 
 use egui::Context;
 
-use crate::rendering::gui::debug::cpu_state::CpuStateView;
+use crate::gui::debug::cpu_state::CpuStateView;
 use grba_core::emulator::debug::DebugEmulator;
 
-use crate::rendering::gui::debug::memory_view::MemoryEditorView;
-use crate::rendering::gui::debug::messages::{DebugMessageResponse, DebugMessageUi};
+use crate::gui::debug::memory_view::MemoryEditorView;
+use crate::gui::debug::messages::{DebugMessageResponse, DebugMessageUi};
 
 mod colors;
 pub mod cpu_state;

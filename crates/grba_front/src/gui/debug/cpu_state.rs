@@ -5,9 +5,9 @@ use itertools::Itertools;
 use grba_core::emulator::cpu::registers::{Mode, Registers, PSR};
 use grba_core::emulator::debug::DebugEmulator;
 
-use crate::rendering::gui::debug::colors::{DARK_GREY, LIGHT_GREY};
-use crate::rendering::gui::debug::memory_view::{MemContents, MemRequest, MemResponse, MemoryEditorView};
-use crate::rendering::gui::debug::{colors, DebugView};
+use crate::gui::debug::colors::{DARK_GREY, LIGHT_GREY};
+use crate::gui::debug::memory_view::{MemContents, MemRequest, MemResponse, MemoryEditorView};
+use crate::gui::debug::{colors, DebugView};
 
 pub struct CpuStateView {
     is_open: bool,

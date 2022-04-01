@@ -1,6 +1,6 @@
-use crate::rendering::gui::debug::cpu_state::CpuStateView;
-use crate::rendering::gui::debug::memory_view::MemoryEditorView;
-use crate::rendering::gui::debug::DebugView;
+use crate::gui::debug::cpu_state::CpuStateView;
+use crate::gui::debug::memory_view::MemoryEditorView;
+use crate::gui::debug::DebugView;
 
 /// Represents a special (and possibly expensive) request for debug information to
 /// the emulator thread.

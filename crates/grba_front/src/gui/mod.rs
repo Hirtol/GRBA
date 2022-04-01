@@ -12,7 +12,7 @@ pub use debug::DebugViewManager;
 mod debug;
 
 /// Manages all state required for rendering egui over `Pixels`.
-pub struct Framework {
+pub struct EguiFramework {
     // State for egui.
     egui_ctx: Context,
     // Egui Winit helper
@@ -27,9 +27,9 @@ pub struct Framework {
     pub gui: Gui,
 }
 
-impl Framework {
+impl EguiFramework {
     /// Create egui.
-    pub(crate) fn new(width: u32, height: u32, scale_factor: f32, pixels: &pixels::Pixels) -> Self {
+    pub fn new(width: u32, height: u32, scale_factor: f32, pixels: &pixels::Pixels) -> Self {
         let egui_ctx = Context::default();
         let egui_state = egui_winit::State::from_pixels_per_point(2048, scale_factor);
         let screen_descriptor = ScreenDescriptor {
@@ -51,32 +51,13 @@ impl Framework {
         }
     }
 
-    /// Handle input events from the window manager.
-    pub(crate) fn handle_event(&mut self, event: &winit::event::WindowEvent) {
-        self.egui_state.on_event(&self.egui_ctx, event);
-    }
-
-    /// Resize egui.
-    pub(crate) fn resize(&mut self, width: u32, height: u32) {
-        if width > 0 && height > 0 {
-            self.screen_descriptor.physical_width = width;
-            self.screen_descriptor.physical_height = height;
-        }
-    }
-
-    /// Update scaling factor.
-    pub(crate) fn scale_factor(&mut self, scale_factor: f32) {
-        self.screen_descriptor.scale_factor = scale_factor;
-        self.egui_ctx.set_pixels_per_point(scale_factor);
-    }
-
     /// Prepare egui.
-    pub(crate) fn prepare(&mut self, window: &Window, request_sender: Option<&mut Sender<EmulatorMessage>>) {
+    pub fn prepare(&mut self, window: &Window, state: &mut crate::State) {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let full_output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx, request_sender);
+            self.gui.ui(egui_ctx, state);
         });
 
         self.textures.append(full_output.textures_delta);
@@ -86,7 +67,7 @@ impl Framework {
     }
 
     /// Render egui.
-    pub(crate) fn render(
+    pub fn render(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         render_target: &wgpu::TextureView,
@@ -110,6 +91,25 @@ impl Framework {
         let textures = std::mem::take(&mut self.textures);
         self.rpass.remove_textures(textures)
     }
+
+    /// Handle input events from the window manager.
+    pub fn handle_event(&mut self, event: &winit::event::WindowEvent) {
+        self.egui_state.on_event(&self.egui_ctx, event);
+    }
+
+    /// Resize egui.
+    pub fn resize(&mut self, width: u32, height: u32) {
+        if width > 0 && height > 0 {
+            self.screen_descriptor.physical_width = width;
+            self.screen_descriptor.physical_height = height;
+        }
+    }
+
+    /// Update scaling factor.
+    pub fn scale_factor(&mut self, scale_factor: f32) {
+        self.screen_descriptor.scale_factor = scale_factor;
+        self.egui_ctx.set_pixels_per_point(scale_factor);
+    }
 }
 
 /// Example application state. A real application will need a lot more state than this.
@@ -130,13 +130,13 @@ impl Gui {
     }
 
     /// Create the UI using egui.
-    fn ui(&mut self, ctx: &Context, request_sender: Option<&mut Sender<EmulatorMessage>>) {
+    fn ui(&mut self, ctx: &Context, state: &mut crate::State) {
         // let now = Instant::now();
         let requests = self.debug_view.draw(ctx);
 
-        if let Some(sender) = request_sender {
+        if let Some(emu) = state.current_emu.as_ref() {
             for request in requests {
-                sender.send(EmulatorMessage::Debug(request)).unwrap();
+                emu.request_sender.send(EmulatorMessage::Debug(request)).unwrap();
             }
         }
 

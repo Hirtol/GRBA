@@ -1,7 +1,7 @@
 use crate::runner::messages::{EmulatorMessage, EmulatorResponse};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 
-use crate::rendering::gui::DebugViewManager;
+use crate::gui::DebugViewManager;
 use crate::runner::frame_exchanger::{ExchangerReceiver, ExchangerSender};
 use grba_core::emulator::cartridge::Cartridge;
 use grba_core::emulator::debug::DebugEmulator;

@@ -1,4 +1,4 @@
-use crate::rendering::gui::{DebugMessageResponse, DebugMessageUi};
+use crate::gui::{DebugMessageResponse, DebugMessageUi};
 use grba_core::InputKeys;
 
 #[derive(Debug)]
