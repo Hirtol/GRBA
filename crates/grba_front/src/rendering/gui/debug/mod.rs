@@ -94,6 +94,10 @@ impl DebugViewManager {
     }
 
     /// Draw the debug views.
+    ///
+    /// # Returns
+    ///
+    /// The data requests from all enabled debug views.
     pub fn draw(&mut self, ctx: &Context) -> Vec<DebugMessageUi> {
         let mut result = Vec::new();
 

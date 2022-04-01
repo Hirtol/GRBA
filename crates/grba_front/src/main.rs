@@ -105,11 +105,7 @@ impl Application {
                 }
                 // Draw the current frame
                 Event::RedrawRequested(_) => {
-                    let mut emu = if let Some(emu) = &mut self.state.current_emu {
-                        // We have an emulator, so run as fast as we can.
-                        *control_flow = ControlFlow::Poll;
-                        emu
-                    } else {
+                    if self.state.current_emu.is_none() {
                         // No emu, don't draw excessively.
                         *control_flow = ControlFlow::WaitUntil(Instant::now() + Self::FRAME_DURATION);
 
@@ -121,13 +117,21 @@ impl Application {
                         }
 
                         return;
-                    };
+                    } else {
+                        // We have an emulator, so run as fast as we can.
+                        *control_flow = ControlFlow::Poll
+                    }
 
-                    // If paused just wait
                     if self.state.paused {
+                        // If paused just wait
                         Self::handle_paused(&mut self.state, &mut self.renderer, control_flow);
                     } else {
-                        Self::handle_draw(&mut self.state, &mut self.renderer, &mut self.wait_to, control_flow);
+                        if let Err(e) =
+                            Self::handle_draw(&mut self.state, &mut self.renderer, &mut self.wait_to, control_flow)
+                        {
+                            *control_flow = ControlFlow::Exit;
+                            log::error!("Failed to render {:#}", e);
+                        }
                     }
                 }
                 _ => (),
@@ -140,15 +144,11 @@ impl Application {
 
         match &mut state.current_emu {
             Some(emu) => {
+                // Handle emulator responses to our messages
+                Self::handle_debug_messages(renderer, control_flow, emu);
+
                 // Try receive a frame to clear up the emulator in case it's waiting for a new frame to come in.
                 let frame = emu.frame_receiver.try_recv_or_recent().as_bytes();
-
-                // Handle emulator responses to our messages
-                while let Ok(response) = emu.response_receiver.try_recv() {
-                    match response {
-                        EmulatorResponse::Debug(msg) => renderer.framework.gui.debug_view.handle_response_message(msg),
-                    }
-                }
 
                 renderer.render_pixels(frame, Some(&mut emu.request_sender))?;
             }
@@ -160,7 +160,12 @@ impl Application {
         Ok(())
     }
 
-    fn handle_draw(state: &mut State, renderer: &mut Renderer, wait_to: &mut Instant, control_flow: &mut ControlFlow) {
+    fn handle_draw(
+        state: &mut State,
+        renderer: &mut Renderer,
+        wait_to: &mut Instant,
+        control_flow: &mut ControlFlow,
+    ) -> anyhow::Result<()> {
         let mut emu = state.current_emu.as_mut().unwrap();
 
         // Determine if we need to wait.
@@ -170,7 +175,7 @@ impl Application {
 
                 if now <= *wait_to {
                     *control_flow = ControlFlow::WaitUntil(*wait_to);
-                    return;
+                    return Ok(());
                 } else {
                     *wait_to += Self::FRAME_DURATION;
                 }
@@ -188,21 +193,22 @@ impl Application {
         };
 
         for _ in 0..frames_to_render {
-            let frame = emu.frame_receiver.recv().unwrap();
             // Handle emulator responses to our messages
-            while let Ok(response) = emu.response_receiver.try_recv() {
-                match response {
-                    EmulatorResponse::Debug(msg) => renderer.framework.gui.debug_view.handle_response_message(msg),
-                }
-            }
+            Self::handle_debug_messages(renderer, control_flow, emu);
+
+            let frame = emu.frame_receiver.recv()?;
 
             // Render result and send debug requests
-            let render_result = renderer.render_pixels(frame.as_bytes(), Some(&mut emu.request_sender));
+            renderer.render_pixels(frame.as_bytes(), Some(&mut emu.request_sender))?;
+        }
 
-            // Basic error handling
-            if let Err(e) = render_result {
-                *control_flow = ControlFlow::Exit;
-                log::error!("Failed to render {:#}", e);
+        Ok(())
+    }
+
+    fn handle_debug_messages(renderer: &mut Renderer, control_flow: &mut ControlFlow, emu: &mut RunnerHandle) {
+        while let Ok(response) = emu.response_receiver.try_recv() {
+            match response {
+                EmulatorResponse::Debug(msg) => renderer.framework.gui.debug_view.handle_response_message(msg),
             }
         }
     }
