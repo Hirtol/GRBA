@@ -6,7 +6,7 @@ pub const PALETTE_RAM_SIZE: usize = 1024;
 #[derive(Debug, Clone)]
 pub struct PaletteCache {
     /// The raw bytes used by the emulator for storage
-    pub palette_ram: Box<[u8; PALETTE_RAM_SIZE]>,
+    palette_ram: Box<[u8; PALETTE_RAM_SIZE]>,
     /// The persisted palette cache where RGB values are stored for quick lookup
     cache: Box<[Palette; 512]>,
 }
@@ -20,6 +20,16 @@ impl PaletteCache {
     #[inline(always)]
     pub fn get_palette(&self, index: usize) -> Palette {
         self.cache[index]
+    }
+
+    #[inline]
+    pub const fn ram(&self) -> &[u8; PALETTE_RAM_SIZE] {
+        &self.palette_ram
+    }
+
+    #[inline]
+    pub const fn cache(&self) -> &[Palette; 512] {
+        &self.cache
     }
 
     #[inline]
@@ -73,12 +83,12 @@ pub struct RGBA {
     pub alpha: u8,
 }
 
-/// 15 Bit BGR color
+/// 15 Bit RGB color pre-converted to 24 bit RGB
 #[derive(Default, Debug, Copy, Clone)]
 pub struct Palette {
-    red: u8,
-    green: u8,
-    blue: u8,
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
 }
 
 impl Palette {

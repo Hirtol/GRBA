@@ -1,7 +1,9 @@
 use crossbeam::channel::Sender;
-use egui::{ClippedMesh, Context, TexturesDelta};
+use egui::mutex::RwLockWriteGuard;
+use egui::{ClippedMesh, Context, Memory, TexturesDelta};
 use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use winit::window::Window;
 
@@ -29,8 +31,22 @@ pub struct EguiFramework {
 
 impl EguiFramework {
     /// Create egui.
-    pub fn new(width: u32, height: u32, scale_factor: f32, pixels: &pixels::Pixels) -> Self {
-        let egui_ctx = Context::default();
+    pub fn new(
+        width: u32,
+        height: u32,
+        scale_factor: f32,
+        pixels: &pixels::Pixels,
+        ui_state: Option<AppUiState>,
+    ) -> Self {
+        let (egui_ctx, gui) = if let Some(mem) = ui_state {
+            let egui_ctx = Context::default();
+            *egui_ctx.memory() = mem.egui;
+
+            (egui_ctx, Gui::new(Some(mem.debug_ui)))
+        } else {
+            (Context::default(), Gui::new(None))
+        };
+
         let egui_state = egui_winit::State::from_pixels_per_point(2048, scale_factor);
         let screen_descriptor = ScreenDescriptor {
             physical_width: width,
@@ -38,7 +54,6 @@ impl EguiFramework {
             scale_factor,
         };
         let rpass = RenderPass::new(pixels.device(), pixels.render_texture_format(), 1);
-        let gui = Gui::new();
 
         Self {
             egui_ctx,
@@ -110,6 +125,17 @@ impl EguiFramework {
         self.screen_descriptor.scale_factor = scale_factor;
         self.egui_ctx.set_pixels_per_point(scale_factor);
     }
+
+    /// The memory of EGUI with regard to windows and state.
+    pub fn memory(&self) -> RwLockWriteGuard<'_, Memory> {
+        self.egui_ctx.memory()
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AppUiState {
+    pub debug_ui: debug::UiState,
+    pub egui: Memory,
 }
 
 /// Example application state. A real application will need a lot more state than this.
@@ -122,10 +148,10 @@ pub struct Gui {
 
 impl Gui {
     /// Create a `Gui`.
-    fn new() -> Self {
+    fn new(ui_state: Option<debug::UiState>) -> Self {
         Self {
             window_open: true,
-            debug_view: DebugViewManager::new(),
+            debug_view: DebugViewManager::new(ui_state),
         }
     }
 
@@ -135,7 +161,7 @@ impl Gui {
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("Emulation", |ui| {
-                    if ui.checkbox(&mut state.paused, "Pause").clicked() {
+                    if ui.checkbox(&mut state.paused, "Pause (K)").clicked() {
                         state.pause(state.paused);
                         ui.close_menu()
                     }

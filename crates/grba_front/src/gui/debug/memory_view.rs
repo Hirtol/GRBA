@@ -93,24 +93,17 @@ impl DebugView for MemoryEditorView {
         }
     }
 
-    fn set_open(&mut self, open: bool) {
-        self.egui_editor.options.is_open = open;
-    }
-
-    fn is_open(&self) -> bool {
-        self.egui_editor.options.is_open
-    }
-
     fn update_requested_data(&mut self, data: Self::RequestedData) {
         self.mem_contents = data;
     }
 
-    fn draw(&mut self, ctx: &Context) -> Option<Self::EmuUpdate> {
+    fn draw(&mut self, ctx: &Context, open: &mut bool) -> Option<Self::EmuUpdate> {
         let mem_contents = &mut self.mem_contents;
         let mut update = MemResponse { data: Vec::new() };
 
         self.egui_editor.window_ui(
             ctx,
+            open,
             mem_contents,
             |mem_contents, addr| {
                 if mem_contents.visible_address_range.contains(&addr) {

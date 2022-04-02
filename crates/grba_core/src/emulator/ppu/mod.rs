@@ -8,7 +8,7 @@ use crate::emulator::ppu::registers::{
 use crate::scheduler::{EmuTime, EventTag, Scheduler};
 use crate::utils::BitOps;
 pub use memory::*;
-pub use palette::RGBA;
+pub use palette::{Palette, RGBA};
 
 pub const DISPLAY_WIDTH: u32 = 240;
 pub const DISPLAY_HEIGHT: u32 = 160;

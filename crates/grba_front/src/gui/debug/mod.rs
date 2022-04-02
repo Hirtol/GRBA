@@ -1,17 +1,21 @@
 use std::fmt::Debug;
 
 use egui::{Context, Ui};
+use serde::{Deserialize, Serialize};
 
-use crate::gui::debug::cpu_state::CpuStateView;
+use crate::gui::debug::cpu_state_view::CpuStateView;
+use crate::BoolUtils;
 use grba_core::emulator::debug::DebugEmulator;
 
 use crate::gui::debug::memory_view::MemoryEditorView;
 use crate::gui::debug::messages::{DebugMessageResponse, DebugMessageUi};
+use crate::gui::debug::palette_view::PaletteView;
 
 mod colors;
-pub mod cpu_state;
+pub mod cpu_state_view;
 pub mod memory_view;
 pub mod messages;
+pub mod palette_view;
 
 pub trait DebugView {
     /// The name of the debug view, used for the menu title.
@@ -36,14 +40,6 @@ pub trait DebugView {
     /// Provide [Self::RequestInformation] for the next frame's [Self::prepare_frame] call.
     fn request_information(&mut self) -> Self::RequestInformation;
 
-    /// Set whether the view should be enabled or not
-    fn set_open(&mut self, open: bool);
-
-    /// Whether the current view is open/enabled.
-    ///
-    /// If `false` then neither [Self::prepare_frame] or [Self::draw] will be called.
-    fn is_open(&self) -> bool;
-
     /// Take the data prepared in [Self::prepare_frame] and update internal state to the provided [Self::RequestedData]
     fn update_requested_data(&mut self, data: Self::RequestedData);
 
@@ -54,12 +50,22 @@ pub trait DebugView {
     /// # Returns
     ///
     /// The [Self::EmuUpdate] data that should be passed to [Self::update_emu]. If no state update should be made, return `None`.
-    fn draw(&mut self, ctx: &Context) -> Option<Self::EmuUpdate>;
+    fn draw(&mut self, ctx: &Context, open: &mut bool) -> Option<Self::EmuUpdate>;
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Copy)]
+pub struct UiState {
+    pub memory_open: bool,
+    pub cpu_open: bool,
+    pub palette_open: bool,
 }
 
 pub struct DebugViewManager {
     memory: MemoryEditorView,
     cpu_viewer: CpuStateView,
+    palette_viewer: PaletteView,
+
+    pub state: UiState,
 }
 
 impl DebugViewManager {
@@ -82,15 +88,22 @@ impl DebugViewManager {
 
                 DebugMessageResponse::CpuResponse(result)
             }
+            DebugMessageUi::PaletteRequest(request) => {
+                let result = PaletteView::prepare_frame(emu, request);
+
+                DebugMessageResponse::PaletteResponse(result)
+            }
         }
     }
 }
 
 impl DebugViewManager {
-    pub fn new() -> Self {
+    pub fn new(ui_state: Option<UiState>) -> Self {
         Self {
             memory: MemoryEditorView::new(Default::default()),
             cpu_viewer: CpuStateView::new(),
+            palette_viewer: PaletteView::new(),
+            state: ui_state.unwrap_or_default(),
         }
     }
 
@@ -103,24 +116,27 @@ impl DebugViewManager {
             DebugMessageResponse::CpuResponse(data) => {
                 self.cpu_viewer.update_requested_data(data);
             }
+            DebugMessageResponse::PaletteResponse(data) => {
+                self.palette_viewer.update_requested_data(data);
+            }
         }
     }
 
+    /// Draw menu buttons for enabling/disabling the debug views.
     pub fn draw_menu_button(&mut self, ui: &mut Ui) {
         ui.menu_button("View", |ui| {
             if ui
-                .checkbox(&mut self.memory.is_open(), MemoryEditorView::NAME)
+                .checkbox(&mut self.state.memory_open, MemoryEditorView::NAME)
                 .clicked()
             {
-                self.memory.set_open(!self.memory.is_open());
                 ui.close_menu();
             }
 
-            if ui
-                .checkbox(&mut self.cpu_viewer.is_open(), CpuStateView::NAME)
-                .clicked()
-            {
-                self.cpu_viewer.set_open(!self.cpu_viewer.is_open());
+            if ui.checkbox(&mut self.state.cpu_open, CpuStateView::NAME).clicked() {
+                ui.close_menu();
+            }
+
+            if ui.checkbox(&mut self.state.palette_open, PaletteView::NAME).clicked() {
                 ui.close_menu();
             }
         });
@@ -134,18 +150,25 @@ impl DebugViewManager {
     pub fn draw(&mut self, ctx: &Context) -> Vec<DebugMessageUi> {
         let mut result = Vec::new();
 
-        if self.memory.is_open() {
-            let response = self.memory.draw(ctx);
+        if self.state.memory_open {
+            let response = self.memory.draw(ctx, &mut self.state.memory_open);
             let request = self.memory.request_information();
 
             result.push(DebugMessageUi::MemoryRequest(request, response));
         }
 
-        if self.cpu_viewer.is_open() {
-            let _ = self.cpu_viewer.draw(ctx);
+        if self.state.cpu_open {
+            let _ = self.cpu_viewer.draw(ctx, &mut self.state.cpu_open);
             let request = self.cpu_viewer.request_information();
 
             result.push(DebugMessageUi::CpuRequest(request));
+        }
+
+        if self.state.palette_open {
+            let _ = self.palette_viewer.draw(ctx, &mut self.state.palette_open);
+            let request = self.palette_viewer.request_information();
+
+            result.push(DebugMessageUi::PaletteRequest(request));
         }
 
         result

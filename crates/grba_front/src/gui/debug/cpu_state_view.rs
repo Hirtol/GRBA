@@ -10,7 +10,6 @@ use crate::gui::debug::memory_view::{MemContents, MemRequest, MemResponse, Memor
 use crate::gui::debug::{colors, DebugView};
 
 pub struct CpuStateView {
-    is_open: bool,
     cpu_state: CpuState,
     selected_banked: Mode,
 }
@@ -26,7 +25,6 @@ pub struct CpuStateRequest;
 impl CpuStateView {
     pub fn new() -> Self {
         Self {
-            is_open: true,
             cpu_state: Default::default(),
             selected_banked: Mode::IRQ,
         }
@@ -51,25 +49,17 @@ impl DebugView for CpuStateView {
         CpuStateRequest
     }
 
-    fn set_open(&mut self, open: bool) {
-        self.is_open = open;
-    }
-
-    fn is_open(&self) -> bool {
-        self.is_open
-    }
-
     fn update_requested_data(&mut self, data: Self::RequestedData) {
         self.cpu_state = data;
     }
 
-    fn draw(&mut self, ctx: &Context) -> Option<Self::EmuUpdate> {
+    fn draw(&mut self, ctx: &Context, open: &mut bool) -> Option<Self::EmuUpdate> {
         let state = &self.cpu_state;
 
         egui::containers::Window::new("ARM7 State")
             .resizable(true)
             .vscroll(true)
-            .open(&mut self.is_open)
+            .open(open)
             .show(ctx, |ui| {
                 state.draw(ui);
             });

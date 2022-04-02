@@ -1,4 +1,3 @@
-use image::EncodableLayout;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -19,6 +18,7 @@ use crate::utils::BoolUtils;
 pub const WIDTH: u32 = 1280;
 pub const HEIGHT: u32 = 720;
 
+mod config;
 mod debug;
 pub mod gui;
 mod rendering;
@@ -58,10 +58,17 @@ impl Application {
     const FRAME_DURATION: Duration = Duration::from_nanos(16742706);
 
     pub fn new() -> anyhow::Result<Application> {
+        let state = config::deserialise_state_and_config();
         let event_loop = EventLoop::new();
         let input = winit_input_helper::WinitInputHelper::new();
         let renderer = Renderer::new(&event_loop, RendererOptions::default())?;
-        let gui = EguiFramework::new(crate::WIDTH, crate::HEIGHT, renderer.scale_factor(), &renderer.pixels);
+        let gui = EguiFramework::new(
+            crate::WIDTH,
+            crate::HEIGHT,
+            renderer.scale_factor(),
+            &renderer.pixels,
+            state,
+        );
 
         Ok(Application {
             state: State::new(),
@@ -159,6 +166,9 @@ impl Application {
                         *control_flow = ControlFlow::Exit;
                         log::error!("Failed to render {:#}", e);
                     }
+                }
+                Event::LoopDestroyed => {
+                    config::save_state_and_config(&self.gui);
                 }
                 _ => (),
             }

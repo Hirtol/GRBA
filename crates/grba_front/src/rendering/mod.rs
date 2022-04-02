@@ -48,9 +48,8 @@ impl Renderer {
                 .build(&event_loop)?
         };
 
-        let (pixels, framework) = {
+        let pixels = {
             let window_size = window.inner_size();
-            let scale_factor = window.scale_factor() as f32 * SCALE_FACTOR_MULTIPLIER;
             let surface_texture = pixels::SurfaceTexture::new(window_size.width, window_size.height, &window);
 
             let pixels =
@@ -62,9 +61,8 @@ impl Renderer {
                     })
                     .present_mode(wgpu::PresentMode::Immediate)
                     .build()?;
-            let framework = gui::EguiFramework::new(window_size.width, window_size.height, scale_factor, &pixels);
 
-            (pixels, framework)
+            pixels
         };
 
         Ok(Self {
