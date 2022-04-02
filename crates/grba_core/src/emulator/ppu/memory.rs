@@ -1,4 +1,4 @@
-use crate::emulator::ppu::{OAM_RAM_SIZE, PALETTE_RAM_SIZE, PPU, VRAM_SIZE};
+use crate::emulator::ppu::{OAM_RAM_SIZE, PPU, VRAM_SIZE};
 use crate::emulator::MemoryAddress;
 
 pub const PALETTE_START: MemoryAddress = 0x0500_0000;
@@ -49,28 +49,17 @@ impl PPU {
 
     #[inline]
     pub fn read_palette(&self, address: MemoryAddress) -> u8 {
-        let addr = address as usize % PALETTE_RAM_SIZE;
-
-        self.palette_ram[addr]
+        self.palette.read_palette(address)
     }
 
     #[inline]
     pub fn write_palette(&mut self, address: MemoryAddress, value: u8) {
-        // When writing to palette ram with only a u8 the value is written to both the upper and lower bytes.
-        let final_value = ((value as u16) << 8) | value as u16;
-
-        self.write_palette_16(address, final_value);
+        self.palette.write_palette(address, value);
     }
 
     #[inline]
     pub fn write_palette_16(&mut self, address: MemoryAddress, value: u16) {
-        let addr = address as usize % PALETTE_RAM_SIZE;
-        let data = value.to_le_bytes();
-        // Better assembly
-        assert!(addr < (PALETTE_RAM_SIZE - 1));
-
-        self.palette_ram[addr] = data[0];
-        self.palette_ram[addr + 1] = data[1];
+        self.palette.write_palette_16(address, value);
     }
 
     #[inline]

@@ -1,5 +1,6 @@
 use crate::emulator::bus::interrupts::{InterruptManager, Interrupts};
 use crate::emulator::frame::RgbaFrame;
+use crate::emulator::ppu::palette::PaletteCache;
 use crate::emulator::ppu::registers::{
     AlphaBlendCoefficients, BgControl, BgMode, BgRotationParam, BgRotationRef, BgScrolling, BrightnessCoefficients,
     ColorSpecialSelection, LcdControl, LcdStatus, MosaicFunction, VerticalCounter, WindowControl, WindowDimensions,
@@ -13,7 +14,6 @@ pub const DISPLAY_WIDTH: u32 = 240;
 pub const DISPLAY_HEIGHT: u32 = 160;
 pub const FRAMEBUFFER_SIZE: u32 = DISPLAY_WIDTH * DISPLAY_HEIGHT;
 pub const VRAM_SIZE: usize = 96 * 1024;
-pub const PALETTE_RAM_SIZE: usize = 1024;
 pub const OAM_RAM_SIZE: usize = 1024;
 
 pub const CYCLES_PER_PIXEL: u32 = 4;
@@ -46,7 +46,7 @@ pub struct PPU {
     // Ram
     frame_buffer: RgbaFrame,
     current_scanline: Box<[RGBA; DISPLAY_WIDTH as usize]>,
-    palette_ram: Box<[u8; PALETTE_RAM_SIZE]>,
+    palette: PaletteCache,
     oam_ram: Box<[u8; OAM_RAM_SIZE]>,
     vram: Box<[u8; VRAM_SIZE]>,
 
@@ -84,7 +84,7 @@ impl PPU {
         PPU {
             frame_buffer: RgbaFrame::default(),
             current_scanline: crate::box_array![RGBA::default(); DISPLAY_WIDTH as usize],
-            palette_ram: crate::box_array![0; PALETTE_RAM_SIZE],
+            palette: PaletteCache::default(),
             oam_ram: crate::box_array![0; OAM_RAM_SIZE],
             vram: crate::box_array![0; VRAM_SIZE],
             control: LcdControl::new(),
@@ -111,10 +111,6 @@ impl PPU {
     /// Executed when the PPU is created to kick-start the PPU event chain.
     pub fn initial_startup(&self, scheduler: &mut Scheduler) {
         scheduler.schedule_event(EventTag::HBlank, EmuTime::from(HDRAW_CYCLES));
-    }
-
-    pub fn frame_buffer(&mut self) -> &mut RgbaFrame {
-        &mut self.frame_buffer
     }
 
     pub fn hblank_start(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
@@ -207,6 +203,14 @@ impl PPU {
         self.frame_buffer[current_address..current_address + DISPLAY_WIDTH as usize]
             .copy_from_slice(&*self.current_scanline);
     }
+
+    pub fn frame_buffer(&mut self) -> &mut RgbaFrame {
+        &mut self.frame_buffer
+    }
+
+    pub fn palette_cache(&self) -> &PaletteCache {
+        &self.palette
+    }
 }
 
 #[profiling::function]
@@ -219,9 +223,9 @@ pub fn render_scanline_mode3(ppu: &mut PPU) {
         let pixel = u16::from_le_bytes(ppu.vram[index..=index + 1].try_into().unwrap());
 
         ppu.current_scanline[i] = RGBA {
-            red: get_5_to_8_bit_color(pixel.get_bits(0, 4) as u8),
-            green: get_5_to_8_bit_color(pixel.get_bits(5, 9) as u8),
-            blue: get_5_to_8_bit_color(pixel.get_bits(10, 14) as u8),
+            red: palette::convert_5_to_8_bit_color(pixel.get_bits(0, 4) as u8),
+            green: palette::convert_5_to_8_bit_color(pixel.get_bits(5, 9) as u8),
+            blue: palette::convert_5_to_8_bit_color(pixel.get_bits(10, 14) as u8),
             alpha: 255,
         };
     }
@@ -241,24 +245,8 @@ pub fn render_scanline_mode4(ppu: &mut PPU) {
 
     for i in 0..DISPLAY_WIDTH as usize {
         let palette_index = ppu.vram[vram_index + i];
-        let palette_ram: &[u16; 512] = unsafe { std::mem::transmute(&*ppu.palette_ram) };
-        let palette = palette_ram[palette_index as usize];
+        let palette = ppu.palette.get_palette(palette_index as usize);
 
-        ppu.current_scanline[i] = RGBA {
-            red: get_5_to_8_bit_color(palette.get_bits(0, 4) as u8),
-            green: get_5_to_8_bit_color(palette.get_bits(5, 9) as u8),
-            blue: get_5_to_8_bit_color(palette.get_bits(10, 14) as u8),
-            alpha: 255,
-        };
+        ppu.current_scanline[i] = palette.to_rgba(255);
     }
-}
-
-/// Convert the 5-bit colour values to 8 bit values which we work with.
-///
-/// Follows the method described [here](https://near.sh/articles/video/color-emulation)
-/// TODO: Do the correction for washed out colours as well.
-#[inline(always)]
-pub const fn get_5_to_8_bit_color(color_5: u8) -> u8 {
-    let final_color = color_5 << 3;
-    final_color | (color_5 >> 2)
 }
