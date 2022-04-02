@@ -274,7 +274,7 @@ impl From<u32> for PSR {
             irq_disable: value.check_bit(7),
             fiq_disable: value.check_bit(6),
             state: State::from_u32(value >> 5 & 1).unwrap(),
-            mode: Mode::from_u32(value & 0x1F).unwrap(),
+            mode: Mode::from_u32(value & 0x1F).unwrap_or(Mode::System),
             reserved: value & 0x0FFF_FF00,
         }
     }
