@@ -56,15 +56,19 @@ impl ThumbV4 {
 
         if is_sign_extended {
             if h_flag {
-                cpu.write_reg(r_d, sign_extend32(bus.read_16(target_addr, cpu) as u32, 8) as u32, bus);
+                cpu.write_reg(
+                    r_d,
+                    sign_extend32(bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32, 16) as u32,
+                    bus,
+                );
             } else {
                 cpu.write_reg(r_d, sign_extend32(bus.read(target_addr, cpu) as u32, 8) as u32, bus);
             }
         } else {
             if h_flag {
-                cpu.write_reg(r_d, bus.read_16(target_addr, cpu) as u32, bus);
+                cpu.write_reg(r_d, bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32, bus);
             } else {
-                bus.write_16(target_addr, cpu.read_reg(r_d) as u16);
+                bus.write_16(target_addr & 0xFFFF_FFFE, cpu.read_reg(r_d) as u16);
             }
         }
     }
@@ -79,7 +83,7 @@ impl ThumbV4 {
         let target_addr = cpu.read_reg(r_base).wrapping_add(offset);
 
         if is_load {
-            cpu.write_reg(r_d, bus.read_16(target_addr, cpu) as u32, bus);
+            cpu.write_reg(r_d, bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32, bus);
         } else {
             bus.write_16(target_addr, cpu.read_reg(r_d) as u16);
         }
