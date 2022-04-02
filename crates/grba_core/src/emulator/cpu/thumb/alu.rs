@@ -216,8 +216,8 @@ impl ThumbV4 {
             AluDataOperation::Mul => {
                 let result = op1.wrapping_mul(op2);
                 cpu.write_reg(r_d, result, bus);
-
-                cpu.set_zero_and_sign(result);
+                // Carry flag gets destroyed by the multiply.
+                cpu.set_logical_flags(result, false);
             }
             AluDataOperation::Bic => {
                 let result = op1 & !op2;
