@@ -22,11 +22,7 @@ impl ShiftType {
             ShiftType::LogicalLeft => match shift_amount {
                 // Interesting to note that the generated assembly with overlapping match arms is actually better
                 // (Though even without overlap the assembly is still significantly more performant than if-else chains)
-                0 => {
-                    let shifted = value << shift_amount;
-
-                    (shifted, current_carry)
-                }
+                0 => (value, current_carry),
                 0..=31 => {
                     let carry = value.check_bit(32 - shift_amount);
 

@@ -130,13 +130,39 @@ impl ThumbV4 {
                 cpu.set_logical_flags(result, carry);
             }
             AluDataOperation::Lsr => {
-                let (result, carry) = ShiftType::LogicalRight.perform_shift(op1, op2 as u8, cpu.registers.cpsr.carry());
+                // It seems Thumb ALU shift behaviour doesn't match ARM barrel shifter edge cases with regard to shift == 0?
+                let (result, carry) = match op2 {
+                    0..=31 => {
+                        let carry = op1.check_bit(op2.saturating_sub(1) as u8);
+                        let shifted = op1 >> op2;
+                        (shifted, carry)
+                    }
+                    32 => (0, op1.check_bit(31)),
+                    _ => (0, false),
+                };
+
                 cpu.write_reg(r_d, result, bus);
 
                 cpu.set_logical_flags(result, carry);
             }
             AluDataOperation::Asr => {
-                let (result, carry) = ShiftType::ArithRight.perform_shift(op1, op2 as u8, cpu.registers.cpsr.carry());
+                // It seems Thumb ALU shift behaviour doesn't match ARM barrel shifter edge cases with regard to shift == 0?
+                let (result, carry) = match op2 {
+                    0..=31 => {
+                        let carry = op1.check_bit(op2.saturating_sub(1) as u8);
+                        // We cast to an i32 to get an arithmetic shift, then cast back.
+                        let shifted = ((op1 as i32) >> op2) as u32;
+
+                        (shifted, carry)
+                    }
+                    _ => {
+                        let carry = op1.check_bit(31);
+                        // Since we're doing signed extension we either return nothing at all or all ones.
+                        let shifted = if carry { u32::MAX } else { 0 };
+                        (shifted, carry)
+                    }
+                };
+
                 cpu.write_reg(r_d, result, bus);
 
                 cpu.set_logical_flags(result, carry);
@@ -152,7 +178,14 @@ impl ThumbV4 {
                 cpu.write_reg(r_d, result, bus);
             }
             AluDataOperation::Ror => {
-                let (result, carry) = ShiftType::RotateRight.perform_shift(op1, op2 as u8, cpu.registers.cpsr.carry());
+                // It seems Thumb ALU shift behaviour doesn't match ARM barrel shifter edge cases with regard to shift == 0?
+                let (result, carry) = match op2 {
+                    0 => (op1, cpu.registers.cpsr.carry()),
+                    _ => {
+                        let shifted = op1.rotate_right(op2 as u32);
+                        (shifted, shifted.check_bit(31))
+                    }
+                };
 
                 cpu.set_logical_flags(result, carry);
 
