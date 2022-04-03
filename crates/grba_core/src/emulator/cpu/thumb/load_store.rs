@@ -144,13 +144,16 @@ impl ThumbV4 {
             if is_byte_transfer {
                 cpu.write_reg(r_d, bus.read(target_addr, cpu) as u32, bus);
             } else {
-                cpu.write_reg(r_d, bus.read_32(target_addr, cpu), bus);
+                let value = bus.read_32(target_addr & 0xFFFF_FFFC, cpu);
+                // The byte at the address will always be at bits 0..=7, if unaligned access then the rest will be shifted.
+                let final_val = value.rotate_right(8 * (target_addr.get_bits(0, 1)));
+                cpu.write_reg(r_d, final_val, bus);
             }
         } else {
             if is_byte_transfer {
                 bus.write(target_addr, cpu.read_reg(r_d) as u8);
             } else {
-                bus.write_32(target_addr, cpu.read_reg(r_d));
+                bus.write_32(target_addr & 0xFFFF_FFFC, cpu.read_reg(r_d));
             }
         }
     }
