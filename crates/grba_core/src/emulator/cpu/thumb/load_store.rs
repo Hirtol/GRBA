@@ -111,9 +111,12 @@ impl ThumbV4 {
         let target_addr = cpu.read_reg(SP_REG).wrapping_add(offset);
 
         if is_load {
-            cpu.write_reg(r_d, bus.read_32(target_addr, cpu), bus);
+            let value = bus.read_32(target_addr & 0xFFFF_FFFC, cpu);
+            // The byte at the address will always be at bits 0..=7, if unaligned access then the rest will be shifted.
+            let final_val = value.rotate_right(8 * (target_addr.get_bits(0, 1)));
+            cpu.write_reg(r_d, final_val, bus);
         } else {
-            bus.write_32(target_addr, cpu.read_reg(r_d));
+            bus.write_32(target_addr & 0xFFFF_FFFC, cpu.read_reg(r_d));
         }
     }
 
