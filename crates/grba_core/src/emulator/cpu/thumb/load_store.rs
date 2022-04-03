@@ -92,11 +92,11 @@ impl ThumbV4 {
         let target_addr = cpu.read_reg(r_base).wrapping_add(offset);
 
         if is_load {
-            let value = bus.read_16(target_addr & 0xFFFF_FFFE, cpu);
+            let value = bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32;
             // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
             let final_val = value.rotate_right(8 * (target_addr.check_bit(0) as u32));
 
-            cpu.write_reg(r_d, final_val as u32, bus);
+            cpu.write_reg(r_d, final_val, bus);
         } else {
             bus.write_16(target_addr & 0xFFFF_FFFE, cpu.read_reg(r_d) as u16);
         }
