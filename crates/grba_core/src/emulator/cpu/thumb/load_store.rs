@@ -56,17 +56,26 @@ impl ThumbV4 {
 
         if is_sign_extended {
             if h_flag {
-                cpu.write_reg(
-                    r_d,
-                    sign_extend32(bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32, 16) as u32,
-                    bus,
-                );
+                let value = bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32;
+                // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
+                let rotated_val = value.rotate_right(8 * (target_addr.check_bit(0) as u32));
+                // Check if unaligned access, if so, then for some reason it acts as if it's a LDRSB ¯\_(ツ)_/¯
+                let final_val = if target_addr.check_bit(0) {
+                    sign_extend32(rotated_val, 8) as u32
+                } else {
+                    sign_extend32(rotated_val, 16) as u32
+                };
+
+                cpu.write_reg(r_d, final_val, bus);
             } else {
                 cpu.write_reg(r_d, sign_extend32(bus.read(target_addr, cpu) as u32, 8) as u32, bus);
             }
         } else {
             if h_flag {
-                cpu.write_reg(r_d, bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32, bus);
+                let value = bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32;
+                // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
+                let final_val = value.rotate_right(8 * (target_addr.check_bit(0) as u32));
+                cpu.write_reg(r_d, final_val, bus);
             } else {
                 bus.write_16(target_addr & 0xFFFF_FFFE, cpu.read_reg(r_d) as u16);
             }
@@ -83,9 +92,13 @@ impl ThumbV4 {
         let target_addr = cpu.read_reg(r_base).wrapping_add(offset);
 
         if is_load {
-            cpu.write_reg(r_d, bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32, bus);
+            let value = bus.read_16(target_addr & 0xFFFF_FFFE, cpu);
+            // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
+            let final_val = value.rotate_right(8 * (target_addr.check_bit(0) as u32));
+
+            cpu.write_reg(r_d, final_val as u32, bus);
         } else {
-            bus.write_16(target_addr, cpu.read_reg(r_d) as u16);
+            bus.write_16(target_addr & 0xFFFF_FFFE, cpu.read_reg(r_d) as u16);
         }
     }
 
