@@ -10,7 +10,7 @@ pub fn test_fuzz_general() {
 
 #[test]
 pub fn test_fuzz_arm_any() {
-    run_fuzz_test("ARM_any.gba");
+    run_fuzz_test("ARM_Any.gba");
 }
 
 #[test]
@@ -20,7 +20,7 @@ pub fn test_fuzz_arm_data_processing() {
 
 #[test]
 pub fn test_fuzz_thumb_any() {
-    run_fuzz_test("THUMB_any.gba");
+    run_fuzz_test("THUMB_Any.gba");
 }
 
 #[test]
@@ -37,18 +37,12 @@ fn run_fuzz_test(rom: impl AsRef<Path>) {
     let mut emu = setup::get_emu(rom);
     let mut debug_emu = DebugEmulator(&mut emu);
 
-    loop {
+    // Fuzz tests go to 0x0800_00F4 when they're finished
+    while debug_emu.cpu().registers.general_purpose[PC_REG] != 0x0800_00F4 {
         debug_emu.0.run_to_vblank();
 
-        // If we're at the end of the test we're good!
-        if debug_emu.cpu().registers.general_purpose[PC_REG] == 0x0800_00F4 {
-            break;
-        }
-
-        let fail_value = debug_emu.bus().ram.read_board(0x0200_0000);
-
         // Check if we had a test failure
-        if fail_value != 0 {
+        if debug_emu.bus().ram.read_board(0x0200_0000) != 0 {
             // Give it one more frame to flesh out registers if need be.
             debug_emu.0.run_to_vblank();
             let failure = FuzzArmFailure::from_emu(debug_emu);
