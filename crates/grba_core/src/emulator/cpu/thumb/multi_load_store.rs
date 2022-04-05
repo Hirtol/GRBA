@@ -11,6 +11,8 @@ impl ThumbV4 {
 
         let register_list = instruction.get_bits(0, 7) as u8;
 
+        // TODO: Consider handling invalid R-Lists in multiple load/store instructions
+
         if is_pop {
             let mut sp = cpu.read_reg(SP_REG);
 
@@ -53,6 +55,8 @@ impl ThumbV4 {
 
         let register_list = instruction.get_bits(0, 7) as u8;
         let mut base_address = cpu.read_reg(r_base);
+
+        // TODO: Consider handling invalid R-Lists in multiple load/store instructions
 
         if is_load {
             for i in 0..8 {

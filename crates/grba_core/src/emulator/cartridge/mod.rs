@@ -47,6 +47,10 @@ impl Cartridge {
         &self.rom
     }
 
+    pub fn ram(&self) -> &[u8] {
+        &self.saved_ram
+    }
+
     /// Read the value at the provided `addr` from SRAM.
     ///
     /// Note that the ROM only has an 8-bit bus, so this should only ever return a [u8]
