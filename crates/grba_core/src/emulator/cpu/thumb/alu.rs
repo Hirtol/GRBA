@@ -132,7 +132,8 @@ impl ThumbV4 {
             AluDataOperation::Lsr => {
                 // It seems Thumb ALU shift behaviour doesn't match ARM barrel shifter edge cases with regard to shift == 0?
                 let (result, carry) = match op2 {
-                    0..=31 => {
+                    0 => (op1, cpu.registers.cpsr.carry()),
+                    1..=31 => {
                         let carry = op1.check_bit(op2.saturating_sub(1) as u8);
                         let shifted = op1 >> op2;
                         (shifted, carry)
@@ -148,7 +149,8 @@ impl ThumbV4 {
             AluDataOperation::Asr => {
                 // It seems Thumb ALU shift behaviour doesn't match ARM barrel shifter edge cases with regard to shift == 0?
                 let (result, carry) = match op2 {
-                    0..=31 => {
+                    0 => (op1, cpu.registers.cpsr.carry()),
+                    1..=31 => {
                         let carry = op1.check_bit(op2.saturating_sub(1) as u8);
                         // We cast to an i32 to get an arithmetic shift, then cast back.
                         let shifted = ((op1 as i32) >> op2) as u32;
