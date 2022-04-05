@@ -131,7 +131,11 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
         // Multiple load/store
         // 1100_XXXX
         if (i & 0xF0) == 0b1100_0000 {
-            result[i] = ThumbV4::multiple_load_store;
+            if i.check_bit(3) {
+                result[i] = ThumbV4::multiple_load;
+            } else {
+                result[i] = ThumbV4::multiple_store;
+            }
             continue;
         }
 
