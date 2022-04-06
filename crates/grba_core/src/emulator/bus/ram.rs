@@ -1,4 +1,5 @@
-use crate::emulator::MemoryAddress;
+use crate::emulator::bus::helpers::ReadType;
+use crate::emulator::{AlignedAddress, MemoryAddress};
 use std::fmt::{Debug, Formatter};
 
 /// 3 cycles for access for u8, u16.
@@ -27,50 +28,36 @@ impl WorkRam {
         }
     }
 
-    #[inline(always)]
-    pub fn read_board(&self, addr: MemoryAddress) -> u8 {
-        self.board[Self::board_addr_to_index(addr)]
-    }
-
-    #[inline(always)]
-    pub fn read_chip(&self, addr: MemoryAddress) -> u8 {
-        self.chip[Self::chip_addr_to_index(addr)]
-    }
-
-    #[inline(always)]
-    pub fn read_board_16(&self, addr: MemoryAddress) -> u16 {
+    #[inline]
+    pub fn read_board<T: 'static + ReadType>(&self, addr: AlignedAddress) -> T {
         let addr = Self::board_addr_to_index(addr);
-        let low = self.board[addr];
-        let high = self.board[addr + 1];
-        u16::from_le_bytes([low, high])
+
+        if crate::is_same_type!(T, u8) {
+            T::from_le_bytes(&[self.board[addr]])
+        } else if crate::is_same_type!(T, u16) {
+            T::from_le_bytes(&self.board[addr..addr.wrapping_add(2)])
+        } else if crate::is_same_type!(T, u32) {
+            T::from_le_bytes(&self.board[addr..addr.wrapping_add(4)])
+        } else {
+            unreachable!("Unsupported type");
+        }
     }
 
-    #[inline(always)]
-    pub fn read_chip_16(&self, addr: MemoryAddress) -> u16 {
+    #[inline]
+    pub fn read_chip<T: 'static + ReadType>(&self, addr: AlignedAddress) -> T {
         let addr = Self::chip_addr_to_index(addr);
-        let low = self.chip[addr];
-        let high = self.chip[addr + 1];
-        u16::from_le_bytes([low, high])
-    }
 
-    #[inline(always)]
-    pub fn read_board_32(&self, addr: MemoryAddress) -> u32 {
-        let addr = Self::board_addr_to_index(addr);
-        let low = self.board[addr];
-        let mid = self.board[addr + 1];
-        let high = self.board[addr + 2];
-        let high_mid = self.board[addr + 3];
-        u32::from_le_bytes([low, mid, high, high_mid])
-    }
+        let bytes = if crate::is_same_type!(T, u8) {
+            &self.chip[addr..=addr]
+        } else if crate::is_same_type!(T, u16) {
+            &self.chip[addr..addr.wrapping_add(2)]
+        } else if crate::is_same_type!(T, u32) {
+            &self.chip[addr..addr.wrapping_add(4)]
+        } else {
+            unreachable!("Unsupported type");
+        };
 
-    #[inline(always)]
-    pub fn read_chip_32(&self, addr: MemoryAddress) -> u32 {
-        let addr = Self::chip_addr_to_index(addr);
-        let low = self.chip[addr];
-        let mid = self.chip[addr + 1];
-        let high = self.chip[addr + 2];
-        let high_mid = self.chip[addr + 3];
-        u32::from_le_bytes([low, mid, high, high_mid])
+        T::from_le_bytes(bytes)
     }
 
     #[inline(always)]
@@ -155,17 +142,17 @@ mod tests {
         // Ensure our basic read and writes work correctly on board RAM
         ram.write_board_32(0x02000000, 0xFEED_BEEF);
 
-        assert_eq!(ram.read_board_32(0x02000000), 0xFEED_BEEF);
+        assert_eq!(ram.read_board::<u32>(0x02000000), 0xFEED_BEEF);
 
         // Ensure the byte order is Little Endian
-        assert_eq!(ram.read_board_16(0x02000000), 0xBEEF);
-        assert_eq!(ram.read_board(0x02000000), 0xEF);
+        assert_eq!(ram.read_board::<u16>(0x02000000), 0xBEEF);
+        assert_eq!(ram.read_board::<u8>(0x02000000), 0xEF);
 
         // Ensure the same works for the chip RAM
         ram.write_chip_32(0x03000000, 0xFEED_BEEF);
 
-        assert_eq!(ram.read_chip_32(0x03000000), 0xFEED_BEEF);
-        assert_eq!(ram.read_chip_16(0x03000000), 0xBEEF);
-        assert_eq!(ram.read_chip(0x03000000), 0xEF);
+        assert_eq!(ram.read_chip::<u32>(0x03000000), 0xFEED_BEEF);
+        assert_eq!(ram.read_chip::<u16>(0x03000000), 0xBEEF);
+        assert_eq!(ram.read_chip::<u8>(0x03000000), 0xEF);
     }
 }

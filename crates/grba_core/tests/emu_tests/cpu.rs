@@ -42,7 +42,7 @@ fn run_fuzz_test(rom: impl AsRef<Path>) {
         debug_emu.0.run_to_vblank();
 
         // Check if we had a test failure
-        if debug_emu.bus().ram.read_board(0x0200_0000) != 0 {
+        if debug_emu.bus().ram.read_board::<u8>(0x0200_0000) != 0 {
             // Give it one more frame to flesh out registers if need be.
             debug_emu.0.run_to_vblank();
             let failure = FuzzArmFailure::from_emu(debug_emu);
@@ -78,7 +78,7 @@ pub struct InitialRegisters {
 impl FuzzArmFailure {
     pub fn from_emu(mut emu: DebugEmulator) -> Self {
         let ram = &mut emu.bus().ram;
-        let state_val = ram.read_board(0x0200_0000) as char;
+        let state_val = ram.read_board::<u8>(0x0200_0000) as char;
         let state = if state_val == 'T' { State::Thumb } else { State::Arm };
         let opcode = (4..16)
             .into_iter()
@@ -102,9 +102,9 @@ impl FailureRegisters {
         let ram = &mut emu.bus().ram;
 
         Self {
-            r3: ram.read_board_32(base_address),
-            r4: ram.read_board_32(base_address + 4),
-            cpsr: ram.read_board_32(base_address + 12).into(),
+            r3: ram.read_board(base_address),
+            r4: ram.read_board(base_address + 4),
+            cpsr: ram.read_board::<u32>(base_address + 12).into(),
         }
     }
 }
@@ -115,10 +115,10 @@ impl InitialRegisters {
         let ram = &mut emu.bus().ram;
 
         Self {
-            r0: ram.read_board_32(base_address),
-            r1: ram.read_board_32(base_address + 4),
-            r2: ram.read_board_32(base_address + 8),
-            cpsr: ram.read_board_32(base_address + 12).into(),
+            r0: ram.read_board(base_address),
+            r1: ram.read_board(base_address + 4),
+            r2: ram.read_board(base_address + 8),
+            cpsr: ram.read_board::<u32>(base_address + 12).into(),
         }
     }
 }

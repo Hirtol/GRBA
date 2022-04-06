@@ -10,6 +10,7 @@ use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
 
 mod bios;
+pub mod helpers;
 pub mod interrupts;
 pub mod keypad;
 mod ram;

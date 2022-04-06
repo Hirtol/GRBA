@@ -17,6 +17,7 @@ pub mod ppu;
 /// Therefore any component which takes this as an incoming type *must* pre-process the value to turn it into an address
 /// relative to itself.
 pub type MemoryAddress = u32;
+pub type AlignedAddress = u32;
 
 #[derive(Debug)]
 pub struct EmuOptions {

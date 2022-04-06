@@ -1,5 +1,6 @@
+use crate::emulator::bus::helpers::ReadType;
 use crate::emulator::cartridge::header::CartridgeHeader;
-use crate::emulator::MemoryAddress;
+use crate::emulator::{AlignedAddress, MemoryAddress};
 
 pub mod header;
 
@@ -63,23 +64,19 @@ impl Cartridge {
         self.saved_ram[Self::cartridge_sram_addr_to_index(addr)] = value;
     }
 
-    #[inline(always)]
-    pub fn read(&self, addr: MemoryAddress) -> u8 {
-        self.rom[Self::cartridge_rom_addr_to_index(addr)]
-    }
-
-    #[inline(always)]
-    pub fn read_16(&self, addr: MemoryAddress) -> u16 {
+    #[inline]
+    pub fn read<T: 'static + ReadType>(&self, addr: AlignedAddress) -> T {
         let addr = Self::cartridge_rom_addr_to_index(addr);
 
-        u16::from_le_bytes((&self.rom[addr..addr + 2]).try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn read_32(&self, addr: MemoryAddress) -> u32 {
-        let addr = Self::cartridge_rom_addr_to_index(addr);
-
-        u32::from_le_bytes((&self.rom[addr..addr + 4]).try_into().unwrap())
+        if crate::is_same_type!(T, u8) {
+            T::from_le_bytes(&[self.rom[addr]])
+        } else if crate::is_same_type!(T, u16) {
+            T::from_le_bytes(&self.rom[addr..addr.wrapping_add(2)])
+        } else if crate::is_same_type!(T, u32) {
+            T::from_le_bytes(&self.rom[addr..addr.wrapping_add(4)])
+        } else {
+            unreachable!("Unsupported type");
+        }
     }
 
     #[inline(always)]
@@ -88,7 +85,7 @@ impl Cartridge {
     }
 
     #[inline(always)]
-    const fn cartridge_rom_addr_to_index(addr: MemoryAddress) -> usize {
+    const fn cartridge_rom_addr_to_index(addr: AlignedAddress) -> usize {
         addr as usize % MAX_ROM_SIZE
     }
 }
