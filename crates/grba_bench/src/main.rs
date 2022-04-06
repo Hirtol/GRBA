@@ -19,8 +19,8 @@ pub struct Args {
 
 fn main() {
     let args = Args::parse();
-    let (mut emulator, header) = get_emu(args.rom_path);
-    println!("Running {:?} for {} frames", header.game_title, args.frames);
+    let (mut emulator, header) = get_emu(&args.rom_path);
+    println!("Running {:?} for {} frames", args.rom_path, args.frames);
 
     let start = Instant::now();
 
@@ -29,7 +29,7 @@ fn main() {
     }
 
     println!(
-        "Executing took {:?} for a total of {} frames per second",
+        "Executing took {:?} for a total of {:.2} frames per second",
         start.elapsed(),
         args.frames as f64 / start.elapsed().as_secs_f64()
     );
