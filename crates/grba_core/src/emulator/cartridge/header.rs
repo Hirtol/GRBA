@@ -27,21 +27,21 @@ pub enum CartBackupId {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CartridgeHeader {
     /// Uppercase ASCII, max `12` characters
-    game_title: String,
+    pub game_title: String,
     /// Uppercase ASCII, max `4` characters
-    game_code: String,
+    pub game_code: String,
     /// Uppercase ASCII, max `2` characters
-    maker_code: String,
+    pub maker_code: String,
     /// (00h for current GBA models)
-    main_unit_code: u8,
+    pub main_unit_code: u8,
     /// (usually 00h) (bit7=DACS/debug related)
-    device_type: u8,
+    pub device_type: u8,
     /// (usually 00h)
-    software_version: u8,
+    pub software_version: u8,
     /// Header checksum (We'll probably just ignore this one)
-    complement_checksum: u8,
+    pub complement_checksum: u8,
     /// The backup id of this particular cartridge
-    backup_id: CartBackupId,
+    pub backup_id: CartBackupId,
 }
 
 impl CartridgeHeader {

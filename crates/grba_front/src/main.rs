@@ -378,6 +378,7 @@ fn handle_key(input: KeyboardInput, state: &mut State, renderer: &mut Renderer) 
 
     match key {
         VirtualKeyCode::U if input.state == ElementState::Released => {
+            println!("{:?}", state.run_state);
             if state.run_state == RunningState::Unbounded {
                 state.run_default();
             } else {

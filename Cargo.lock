@@ -1248,6 +1248,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "grba_bench"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.0.14",
+ "grba_core",
+ "itertools",
+ "memmap2 0.5.2",
+ "owo-colors",
+]
+
+[[package]]
 name = "grba_core"
 version = "0.1.0"
 dependencies = [
