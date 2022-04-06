@@ -28,7 +28,7 @@ impl WorkRam {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn read_board<T: 'static + ReadType>(&self, addr: AlignedAddress) -> T {
         let addr = Self::board_addr_to_index(addr);
 
@@ -43,7 +43,7 @@ impl WorkRam {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn read_chip<T: 'static + ReadType>(&self, addr: AlignedAddress) -> T {
         let addr = Self::chip_addr_to_index(addr);
 

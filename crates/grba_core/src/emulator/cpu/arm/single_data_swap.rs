@@ -22,7 +22,6 @@ impl ArmV4 {
             cpu.write_reg(reg_dst, current_mem as u32, bus);
         } else {
             let rotate_amount = base_address.get_bits(0, 1);
-            let base_address = base_address;
             let current_mem = bus.read_32(base_address, cpu).rotate_right(8 * rotate_amount);
 
             bus.write_32(base_address, source_content);

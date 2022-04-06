@@ -62,6 +62,7 @@ impl Bus {
         u16::from_le_bytes([self.read(addr, cpu), self.read(addr.wrapping_add(1), cpu)])
     }
 
+    #[inline]
     pub fn read(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         crate::cpu_log!("bus-logging"; "Reading from {:#X}", addr);
         match Self::get_mem_range(addr) {
