@@ -14,14 +14,14 @@ impl ThumbV4 {
         if store_lr_load_pc {
             sp = sp.wrapping_sub(4);
 
-            bus.write_32(sp & 0xFFFF_FFFC, cpu.read_reg(LINK_REG));
+            bus.write_32(sp, cpu.read_reg(LINK_REG));
         }
 
         for i in (0..8).rev() {
             if register_list.check_bit(i) {
                 sp = sp.wrapping_sub(4);
 
-                bus.write_32(sp & 0xFFFF_FFFC, cpu.read_reg(i as usize));
+                bus.write_32(sp, cpu.read_reg(i as usize));
             }
         }
 
@@ -36,14 +36,14 @@ impl ThumbV4 {
 
         for i in 0..8 {
             if register_list.check_bit(i) {
-                cpu.write_reg(i as usize, bus.read_32(sp & 0xFFFF_FFFC, cpu), bus);
+                cpu.write_reg(i as usize, bus.read_32(sp, cpu), bus);
 
                 sp = sp.wrapping_add(4);
             }
         }
 
         if store_lr_load_pc {
-            cpu.write_reg(PC_REG, bus.read_32(sp & 0xFFFF_FFFC, cpu), bus);
+            cpu.write_reg(PC_REG, bus.read_32(sp, cpu), bus);
 
             sp = sp.wrapping_add(4);
         }

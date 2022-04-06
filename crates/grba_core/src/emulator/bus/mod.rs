@@ -1,6 +1,7 @@
 pub use bios::BiosData;
 
 use crate::emulator::bus::bios::GbaBios;
+use crate::emulator::bus::helpers::ReadType;
 use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
 use crate::emulator::bus::keypad::{Keypad, KEYINTERRUPT_END, KEYINTERRUPT_START, KEYSTATUS_END, KEYSTATUS_START};
 use crate::emulator::cartridge::Cartridge;
@@ -43,8 +44,10 @@ impl Bus {
     }
 
     pub fn read_32(&mut self, addr: MemoryAddress, cpu: &CPU) -> u32 {
+        let addr = u32::align_address(addr);
         // Temporary implementation for ease of writing.
         // In the future for performance sake we should implement an individual match for each variant, possibly.
+
         u32::from_le_bytes([
             self.read(addr, cpu),
             self.read(addr.wrapping_add(1), cpu),
@@ -54,6 +57,8 @@ impl Bus {
     }
 
     pub fn read_16(&mut self, addr: MemoryAddress, cpu: &CPU) -> u16 {
+        let addr = u16::align_address(addr);
+
         u16::from_le_bytes([self.read(addr, cpu), self.read(addr.wrapping_add(1), cpu)])
     }
 
@@ -89,13 +94,16 @@ impl Bus {
     }
 
     pub fn write_32(&mut self, addr: MemoryAddress, data: u32) {
-        let data: [u8; 4] = data.to_le_bytes();
+        let addr = u32::align_address(addr);
+        let data = data.to_le_bytes();
 
         self.write_16(addr, u16::from_le_bytes([data[0], data[1]]));
         self.write_16(addr.wrapping_add(2), u16::from_le_bytes([data[2], data[3]]));
     }
 
     pub fn write_16(&mut self, addr: MemoryAddress, data: u16) {
+        let addr = u16::align_address(addr);
+
         match Self::get_mem_range(addr) {
             5 => self.ppu.write_palette_16(addr, data),
             6 => self.ppu.write_vram_16(addr, data),
@@ -189,7 +197,7 @@ impl Bus {
     }
 
     #[inline(always)]
-    fn get_mem_range(addr: MemoryAddress) -> u32 {
+    const fn get_mem_range(addr: MemoryAddress) -> u32 {
         // TODO: Upper four bits of the address bus are unused, should we mask them off?
         addr >> 24
     }

@@ -70,7 +70,7 @@ impl ArmV4 {
         }
 
         // Handle all registers
-        Self::iterate_registers(cpu, bus, is_load, register_list, address & 0xFFFF_FFFC);
+        Self::iterate_registers(cpu, bus, is_load, register_list, address);
 
         if has_writeback {
             cpu.write_reg(reg_base, writeback_address, bus);
@@ -131,7 +131,7 @@ impl ArmV4 {
         }
 
         // Handle all registers
-        Self::iterate_registers(cpu, bus, is_load, register_list, address & 0xFFFF_FFFC);
+        Self::iterate_registers(cpu, bus, is_load, register_list, address);
 
         if swapped_banks {
             // In theory has_writeback should be false, but can't hurt to pre-emptively swap back.

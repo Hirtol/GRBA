@@ -53,7 +53,7 @@ impl ArmV4 {
                 let value = bus.read(address, cpu) as u32;
                 cpu.write_reg(reg_dest, value, bus);
             } else {
-                let value = bus.read_32(address & 0xFFFF_FFFC, cpu);
+                let value = bus.read_32(address, cpu);
                 // The byte at the address will always be at bits 0..=7, if unaligned access then the rest will be shifted.
                 let final_val = value.rotate_right(8 * (address.get_bits(0, 1)));
                 cpu.write_reg(reg_dest, final_val, bus);
@@ -69,7 +69,7 @@ impl ArmV4 {
             } else {
                 let data = cpu.read_reg(reg_dest);
                 // Force align the address
-                bus.write_32(address & 0xFFFF_FFFC, data);
+                bus.write_32(address, data);
             }
 
             cpu.registers.general_purpose[PC_REG] -= 4;
@@ -189,13 +189,13 @@ impl ArmV4 {
             SwapType::Swp => todo!("Swap instruction in halfword and signed register?: {:#X?}", instruction),
             SwapType::UnsignedU16 => {
                 if is_load {
-                    let value = bus.read_16(address & 0xFFFF_FFFE, cpu) as u32;
+                    let value = bus.read_16(address, cpu) as u32;
                     // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
                     let final_val = value.rotate_right(8 * (address.check_bit(0) as u32));
                     cpu.write_reg(reg_dest, final_val, bus);
                 } else {
                     let value = cpu.read_reg(reg_dest) as u16;
-                    bus.write_16(address & 0xFFFF_FFFE, value);
+                    bus.write_16(address, value);
                 }
             }
             SwapType::Signedi8 => {
@@ -216,7 +216,7 @@ impl ArmV4 {
             SwapType::Signedi16 => {
                 // Load bit *shouldn't* be low, so we'll just ignore it!
                 // Sign extension should take place, but since we're casting from a smaller int to larger int this is done automatically.
-                let value = bus.read_16(address & 0xFFFF_FFFE, cpu) as i16 as u32;
+                let value = bus.read_16(address, cpu) as i16 as u32;
 
                 cpu.write_reg(reg_dest, value, bus);
             }

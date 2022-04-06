@@ -56,7 +56,7 @@ impl ThumbV4 {
 
         if is_sign_extended {
             if h_flag {
-                let value = bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32;
+                let value = bus.read_16(target_addr, cpu) as u32;
                 // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
                 let rotated_val = value.rotate_right(8 * (target_addr.check_bit(0) as u32));
                 // Check if unaligned access, if so, then for some reason it acts as if it's a LDRSB ¯\_(ツ)_/¯
@@ -72,12 +72,12 @@ impl ThumbV4 {
             }
         } else {
             if h_flag {
-                let value = bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32;
+                let value = bus.read_16(target_addr, cpu) as u32;
                 // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
                 let final_val = value.rotate_right(8 * (target_addr.check_bit(0) as u32));
                 cpu.write_reg(r_d, final_val, bus);
             } else {
-                bus.write_16(target_addr & 0xFFFF_FFFE, cpu.read_reg(r_d) as u16);
+                bus.write_16(target_addr, cpu.read_reg(r_d) as u16);
             }
         }
     }
@@ -92,13 +92,13 @@ impl ThumbV4 {
         let target_addr = cpu.read_reg(r_base).wrapping_add(offset);
 
         if is_load {
-            let value = bus.read_16(target_addr & 0xFFFF_FFFE, cpu) as u32;
+            let value = bus.read_16(target_addr, cpu) as u32;
             // For ARMv4 we have to force align and rotate the read value on unaligned reads, only force align for ARMv5+
             let final_val = value.rotate_right(8 * (target_addr.check_bit(0) as u32));
 
             cpu.write_reg(r_d, final_val, bus);
         } else {
-            bus.write_16(target_addr & 0xFFFF_FFFE, cpu.read_reg(r_d) as u16);
+            bus.write_16(target_addr, cpu.read_reg(r_d) as u16);
         }
     }
 
@@ -111,12 +111,12 @@ impl ThumbV4 {
         let target_addr = cpu.read_reg(SP_REG).wrapping_add(offset);
 
         if is_load {
-            let value = bus.read_32(target_addr & 0xFFFF_FFFC, cpu);
+            let value = bus.read_32(target_addr, cpu);
             // The byte at the address will always be at bits 0..=7, if unaligned access then the rest will be shifted.
             let final_val = value.rotate_right(8 * (target_addr.get_bits(0, 1)));
             cpu.write_reg(r_d, final_val, bus);
         } else {
-            bus.write_32(target_addr & 0xFFFF_FFFC, cpu.read_reg(r_d));
+            bus.write_32(target_addr, cpu.read_reg(r_d));
         }
     }
 
@@ -134,7 +134,6 @@ impl ThumbV4 {
     }
 
     pub fn add_offset_to_stack_pointer(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
-        //TODO: We should be able to do this by just casting the offset range (0, 7) to (as i8 as u32)
         let offset_is_negative = instruction.check_bit(7);
         let offset = (instruction.get_bits(0, 6) as u32) << 2;
 
@@ -160,7 +159,7 @@ impl ThumbV4 {
             if is_byte_transfer {
                 cpu.write_reg(r_d, bus.read(target_addr, cpu) as u32, bus);
             } else {
-                let value = bus.read_32(target_addr & 0xFFFF_FFFC, cpu);
+                let value = bus.read_32(target_addr, cpu);
                 // The byte at the address will always be at bits 0..=7, if unaligned access then the rest will be shifted.
                 let final_val = value.rotate_right(8 * (target_addr.get_bits(0, 1)));
                 cpu.write_reg(r_d, final_val, bus);
@@ -169,7 +168,7 @@ impl ThumbV4 {
             if is_byte_transfer {
                 bus.write(target_addr, cpu.read_reg(r_d) as u8);
             } else {
-                bus.write_32(target_addr & 0xFFFF_FFFC, cpu.read_reg(r_d));
+                bus.write_32(target_addr, cpu.read_reg(r_d));
             }
         }
     }

@@ -4,7 +4,6 @@ use crate::emulator::cpu::registers::{Mode, State, LINK_REG, PC_REG};
 use crate::emulator::cpu::thumb::{ThumbInstruction, ThumbV4};
 use crate::emulator::cpu::{Exception, CPU};
 use crate::utils::{sign_extend32, BitOps};
-use num_traits::FromPrimitive;
 
 impl ThumbV4 {
     pub fn hi_reg_op_branch_exchange(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
