@@ -168,7 +168,9 @@ impl Bus {
             IE_START..=IE_END => self.interrupts.write_ie(addr, data),
             IF_START..=IF_END => self.interrupts.write_if(addr, data, &mut self.scheduler),
             IME_START..=IME_END => self.interrupts.write_ime(addr, data),
-            _ => todo!("IO Write"),
+            _ => {
+                todo!("IO Write {:#X}", addr)
+            }
         }
     }
 
