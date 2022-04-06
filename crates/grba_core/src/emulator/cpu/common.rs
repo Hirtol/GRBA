@@ -243,7 +243,7 @@ impl HalfAlignedAddress {
 macro_rules! newtype {
     ($new:ty) => {
         impl Deref for $new {
-            type Target = u32;
+            type Target = MemoryAddress;
 
             #[inline(always)]
             fn deref(&self) -> &Self::Target {

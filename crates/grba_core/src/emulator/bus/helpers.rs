@@ -22,8 +22,8 @@ pub trait ReadType {
     /// Align the provided address to the appropriate boundary for this current type
     ///
     /// # Alignment
-    /// * `u32` - 4-byte alignment
-    /// * `u16` - 2-byte alignment
+    /// * `u32` - 4-byte alignment (aka, `address & 0xFFFF_FFFC`)
+    /// * `u16` - 2-byte alignment (aka, `address & 0xFFFF_FFFE`)
     /// * `u8`  - Any
     fn align_address(address: MemoryAddress) -> AlignedAddress;
 }
@@ -40,7 +40,7 @@ macro_rules! impl_readable_type {
             }
 
             #[inline(always)]
-            fn align_address(address: MemoryAddress) -> MemoryAddress {
+            fn align_address(address: MemoryAddress) -> AlignedAddress {
                 address & !(std::mem::size_of::<Self>() as MemoryAddress - 1)
             }
         })*
