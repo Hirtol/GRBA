@@ -124,7 +124,11 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
         // Push/Pop registers
         // 1011_X10X
         if (i & 0xF6) == 0b1011_0100 {
-            result[i] = ThumbV4::push_pop_registers;
+            if i.check_bit(3) {
+                result[i] = ThumbV4::pop_registers;
+            } else {
+                result[i] = ThumbV4::push_registers;
+            }
             continue;
         }
 

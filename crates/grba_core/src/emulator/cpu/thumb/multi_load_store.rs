@@ -5,42 +5,47 @@ use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 
 impl ThumbV4 {
-    pub fn push_pop_registers(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
-        let is_pop = instruction.check_bit(11);
+    pub fn push_registers(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
         let store_lr_load_pc = instruction.check_bit(8);
-
         let register_list = instruction.get_bits(0, 7) as u8;
 
         let mut sp = cpu.read_reg(SP_REG);
 
-        if is_pop {
-            for i in 0..8 {
-                if register_list.check_bit(i) {
-                    let value = bus.read_32(sp & 0xFFFF_FFFC, cpu);
-                    sp = sp.wrapping_add(4);
+        if store_lr_load_pc {
+            sp = sp.wrapping_sub(4);
 
-                    cpu.write_reg(i as usize, value, bus);
-                }
+            bus.write_32(sp & 0xFFFF_FFFC, cpu.read_reg(LINK_REG));
+        }
+
+        for i in (0..8).rev() {
+            if register_list.check_bit(i) {
+                sp = sp.wrapping_sub(4);
+
+                bus.write_32(sp & 0xFFFF_FFFC, cpu.read_reg(i as usize));
             }
+        }
 
-            if store_lr_load_pc {
-                cpu.write_reg(PC_REG, bus.read_32(sp & 0xFFFF_FFFC, cpu), bus);
+        cpu.write_reg(SP_REG, sp, bus);
+    }
+
+    pub fn pop_registers(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
+        let store_lr_load_pc = instruction.check_bit(8);
+        let register_list = instruction.get_bits(0, 7) as u8;
+
+        let mut sp = cpu.read_reg(SP_REG);
+
+        for i in 0..8 {
+            if register_list.check_bit(i) {
+                cpu.write_reg(i as usize, bus.read_32(sp & 0xFFFF_FFFC, cpu), bus);
+
                 sp = sp.wrapping_add(4);
             }
-        } else {
-            if store_lr_load_pc {
-                sp = sp.wrapping_sub(4);
-                bus.write_32(sp & 0xFFFF_FFFC, cpu.read_reg(LINK_REG));
-            }
+        }
 
-            for i in (0..8).rev() {
-                if register_list.check_bit(i) {
-                    let reg_value = cpu.read_reg(i as usize);
-                    sp = sp.wrapping_sub(4);
+        if store_lr_load_pc {
+            cpu.write_reg(PC_REG, bus.read_32(sp & 0xFFFF_FFFC, cpu), bus);
 
-                    bus.write_32(sp & 0xFFFF_FFFC, reg_value);
-                }
-            }
+            sp = sp.wrapping_add(4);
         }
 
         cpu.write_reg(SP_REG, sp, bus);
