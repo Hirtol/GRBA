@@ -110,6 +110,7 @@ impl CPU {
         }
     }
 
+    #[inline]
     fn execute_arm(&mut self, bus: &mut Bus, instruction: ArmInstruction) {
         if !ArmV4::condition_holds(self, instruction) {
             return;
@@ -121,6 +122,7 @@ impl CPU {
         self.arm_lut[lut_index](self, instruction, bus);
     }
 
+    #[inline]
     fn execute_thumb(&mut self, bus: &mut Bus, instruction: ThumbInstruction) {
         let lut_index = instruction.get_bits(8, 15) as usize;
 
