@@ -39,5 +39,5 @@ debug = 1
 
 [workspace]
 resolver = "2"
-members = ["crates/grba_core", "crates/grba_front", "crates/grba_test", "crates/grba_log", "crates/grba_bench"]
+members = ["crates/grba_core", "crates/grba_front", "crates/grba_test", "crates/grba_log", "crates/grba_bench", "crates/grba_lut_generate"]
 default-members = ["crates/grba_front"]
