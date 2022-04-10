@@ -27,10 +27,14 @@ impl EmulatorRunner {
         Self { rom, bios }
     }
 
-    pub fn run(self) -> RunnerHandle {
+    pub fn run(self, start_paused: bool) -> RunnerHandle {
         let (request_sender, request_receiver) = unbounded::<EmulatorMessage>();
         let (response_sender, response_receiver) = unbounded::<EmulatorResponse>();
         let (frame_sender, frame_receiver) = frame_exchanger::exchangers(RgbaFrame::default());
+
+        if start_paused {
+            request_sender.send(EmulatorMessage::Pause).unwrap();
+        }
 
         let emu_thread = std::thread::spawn(move || {
             profiling::register_thread!("Emulator Thread");
@@ -109,13 +113,6 @@ fn run_emulator(
     'mainloop: loop {
         profiling::scope!("Emulator Loop");
 
-        emu.run_to_vblank();
-
-        if let Err(e) = frame_sender.send(emu.frame_buffer()) {
-            log::error!("Failed to transfer framebuffer due to: {:#}", e);
-            break;
-        }
-
         while let Ok(msg) = request_receiver.try_recv() {
             match msg {
                 EmulatorMessage::ExitRequest => break 'mainloop,
@@ -123,14 +120,14 @@ fn run_emulator(
                 EmulatorMessage::KeyUp(key) => emu.key_up(key),
                 EmulatorMessage::Debug(msg) => {
                     let mut emu = DebugEmulator(emu);
-                    let response = DebugViewManager::handle_ui_request_message(&mut emu, msg);
+                    let (response, _) = DebugViewManager::handle_ui_request_message(&mut emu, msg);
 
                     response_sender
                         .send(EmulatorResponse::Debug(response))
                         .expect("Failed to send response");
                 }
                 EmulatorMessage::Pause => {
-                    if pause_loop(emu, &response_sender, &request_receiver) {
+                    if pause_loop(emu, &response_sender, &request_receiver, &frame_sender) {
                         break 'mainloop;
                     }
                 }
@@ -138,6 +135,13 @@ fn run_emulator(
                     log::info!("Tried to unpause when not paused");
                 }
             }
+        }
+
+        emu.run_to_vblank();
+
+        if let Err(e) = frame_sender.send(emu.frame_buffer()) {
+            log::error!("Failed to transfer framebuffer due to: {:#}", e);
+            break;
         }
     }
 }
@@ -152,6 +156,7 @@ fn pause_loop(
     emu: &mut GBAEmulator,
     response_sender: &Sender<EmulatorResponse>,
     request_receiver: &Receiver<EmulatorMessage>,
+    frame_sender: &ExchangerSender<RgbaFrame>,
 ) -> bool {
     'pause_loop: loop {
         while let Ok(msg) = request_receiver.try_recv() {
@@ -161,11 +166,23 @@ fn pause_loop(
                 EmulatorMessage::KeyUp(key) => emu.key_up(key),
                 EmulatorMessage::Debug(msg) => {
                     let mut emu = DebugEmulator(emu);
-                    let response = DebugViewManager::handle_ui_request_message(&mut emu, msg);
+                    let (response, should_redraw) = DebugViewManager::handle_ui_request_message(&mut emu, msg);
 
                     response_sender
                         .send(EmulatorResponse::Debug(response))
                         .expect("Failed to send response");
+
+                    if should_redraw {
+                        // Since the PPU won't be able to draw a new frame we'll need to preserve the current one.
+                        let current_frame = emu.0.frame_buffer().clone();
+
+                        if let Err(e) = frame_sender.send(emu.0.frame_buffer()) {
+                            log::error!("Failed to transfer framebuffer due to: {:#}", e);
+                            break;
+                        }
+
+                        let _ = std::mem::replace(emu.0.frame_buffer(), current_frame);
+                    }
                 }
                 EmulatorMessage::Pause => log::info!("Tried to pause when already paused"),
                 EmulatorMessage::Unpause => break 'pause_loop false,

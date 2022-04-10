@@ -4,7 +4,7 @@ use egui::{Context, Ui};
 use serde::{Deserialize, Serialize};
 
 use crate::gui::debug::cpu_state_view::CpuStateView;
-use crate::BoolUtils;
+use crate::gui::debug::execution_view::CpuExecutionView;
 use grba_core::emulator::debug::DebugEmulator;
 
 use crate::gui::debug::memory_view::MemoryEditorView;
@@ -13,6 +13,7 @@ use crate::gui::debug::palette_view::PaletteView;
 
 mod colors;
 pub mod cpu_state_view;
+pub mod execution_view;
 pub mod memory_view;
 pub mod messages;
 pub mod palette_view;
@@ -58,19 +59,24 @@ pub struct UiState {
     pub memory_open: bool,
     pub cpu_open: bool,
     pub palette_open: bool,
+    pub cpu_execute_open: bool,
 }
 
 pub struct DebugViewManager {
     memory: MemoryEditorView,
     cpu_viewer: CpuStateView,
     palette_viewer: PaletteView,
+    cpu_execution: CpuExecutionView,
 
     pub state: UiState,
 }
 
 impl DebugViewManager {
     /// Gather all debug information for a message.
-    pub fn handle_ui_request_message(emu: &mut DebugEmulator, msg: DebugMessageUi) -> DebugMessageResponse {
+    ///
+    /// # Returns
+    /// A potential response, as well as a boolean flag indicating whether a new frame should be dispatched.
+    pub fn handle_ui_request_message(emu: &mut DebugEmulator, msg: DebugMessageUi) -> (DebugMessageResponse, bool) {
         match msg {
             DebugMessageUi::MemoryRequest(request, update) => {
                 // Update any memory that needs to be updated
@@ -81,17 +87,28 @@ impl DebugViewManager {
                 // Fill memory response with the requested memory
                 let result = MemoryEditorView::prepare_frame(emu, request);
 
-                DebugMessageResponse::MemoryResponse(result)
+                (DebugMessageResponse::MemoryResponse(result), false)
             }
             DebugMessageUi::CpuRequest(request) => {
                 let result = CpuStateView::prepare_frame(emu, request);
 
-                DebugMessageResponse::CpuResponse(result)
+                (DebugMessageResponse::CpuResponse(result), false)
             }
             DebugMessageUi::PaletteRequest(request) => {
                 let result = PaletteView::prepare_frame(emu, request);
 
-                DebugMessageResponse::PaletteResponse(result)
+                (DebugMessageResponse::PaletteResponse(result), false)
+            }
+            DebugMessageUi::CpuExecuteRequest(request, update) => {
+                // Update any memory that needs to be updated
+                if let Some(update) = update {
+                    CpuExecutionView::update_emu(emu, update);
+                }
+
+                // Fill memory response with the requested memory
+                let result = CpuExecutionView::prepare_frame(emu, request);
+
+                (DebugMessageResponse::CpuExecuteResponse(result), true)
             }
         }
     }
@@ -103,6 +120,7 @@ impl DebugViewManager {
             memory: MemoryEditorView::new(Default::default()),
             cpu_viewer: CpuStateView::new(),
             palette_viewer: PaletteView::new(),
+            cpu_execution: CpuExecutionView::new(),
             state: ui_state.unwrap_or_default(),
         }
     }
@@ -119,6 +137,9 @@ impl DebugViewManager {
             DebugMessageResponse::PaletteResponse(data) => {
                 self.palette_viewer.update_requested_data(data);
             }
+            DebugMessageResponse::CpuExecuteResponse(data) => {
+                self.cpu_execution.update_requested_data(data);
+            }
         }
     }
 
@@ -133,6 +154,13 @@ impl DebugViewManager {
             }
 
             if ui.checkbox(&mut self.state.cpu_open, CpuStateView::NAME).clicked() {
+                ui.close_menu();
+            }
+
+            if ui
+                .checkbox(&mut self.state.cpu_execute_open, CpuExecutionView::NAME)
+                .clicked()
+            {
                 ui.close_menu();
             }
 
@@ -162,6 +190,13 @@ impl DebugViewManager {
             let request = self.cpu_viewer.request_information();
 
             result.push(DebugMessageUi::CpuRequest(request));
+        }
+
+        if self.state.cpu_execute_open {
+            let response = self.cpu_execution.draw(ctx, &mut self.state.cpu_execute_open);
+            let request = self.cpu_execution.request_information();
+
+            result.push(DebugMessageUi::CpuExecuteRequest(request, response));
         }
 
         if self.state.palette_open {

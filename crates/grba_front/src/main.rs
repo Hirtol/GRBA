@@ -318,7 +318,7 @@ impl State {
         let bios = std::fs::read("roms/gba_bios.bin").unwrap();
 
         let runner = EmulatorRunner::new(cartridge, Some(bios));
-        self.current_emu = Some(runner.run());
+        self.current_emu = Some(runner.run(self.paused));
     }
 
     pub fn pause(&mut self, pause: bool) {

@@ -1278,6 +1278,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode",
+ "capstone",
  "clap 3.0.14",
  "cpal",
  "crossbeam",

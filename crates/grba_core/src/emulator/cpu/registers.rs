@@ -69,6 +69,21 @@ impl Registers {
         self.general_purpose[PC_REG]
     }
 
+    /// Return the next instruction pointer, without pipelining.
+    ///
+    /// Aka, in `ARM` mode it'll be `4` bytes behind the current 'truthful' PC, and in `THUMB` mode it'll be `2` bytes behind.
+    #[inline]
+    pub fn next_pc(&self) -> u32 {
+        let state = self.cpsr.state();
+
+        let to_subtract = match state {
+            State::Arm => 4,
+            State::Thumb => 2,
+        };
+
+        self.pc().saturating_sub(to_subtract)
+    }
+
     /// Swap the register banks. Saving the current registers in the `from_mode` bank, and loading the `to_mode` bank.
     /// Does *not* switch the mode in the CPSR, and in fact leaves the CPSR as it was.
     ///
