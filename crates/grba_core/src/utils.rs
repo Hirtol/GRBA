@@ -35,6 +35,19 @@ pub trait BitOps {
     /// assert!(set);
     /// ```
     fn check_bit(self, bit: u8) -> bool;
+
+    /// Update the provided `byte` to the specified `value`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use grba_core::utils::BitOps;
+    /// let mut value: u16 = 0xBEEF;
+    /// let new_value = value.change_byte_le(0, 0xBE);
+    ///
+    /// assert_eq!(new_value, 0xBEBE);
+    /// ```
+    fn change_byte_le(self, byte: usize, value: u8) -> Self::Output;
 }
 
 macro_rules! impl_bitops {
@@ -51,6 +64,13 @@ macro_rules! impl_bitops {
                 #[inline(always)]
                 fn check_bit(self, bit: u8) -> bool {
                     (self & (1 << bit)) != 0
+                }
+
+                #[inline(always)]
+                fn change_byte_le(self, byte: usize, value: u8) -> $t {
+                    let mut bytes = self.to_le_bytes();
+                    bytes[byte] = value;
+                    Self::from_le_bytes(bytes)
                 }
             }
         )*

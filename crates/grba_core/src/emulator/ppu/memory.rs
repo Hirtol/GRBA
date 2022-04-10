@@ -1,5 +1,6 @@
 use crate::emulator::ppu::{OAM_RAM_SIZE, PPU, VRAM_SIZE};
 use crate::emulator::MemoryAddress;
+use crate::utils::BitOps;
 
 pub const PALETTE_START: MemoryAddress = 0x0500_0000;
 pub const PALETTE_END: MemoryAddress = 0x0500_03FF;
@@ -37,7 +38,7 @@ impl PPU {
         let address = address - LCD_IO_START;
         match address {
             0x0..=0x1 => self.control.update_byte_le(addr % 2, value),
-            0x2..=0x3 => self.green_swap &= (value as u16) << ((addr % 2) * 8) as u16,
+            0x2..=0x3 => self.green_swap = self.green_swap.change_byte_le(addr % 2, value),
             0x4..=0x5 => self.status.update_byte_le(addr % 2, value),
             0x6..=0x7 => {
                 // Vertical counter is read only
