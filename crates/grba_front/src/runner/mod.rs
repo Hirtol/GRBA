@@ -137,7 +137,19 @@ fn run_emulator(
             }
         }
 
-        emu.run_to_vblank();
+        // We split on the debugging option here to incur as little runtime overhead as possible.
+        // If we need more thorough debugging abilities in the future we'll probably need to look at generics instead.
+        if emu.options.debugging {
+            let breakpoint_hit = emu.run_to_vblank_debug();
+
+            if breakpoint_hit {
+                if pause_loop(emu, &response_sender, &request_receiver, &frame_sender) {
+                    break 'mainloop;
+                }
+            }
+        } else {
+            emu.run_to_vblank();
+        }
 
         if let Err(e) = frame_sender.send(emu.frame_buffer()) {
             log::error!("Failed to transfer framebuffer due to: {:#}", e);
@@ -178,7 +190,7 @@ fn pause_loop(
 
                         if let Err(e) = frame_sender.send(emu.0.frame_buffer()) {
                             log::error!("Failed to transfer framebuffer due to: {:#}", e);
-                            break;
+                            break 'pause_loop true;
                         }
 
                         let _ = std::mem::replace(emu.0.frame_buffer(), current_frame);

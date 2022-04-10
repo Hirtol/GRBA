@@ -2,25 +2,23 @@ use std::ops::Range;
 
 use capstone::prelude::{BuildsCapstone, BuildsCapstoneSyntax};
 use capstone::{arch, Capstone};
-use egui::{Color32, Context, Direction, Layout, RichText, ScrollArea, Separator, TextStyle, Ui, Vec2};
-use egui_memory_editor::{Address, MemoryEditor};
-use itertools::Itertools;
+use egui::{Context, Direction, Layout, RichText, ScrollArea, Sense, Separator, TextStyle, Ui, Vec2};
+use egui_memory_editor::Address;
 
-use grba_core::emulator::cpu;
-use grba_core::emulator::cpu::registers::{Mode, Registers, State, PSR};
+use grba_core::emulator::cpu::registers::{Registers, State, PSR};
 use grba_core::emulator::debug::DebugEmulator;
+use grba_core::emulator::MemoryAddress;
 
 use crate::gui::debug::colors::{DARK_GREY, LIGHT_GREY};
-use crate::gui::debug::cpu_state_view::CpuStateView;
-use crate::gui::debug::execution_view::CpuExecutionUpdate::StepFrame;
-use crate::gui::debug::memory_view::{MemContents, MemRequest, MemResponse, MemoryEditorView};
 use crate::gui::debug::{colors, DebugView};
 
 pub struct CpuExecutionView {
     cpu_state: CpuState,
     last_visible_address: Range<Address>,
+    break_points: Vec<MemoryAddress>,
     // Display
     capstone: Capstone,
+    debug_enabled: bool,
     selected_address: Option<Address>,
     force_state: Option<State>,
 }
@@ -53,6 +51,8 @@ impl CpuExecutionView {
             last_visible_address: Default::default(),
             force_state: None,
             capstone,
+            debug_enabled: false,
+            break_points: vec![],
         }
     }
 }
@@ -61,6 +61,8 @@ impl CpuExecutionView {
 pub enum CpuExecutionUpdate {
     StepInstruction,
     StepFrame,
+    SetDebug(bool),
+    SetBreakpoints(Vec<MemoryAddress>),
 }
 
 impl DebugView for CpuExecutionView {
@@ -89,9 +91,21 @@ impl DebugView for CpuExecutionView {
         for update in update {
             match update {
                 CpuExecutionUpdate::StepInstruction => {
-                    emu.0.step_instruction();
+                    let (vblank, breakpoint_hit) = emu.0.step_instruction_debug();
+
+                    if breakpoint_hit {
+                        println!("Breakpoint hit");
+                    }
                 }
-                CpuExecutionUpdate::StepFrame => emu.0.run_to_vblank(),
+                CpuExecutionUpdate::StepFrame => {
+                    let breakpoint = emu.0.run_to_vblank_debug();
+
+                    if breakpoint {
+                        println!("Breakpoint reached");
+                    }
+                }
+                CpuExecutionUpdate::SetDebug(value) => emu.0.options.debugging = value,
+                CpuExecutionUpdate::SetBreakpoints(breakpoints) => emu.debug_info().breakpoints = breakpoints,
             };
         }
     }
@@ -139,6 +153,9 @@ impl DebugView for CpuExecutionView {
 impl CpuExecutionView {
     pub fn draw_window_content(&mut self, ui: &mut Ui, updates: &mut Vec<CpuExecutionUpdate>) {
         self.draw_actions(ui, updates);
+
+        ui.separator();
+
         ui.style_mut().override_text_style = Some(TextStyle::Monospace);
 
         let active_state = self
@@ -152,7 +169,7 @@ impl CpuExecutionView {
         let line_height = self.get_line_height(ui);
         let address_characters = 8usize;
         let pc = self.cpu_state.registers.next_pc() as usize;
-        let address_space = pc.saturating_sub(40)..pc + 40;
+        let address_space = pc.saturating_sub(40)..pc + 0x500;
         let max_lines = address_space.len();
 
         let mut scroll = ScrollArea::vertical()
@@ -175,11 +192,13 @@ impl CpuExecutionView {
 
                     for start_row in line_range.clone() {
                         let start_address = address_space.start + (start_row * addr_mult);
-                        let highlight_in_range = matches!(self.selected_address, Some(address));
+                        let highlight_in_range =
+                            matches!(self.selected_address, Some(address) if address == start_address);
                         let is_pc = start_address == pc;
+                        let is_breakpoint = self.break_points.contains(&(start_address as MemoryAddress));
 
-                        let start_text =
-                            RichText::new(format!("0x{:01$X}:", start_address, address_characters)).color(if is_pc {
+                        let mut start_text = RichText::new(format!("0x{:01$X}:", start_address, address_characters))
+                            .color(if is_pc {
                                 colors::DARK_RED
                             } else if highlight_in_range {
                                 colors::HIGHLIGHT
@@ -187,7 +206,32 @@ impl CpuExecutionView {
                                 colors::DARK_PURPLE
                             });
 
-                        ui.label(start_text);
+                        if is_breakpoint {
+                            start_text = start_text.background_color(colors::LIGHT_RED);
+                        }
+
+                        let response = ui
+                            .add(egui::Label::new(start_text).sense(Sense::click()))
+                            .on_hover_text("Click to select, right-click to set breakpoint");
+                        // Select the address
+                        if response.clicked() {
+                            if matches!(self.selected_address, Some(address) if address == start_address) {
+                                self.selected_address = None;
+                            } else {
+                                self.selected_address = Some(start_address);
+                            }
+                        }
+                        // Set breakpoint
+                        if response.secondary_clicked() {
+                            if self.break_points.contains(&(start_address as MemoryAddress)) {
+                                self.break_points
+                                    .retain(|address| *address != start_address as MemoryAddress);
+                            } else {
+                                self.break_points.push(start_address as MemoryAddress);
+                            }
+
+                            updates.push(CpuExecutionUpdate::SetBreakpoints(self.break_points.clone()));
+                        }
 
                         self.draw_instruction(ui, active_state, start_address, &address_space);
 
@@ -230,6 +274,14 @@ impl CpuExecutionView {
                 self.force_state = Some(State::Thumb);
             } else {
                 self.force_state = None;
+            }
+
+            if ui
+                .checkbox(&mut self.debug_enabled, "Debug Enabled")
+                .on_hover_text("If enabled will allow breakpoints to work")
+                .clicked()
+            {
+                updates.push(CpuExecutionUpdate::SetDebug(self.debug_enabled));
             }
         });
     }
