@@ -55,7 +55,6 @@ impl CPU {
 
     /// Main stepping function.
     /// Advances the CPU one instruction.
-    #[profiling::function]
     pub fn step_instruction(&mut self, bus: &mut Bus) {
         // We immediately advance the pipeline once to recover from pipeline flush (which only partly fills the pipeline)
         self.advance_pipeline(bus);
@@ -110,6 +109,7 @@ impl CPU {
         }
     }
 
+    #[profiling::function]
     #[inline]
     fn execute_arm(&mut self, bus: &mut Bus, instruction: ArmInstruction) {
         if !ArmV4::condition_holds(self, instruction) {
@@ -122,6 +122,7 @@ impl CPU {
         self.arm_lut[lut_index](self, instruction, bus);
     }
 
+    #[profiling::function]
     #[inline]
     fn execute_thumb(&mut self, bus: &mut Bus, instruction: ThumbInstruction) {
         let lut_index = instruction.get_bits(8, 15) as usize;

@@ -216,7 +216,7 @@ impl PPU {
 #[profiling::function]
 pub fn render_scanline_mode3(ppu: &mut PPU) {
     let vram_index = ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
-    //TODO: Fix colours being wrong?
+
     for i in 0..DISPLAY_WIDTH as usize {
         // * 2 since we're rendering one pixel per two bytes
         let index = (vram_index + i) * 2;
