@@ -126,7 +126,7 @@ pub mod common_behaviour {
             // No overflow
             0b0111 => !cpsr.overflow(),
             0b1000 => cpsr.carry() && !cpsr.zero(),
-            0b1001 => !cpsr.carry() && cpsr.zero(),
+            0b1001 => !cpsr.carry() || cpsr.zero(),
             // Greater than or equal
             0b1010 => cpsr.sign() == cpsr.overflow(),
             // Less than
