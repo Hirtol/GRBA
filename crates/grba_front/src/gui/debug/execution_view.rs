@@ -233,7 +233,7 @@ impl CpuExecutionView {
                             updates.push(CpuExecutionUpdate::SetBreakpoints(self.break_points.clone()));
                         }
 
-                        self.draw_instruction(ui, active_state, start_address, &address_space);
+                        self.draw_instruction(ui, active_state, start_address);
 
                         ui.end_row();
                     }
@@ -286,15 +286,13 @@ impl CpuExecutionView {
         });
     }
 
-    fn draw_instruction(&self, ui: &mut Ui, state: State, address: usize, address_space: &Range<usize>) {
+    fn draw_instruction(&self, ui: &mut Ui, state: State, address: usize) {
         let vis_range = &self.cpu_state.visible_address_range;
 
         if vis_range.contains(&address) && vis_range.contains(&(address + 4)) {
             let addr = address - vis_range.start;
-            let data = match state {
-                State::Arm => &self.cpu_state.data[addr..addr.saturating_add(4)],
-                State::Thumb => &self.cpu_state.data[addr..addr.saturating_add(2)],
-            };
+            // We take 4 bytes, even in Thumb mode (because we want to disassemble the `bl` instruction correctly)
+            let data = &self.cpu_state.data[addr..addr.saturating_add(4)];
 
             let disassembled = self.capstone.disasm_all(data, address as u64).unwrap();
 
@@ -305,7 +303,7 @@ impl CpuExecutionView {
                 ),
                 State::Thumb => ui.colored_label(
                     colors::LIGHT_GREY,
-                    format!("{:04X}", u16::from_le_bytes(data.try_into().unwrap())),
+                    format!("{:04X}", u16::from_le_bytes(data[0..2].try_into().unwrap())),
                 ),
             };
 
@@ -324,89 +322,4 @@ impl CpuExecutionView {
         let text_style = ui.text_style_height(&TextStyle::Monospace);
         text_style
     }
-}
-
-fn render_psr(ui: &mut Ui, psr: &PSR) {
-    ui.horizontal(|ui| {
-        ui.style_mut().spacing.item_spacing.x = 5.0;
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.sign() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "N");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.zero() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "Z");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.carry() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "C");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.overflow() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "V");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:020b}", psr.reserved() >> 8))
-                .color(LIGHT_GREY)
-                .size(10.0)
-                .background_color(DARK_GREY);
-            ui.label(text);
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.irq_disable() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "I");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.fiq_disable() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "F");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.state() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "T");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:05b}", psr.mode() as u8)).background_color(LIGHT_GREY);
-            let size = ui.label(text).rect.size();
-            ui.allocate_ui(size, |ui| {
-                ui.centered_and_justified(|ui| {
-                    ui.colored_label(colors::DARK_PURPLE, "Mode");
-                });
-            });
-        });
-    });
-
-    ui.horizontal(|ui| {
-        ui.colored_label(colors::DARK_PURPLE, "State:");
-
-        ui.label(format!("{:?}", psr.state()));
-
-        ui.add(Separator::default().vertical());
-
-        ui.colored_label(colors::DARK_PURPLE, "Mode:");
-
-        ui.label(format!("{:?}", psr.mode()));
-    });
 }
