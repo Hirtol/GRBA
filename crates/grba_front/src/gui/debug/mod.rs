@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::gui::debug::cpu_state_view::CpuStateView;
 use crate::gui::debug::execution_view::CpuExecutionView;
+use crate::gui::debug::io_view::IoView;
 use grba_core::emulator::debug::DebugEmulator;
 
 use crate::gui::debug::memory_view::MemoryEditorView;
@@ -14,6 +15,7 @@ use crate::gui::debug::palette_view::PaletteView;
 mod colors;
 pub mod cpu_state_view;
 pub mod execution_view;
+pub mod io_view;
 pub mod memory_view;
 pub mod messages;
 pub mod palette_view;
@@ -60,6 +62,7 @@ pub struct UiState {
     pub cpu_open: bool,
     pub palette_open: bool,
     pub cpu_execute_open: bool,
+    pub io_open: bool,
 }
 
 pub struct DebugViewManager {
@@ -67,6 +70,7 @@ pub struct DebugViewManager {
     cpu_viewer: CpuStateView,
     palette_viewer: PaletteView,
     cpu_execution: CpuExecutionView,
+    io_viewer: io_view::IoView,
 
     pub state: UiState,
 }
@@ -110,6 +114,15 @@ impl DebugViewManager {
 
                 (DebugMessageResponse::CpuExecuteResponse(result), true)
             }
+            DebugMessageUi::IoRequest(request, update) => {
+                if let Some(update) = update {
+                    IoView::update_emu(emu, update);
+                }
+
+                let result = IoView::prepare_frame(emu, request);
+
+                (DebugMessageResponse::IoResponse(result), false)
+            }
         }
     }
 }
@@ -121,6 +134,7 @@ impl DebugViewManager {
             cpu_viewer: CpuStateView::new(),
             palette_viewer: PaletteView::new(),
             cpu_execution: CpuExecutionView::new(),
+            io_viewer: IoView::new(),
             state: ui_state.unwrap_or_default(),
         }
     }
@@ -140,6 +154,9 @@ impl DebugViewManager {
             DebugMessageResponse::CpuExecuteResponse(data) => {
                 self.cpu_execution.update_requested_data(data);
             }
+            DebugMessageResponse::IoResponse(data) => {
+                self.io_viewer.update_requested_data(data);
+            }
         }
     }
 
@@ -150,6 +167,10 @@ impl DebugViewManager {
                 .checkbox(&mut self.state.memory_open, MemoryEditorView::NAME)
                 .clicked()
             {
+                ui.close_menu();
+            }
+
+            if ui.checkbox(&mut self.state.io_open, IoView::NAME).clicked() {
                 ui.close_menu();
             }
 
@@ -183,6 +204,13 @@ impl DebugViewManager {
             let request = self.memory.request_information();
 
             result.push(DebugMessageUi::MemoryRequest(request, response));
+        }
+
+        if self.state.io_open {
+            let response = self.io_viewer.draw(ctx, &mut self.state.io_open);
+            let request = self.io_viewer.request_information();
+
+            result.push(DebugMessageUi::IoRequest(request, response));
         }
 
         if self.state.cpu_open {

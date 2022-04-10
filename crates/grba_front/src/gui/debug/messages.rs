@@ -3,6 +3,7 @@ use crate::gui::debug::execution_view::CpuExecutionView;
 use crate::gui::debug::memory_view::MemoryEditorView;
 use crate::gui::debug::palette_view::PaletteView;
 use crate::gui::debug::DebugView;
+use crate::gui::debug::io_view::IoView;
 
 /// Represents a special (and possibly expensive) request for debug information to
 /// the emulator thread.
@@ -18,6 +19,10 @@ pub enum DebugMessageUi {
         <CpuExecutionView as DebugView>::RequestInformation,
         Option<<CpuExecutionView as DebugView>::EmuUpdate>,
     ),
+    IoRequest(
+        <IoView as DebugView>::RequestInformation,
+        Option<<IoView as DebugView>::EmuUpdate>,
+    ),
 }
 
 /// Represents the response to a [DebugMessageUi] request.
@@ -27,4 +32,5 @@ pub enum DebugMessageResponse {
     CpuResponse(<CpuStateView as DebugView>::RequestedData),
     PaletteResponse(<PaletteView as DebugView>::RequestedData),
     CpuExecuteResponse(<CpuExecutionView as DebugView>::RequestedData),
+    IoResponse(<IoView as DebugView>::RequestedData),
 }
