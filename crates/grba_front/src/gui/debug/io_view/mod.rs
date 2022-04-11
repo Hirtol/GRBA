@@ -88,8 +88,10 @@ impl DebugView for IoView {
         let selected_reg = &registers::IO_REGISTER_VIEWS[frame_data.selected_reg];
         let range = &selected_reg.address;
 
+        // We take a larger range than the actual register to allow for adjacent registers to be selected without
+        // a 1 frame flicker
         IoStateRequest {
-            visible_address_range: *range.start()..range.end().saturating_add(1),
+            visible_address_range: range.start().saturating_sub(20)..range.end().saturating_add(20),
         }
     }
 
@@ -127,7 +129,8 @@ impl IoView {
         let data = if state.visible_address_range.contains(data_range.start())
             && state.visible_address_range.contains(data_range.end())
         {
-            &*state.data
+            let start = (data_range.start() - state.visible_address_range.start) as usize;
+            &state.data[start..start + data_range.size_hint().0]
         } else {
             &[0; 16][0..data_range.size_hint().0]
         };
