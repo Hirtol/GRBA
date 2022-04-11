@@ -10,8 +10,12 @@ pub const GREEN_SWAP_START: MemoryAddress = 0x0400_0002;
 pub const GREEN_SWAP_END: MemoryAddress = 0x0400_0003;
 pub const LCD_STATUS_START: MemoryAddress = 0x0400_0004;
 pub const LCD_STATUS_END: MemoryAddress = 0x0400_0005;
-pub const LCD_VERTICAL_COUNTER_START: MemoryAddress = 0x0400_0006;
-pub const LCD_VERTICAL_COUNTER_END: MemoryAddress = 0x0400_0007;
+pub const VERTICAL_COUNTER_START: MemoryAddress = 0x0400_0006;
+pub const VERTICAL_COUNTER_END: MemoryAddress = 0x0400_0007;
+pub const BG_CONTROL_START: MemoryAddress = 0x0400_0008;
+pub const BG_CONTROL_END: MemoryAddress = 0x0400_000F;
+pub const BG_SCROLL_START: MemoryAddress = 0x0400_0010;
+pub const BG_SCROLL_END: MemoryAddress = 0x0400_001F;
 
 #[bitfield(bits = 16)]
 #[repr(u16)]

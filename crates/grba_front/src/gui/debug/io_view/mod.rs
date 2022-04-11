@@ -7,11 +7,11 @@ use grba_core::emulator::cpu::registers::{Mode, Registers, PSR};
 use grba_core::emulator::debug::DebugEmulator;
 use grba_core::emulator::MemoryAddress;
 
-use crate::gui::debug::colors::{DARK_GREY, LIGHT_GREY};
-use crate::gui::debug::io_view::registers::ViewableRegister;
+use crate::gui::debug::colors::LIGHT_GREY;
 use crate::gui::debug::memory_view::{MemContents, MemRequest, MemResponse, MemoryEditorView};
 use crate::gui::debug::{colors, DebugView};
 
+mod io_utils;
 mod registers;
 
 pub struct IoView {
@@ -22,9 +22,6 @@ pub struct IoView {
 /// Private data for Egui display
 struct IoFrameData {
     selected_reg: usize,
-    selected_instance: u32,
-    selected_label_index: usize,
-    registers: Vec<&'static dyn ViewableRegister>,
 }
 
 #[derive(Debug, Default)]
@@ -46,12 +43,7 @@ pub struct IoStateResponse {
 
 impl IoView {
     pub fn new() -> Self {
-        let frame_data = IoFrameData {
-            selected_reg: 0,
-            selected_instance: 0,
-            selected_label_index: 0,
-            registers: registers::get_register_list(),
-        };
+        let frame_data = IoFrameData { selected_reg: 0 };
 
         Self {
             state: Default::default(),
@@ -93,8 +85,8 @@ impl DebugView for IoView {
 
     fn request_information(&mut self) -> Self::RequestInformation {
         let frame_data = &self.frame_data;
-        let selected_reg = &frame_data.registers[frame_data.selected_reg];
-        let range = selected_reg.get_address(frame_data.selected_instance);
+        let selected_reg = &registers::IO_REGISTER_VIEWS[frame_data.selected_reg];
+        let range = &selected_reg.address;
 
         IoStateRequest {
             visible_address_range: *range.start()..range.end().saturating_add(1),
@@ -121,44 +113,26 @@ impl IoView {
             .resizable(false)
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    let mut label_index = 0;
-
-                    for (i, reg) in self.frame_data.registers.iter().enumerate() {
-                        for instance in 0..reg.get_total_instances() {
-                            let name = if reg.get_total_instances() == 1 {
-                                reg.get_name().to_string()
-                            } else {
-                                format!("{}[{}]", reg.get_name(), instance)
-                            };
-
-                            let response =
-                                ui.selectable_value(&mut self.frame_data.selected_label_index, label_index, name);
-
-                            if response.changed() {
-                                self.frame_data.selected_reg = i;
-                                self.frame_data.selected_instance = instance;
-                            }
-
-                            label_index += 1;
-                        }
+                    for (i, reg) in registers::IO_REGISTER_VIEWS.iter().enumerate() {
+                        ui.selectable_value(&mut self.frame_data.selected_reg, i, reg.name);
                     }
                 })
             });
 
         let Self { frame_data, state } = &self;
 
-        let selected_reg = &frame_data.registers[frame_data.selected_reg];
-        let data_range = selected_reg.get_address(frame_data.selected_instance);
+        let selected_reg = &registers::IO_REGISTER_VIEWS[frame_data.selected_reg];
+        let data_range = selected_reg.address.clone();
 
         let data = if state.visible_address_range.contains(data_range.start())
             && state.visible_address_range.contains(data_range.end())
         {
-            &state.data
+            &*state.data
         } else {
-            return None;
+            &[0; 16][0..data_range.size_hint().0]
         };
 
-        ui.label(selected_reg.get_name());
+        ui.label(selected_reg.name);
 
         ui.separator();
 
@@ -167,12 +141,12 @@ impl IoView {
 
             ui.separator();
 
-            ui.label(format!("Value: {}", selected_reg.get_current_value(data)));
+            ui.label(format!("Value: {}", (selected_reg.format)(data)));
         });
 
         ui.separator();
 
-        let response = selected_reg.draw(ui, data)?;
+        let response = (selected_reg.draw)(ui, data)?;
 
         Some(IoStateResponse {
             data: response
@@ -182,140 +156,4 @@ impl IoView {
                 .collect(),
         })
     }
-}
-
-impl IoState {
-    pub fn draw(&self, ui: &mut Ui) {
-        ui.style_mut().override_text_style = Some(TextStyle::Monospace);
-        // Registers
-        egui::Grid::new("CPU State Registers Grid")
-            .striped(true)
-            .max_col_width(60.)
-            .show(ui, |ui| {
-                for regs in &self.registers.general_purpose.into_iter().enumerate().chunks(4) {
-                    ui.vertical(|ui| {
-                        for (i, reg) in regs {
-                            ui.horizontal(|ui| {
-                                ui.horizontal(|ui| {
-                                    // Ensure that r5 and r15 have their value text properly aligned.
-                                    ui.set_width_range(30.0..=30.0);
-
-                                    let text = RichText::new(format!("r{}:", i)).color(colors::DARK_PURPLE);
-                                    ui.label(text);
-                                });
-
-                                let value = RichText::new(format!("{:08X}", reg)).background_color(colors::LIGHT_GREY);
-
-                                ui.label(value);
-                            });
-                        }
-                    });
-                }
-            });
-
-        ui.separator();
-
-        // CPSR
-        ui.label("CPSR:");
-
-        render_psr(ui, &self.registers.cpsr);
-
-        ui.separator();
-
-        // SPSR:
-
-        ui.label("SPSR:");
-
-        // Ignore the modes without SPSRs
-        if matches!(self.registers.cpsr.mode(), Mode::User | Mode::System) {
-            ui.label("None");
-        } else {
-            render_psr(ui, &self.registers.spsr);
-        }
-    }
-}
-
-fn render_psr(ui: &mut Ui, psr: &PSR) {
-    ui.horizontal(|ui| {
-        ui.style_mut().spacing.item_spacing.x = 5.0;
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.sign() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "N");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.zero() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "Z");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.carry() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "C");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.overflow() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "V");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:020b}", psr.reserved() >> 8))
-                .color(LIGHT_GREY)
-                .size(10.0)
-                .background_color(DARK_GREY);
-            ui.label(text);
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.irq_disable() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "I");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.fiq_disable() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "F");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:b}", psr.state() as u8)).background_color(LIGHT_GREY);
-            ui.label(text);
-
-            ui.colored_label(colors::DARK_PURPLE, "T");
-        });
-
-        ui.vertical(|ui| {
-            let text = RichText::new(format!("{:05b}", psr.mode() as u8)).background_color(LIGHT_GREY);
-            let size = ui.label(text).rect.size();
-            ui.allocate_ui(size, |ui| {
-                ui.centered_and_justified(|ui| {
-                    ui.colored_label(colors::DARK_PURPLE, "Mode");
-                });
-            });
-        });
-    });
-
-    ui.horizontal(|ui| {
-        ui.colored_label(colors::DARK_PURPLE, "State:");
-
-        ui.label(format!("{:?}", psr.state()));
-
-        ui.add(Separator::default().vertical());
-
-        ui.colored_label(colors::DARK_PURPLE, "Mode:");
-
-        ui.label(format!("{:?}", psr.mode()));
-    });
 }
