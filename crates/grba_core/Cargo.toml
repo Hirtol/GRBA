@@ -23,6 +23,7 @@ binary-heap-plus = "0.4.1"
 
 num-traits = "0.2"
 num-derive = "0.3"
+enum-iterator = "0.7.0"
 regex = "1.5.4"
 
 serde = { version = "1.0.135", features = ["derive"] }

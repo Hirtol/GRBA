@@ -62,7 +62,7 @@ pub struct LcdControl {
 ///
 /// # Features
 /// S)crolling, F)lip, M)osaic, A)lphaBlending, B)rightness, P)riority.
-#[derive(Debug, BitfieldSpecifier)]
+#[derive(Debug, BitfieldSpecifier, enum_iterator::IntoEnumIterator, PartialEq, Clone, Copy)]
 #[bits = 3]
 pub enum BgMode {
     Mode0 = 0b000,

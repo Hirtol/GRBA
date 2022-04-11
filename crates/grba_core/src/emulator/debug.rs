@@ -2,6 +2,10 @@ use crate::emulator::bus::Bus;
 use crate::emulator::cpu::CPU;
 use crate::emulator::{EmuDebugging, GBAEmulator};
 
+// Re-export registers which *shouldn't* be part of the public API, but for debugging purposes will be.
+pub use crate::emulator::bus::interrupts::{InterruptEnable, InterruptMasterEnable, InterruptRequestFlags};
+pub use crate::emulator::ppu::registers::*;
+
 /// A reference to the [GBAEmulator] which has special access to internal state for the sake of acquiring debug information.
 #[repr(transparent)]
 pub struct DebugEmulator<'a>(pub &'a mut GBAEmulator);

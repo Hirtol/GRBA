@@ -1030,6 +1030,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum-iterator"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4eeac5c5edb79e4e39fe8439ef35207780a11f69c52cbe424ce3dfad4cb78de6"
+dependencies = [
+ "enum-iterator-derive",
+]
+
+[[package]]
+name = "enum-iterator-derive"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c134c37760b27a871ba422106eedbb8247da973a09e82558bf26d619c882b159"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "epaint"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1261,6 +1281,7 @@ dependencies = [
  "bitflags",
  "blip_buf",
  "criterion",
+ "enum-iterator",
  "grba_lut_generate",
  "log",
  "modular-bitfield",
@@ -1286,6 +1307,7 @@ dependencies = [
  "egui-winit",
  "egui_memory_editor",
  "egui_wgpu_backend",
+ "enum-iterator",
  "grba_core",
  "image 0.24.1",
  "itertools",

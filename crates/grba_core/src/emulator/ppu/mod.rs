@@ -39,7 +39,7 @@ pub const FRAME_CYCLES: u32 = 280896;
 
 mod memory;
 mod palette;
-mod registers;
+pub(crate) mod registers;
 
 #[derive(Debug, Clone)]
 pub struct PPU {
