@@ -37,6 +37,7 @@ pub const FRAME_CYCLES: u32 = 280896;
 // * Mode 3..=5: Bitmap modes
 // One frame is 280896 cycles
 
+pub mod debug;
 mod memory;
 mod palette;
 pub(crate) mod registers;
@@ -51,21 +52,33 @@ pub struct PPU {
     vram: Box<[u8; VRAM_SIZE]>,
 
     // Registers
-    control: LcdControl,
+    dispcnt: LcdControl,
     /// Not emulated
     green_swap: u16,
-    status: LcdStatus,
+    dispstat: LcdStatus,
     vertical_counter: VerticalCounter,
     /// The background control registers, for backgrounds 0..=3
     bg_control: [BgControl; 4],
     /// The background scrolling/offset registers, where `[0]` is X, and `[1]` is Y when indexing a particular background
-    bg_offset: [[BgScrolling; 2]; 4],
+    bg_scrolling: [[BgScrolling; 2]; 4],
     /// The background rotation references, where `[0]` is `BG2`, and `[1]` is `BG3`
     bg_rotation_x: [BgRotationParam; 2],
     bg_rotation_y: [BgRotationParam; 2],
     /// Internal background rotation/scaling for `BG2`
+    ///
+    /// Where the indexes correspond to the registers in the following way:
+    /// * `[0]` is `PA`
+    /// * `[1]` is `PB`
+    /// * `[2]` is `PC`
+    /// * `[3]` is `PD`
     bg_rotation_reference_bg2: [BgRotationRef; 4],
     /// Internal background rotation/scaling for `BG3`
+    ///
+    /// Where the indexes correspond to the registers in the following way:
+    /// * `[0]` is `PA`
+    /// * `[1]` is `PB`
+    /// * `[2]` is `PC`
+    /// * `[3]` is `PD`
     bg_rotation_reference_bg3: [BgRotationRef; 4],
 
     window_horizontal: [WindowDimensions; 2],
@@ -87,12 +100,12 @@ impl PPU {
             palette: PaletteCache::default(),
             oam_ram: crate::box_array![0; OAM_RAM_SIZE],
             vram: crate::box_array![0; VRAM_SIZE],
-            control: LcdControl::new(),
+            dispcnt: LcdControl::new(),
             green_swap: 0,
-            status: LcdStatus::new(),
+            dispstat: LcdStatus::new(),
             vertical_counter: VerticalCounter::new(),
             bg_control: [BgControl::new(); 4],
-            bg_offset: [[BgScrolling::new(); 2]; 4],
+            bg_scrolling: [[BgScrolling::new(); 2]; 4],
             bg_rotation_x: [BgRotationParam::new(); 2],
             bg_rotation_y: [BgRotationParam::new(); 2],
             bg_rotation_reference_bg2: [BgRotationRef::new(); 4],
@@ -115,10 +128,10 @@ impl PPU {
 
     pub fn hblank_start(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
         crate::cpu_log!("ppu-logging"; "HBlank fired!");
-        self.status.set_h_blank_flag(true);
+        self.dispstat.set_h_blank_flag(true);
 
         // Schedule HBlank interrupt if it's desired
-        if self.status.h_blank_irq_enable() {
+        if self.dispstat.h_blank_irq_enable() {
             interrupts.request_interrupt(Interrupts::Hblank, scheduler);
         }
 
@@ -132,7 +145,7 @@ impl PPU {
 
     pub fn hblank_end(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
         crate::cpu_log!("ppu-logging"; "HBlankEnd fired!");
-        self.status.set_h_blank_flag(false);
+        self.dispstat.set_h_blank_flag(false);
 
         self.vertical_counter
             .set_current_scanline(self.vertical_counter.current_scanline() + 1);
@@ -141,7 +154,7 @@ impl PPU {
         // scheduler is more difficult.
         if self.vertical_counter.current_scanline() == 227 {
             // Vblank is no longer set one hblank before the wrap-around
-            self.status.set_v_blank_flag(false);
+            self.dispstat.set_v_blank_flag(false);
         } else if self.vertical_counter.current_scanline() == 228 {
             // Reached the end of vblank, time to reset the scanline counter
             self.vertical_counter.set_current_scanline(0);
@@ -160,30 +173,30 @@ impl PPU {
 
     pub fn vblank(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
         crate::cpu_log!("ppu-logging"; "Vblank fired at time: {:?}", scheduler.current_time);
-        self.status.set_v_blank_flag(true);
+        self.dispstat.set_v_blank_flag(true);
 
-        if self.status.v_blank_irq_enable() {
+        if self.dispstat.v_blank_irq_enable() {
             interrupts.request_interrupt(Interrupts::Vblank, scheduler);
         }
     }
 
     fn check_vertical_counter_interrupt(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
-        if self.vertical_counter.current_scanline() == self.status.v_count_setting_lyc() {
-            self.status.set_v_counter_flag(true);
+        if self.vertical_counter.current_scanline() == self.dispstat.v_count_setting_lyc() {
+            self.dispstat.set_v_counter_flag(true);
 
-            if self.status.v_counter_irq_enable() {
+            if self.dispstat.v_counter_irq_enable() {
                 interrupts.request_interrupt(Interrupts::VCounter, scheduler);
             }
         } else {
-            self.status.set_v_counter_flag(false);
+            self.dispstat.set_v_counter_flag(false);
         }
     }
 
     fn render_scanline(&mut self) {
-        crate::cpu_log!("ppu-logging"; "Rendering scanline {} - Mode: {:?}", self.vertical_counter.current_scanline(), self.control.bg_mode());
+        crate::cpu_log!("ppu-logging"; "Rendering scanline {} - Mode: {:?}", self.vertical_counter.current_scanline(), self.dispcnt.bg_mode());
         // TODO: Backdrop color (when no background has rendered a pixel there (all transparent) should be filled with palette 0)
         // Only really relevant for Mode0..=2
-        match self.control.bg_mode() {
+        match self.dispcnt.bg_mode() {
             BgMode::Mode0 => {}
             BgMode::Mode1 => {}
             BgMode::Mode2 => {}
@@ -239,7 +252,7 @@ pub fn render_scanline_mode4(ppu: &mut PPU) {
 
     // If Frame 1 is selected (`display_frame_select` is true) then the frame buffer is located at 0xA000, otherwise
     // it will point to 0x0 for FRAME_0 due to the multiplication.
-    let vram_index_base = ppu.control.display_frame_select() as usize * FRAME_1_ADDR;
+    let vram_index_base = ppu.dispcnt.display_frame_select() as usize * FRAME_1_ADDR;
 
     let vram_index = vram_index_base + (ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize);
 

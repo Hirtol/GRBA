@@ -19,11 +19,24 @@ impl PPU {
         let address = address - LCD_IO_START;
 
         match address {
-            0x0..=0x1 => self.control.to_le_bytes()[addr % 2] as u8,
-            0x2..=0x3 => self.green_swap.to_le_bytes()[addr % 2] as u8,
-            0x4..=0x5 => self.status.to_le_bytes()[addr % 2] as u8,
-            0x6..=0x7 => self.vertical_counter.to_le_bytes()[addr % 2] as u8,
-            0x8..=0xF => self.bg_control[(addr % 8) / 2].to_le_bytes()[addr % 2] as u8,
+            0x0..=0x1 => self.dispcnt.to_le_bytes()[addr % 2],
+            0x2..=0x3 => self.green_swap.to_le_bytes()[addr % 2],
+            0x4..=0x5 => self.dispstat.to_le_bytes()[addr % 2],
+            0x6..=0x7 => self.vertical_counter.to_le_bytes()[addr % 2],
+            0x8..=0xF => self.bg_control[(addr % 8) / 2].to_le_bytes()[addr % 2],
+            0x10..=0x3F => {
+                // bg_scrolling is write-only
+                0xFF
+            }
+            0x40..=0x47 => {
+                // Window registers are write-only
+                0xFF
+            }
+            0x48..=0x49 => self.window_control_inside.to_le_bytes()[addr % 2],
+            0x4A..=0x4B => self.window_control_outside.to_le_bytes()[addr % 2],
+            0x50..=0x51 => self.special.to_le_bytes()[addr % 2],
+            0x52..=0x53 => self.alpha.to_le_bytes()[addr % 2],
+            0x54..=0x55 => self.brightness.to_le_bytes()[addr % 2],
             _ => {
                 crate::cpu_log!("ppu-logging"; "Unimplemented IO read at {:08X}", address);
                 0xFF
@@ -37,14 +50,50 @@ impl PPU {
         // Note that IO is not mirrored, therefore a subtract instead of a modulo
         let address = address - LCD_IO_START;
         match address {
-            0x0..=0x1 => self.control.update_byte_le(addr % 2, value),
+            0x0..=0x1 => self.dispcnt.update_byte_le(addr % 2, value),
             0x2..=0x3 => self.green_swap = self.green_swap.change_byte_le(addr % 2, value),
-            0x4..=0x5 => self.status.update_byte_le(addr % 2, value),
+            0x4..=0x5 => self.dispstat.update_byte_le(addr % 2, value),
             0x6..=0x7 => {
                 // Vertical counter is read only
             }
-            0x8..=0xF => self.bg_control[(addr % 8) / 2].update_byte_le(addr % 2, value),
-            _ => todo!(),
+            0x8..=0x9 => self.bg_control[0].update_byte_le(addr % 2, value),
+            0xA..=0xB => self.bg_control[1].update_byte_le(addr % 2, value),
+            0xC..=0xD => self.bg_control[2].update_byte_le(addr % 2, value),
+            0xE..=0xF => self.bg_control[3].update_byte_le(addr % 2, value),
+            0x10..=0x11 => self.bg_scrolling[0][0].update_byte_le(addr % 2, value),
+            0x12..=0x13 => self.bg_scrolling[1][0].update_byte_le(addr % 2, value),
+            0x14..=0x15 => self.bg_scrolling[2][0].update_byte_le(addr % 2, value),
+            0x16..=0x17 => self.bg_scrolling[3][0].update_byte_le(addr % 2, value),
+            0x18..=0x19 => self.bg_scrolling[0][1].update_byte_le(addr % 2, value),
+            0x1A..=0x1B => self.bg_scrolling[1][1].update_byte_le(addr % 2, value),
+            0x1C..=0x1D => self.bg_scrolling[2][1].update_byte_le(addr % 2, value),
+            0x1E..=0x1F => self.bg_scrolling[3][1].update_byte_le(addr % 2, value),
+            0x20..=0x21 => self.bg_rotation_reference_bg2[0].update_byte_le(addr % 2, value),
+            0x22..=0x23 => self.bg_rotation_reference_bg2[1].update_byte_le(addr % 2, value),
+            0x24..=0x25 => self.bg_rotation_reference_bg2[2].update_byte_le(addr % 2, value),
+            0x26..=0x27 => self.bg_rotation_reference_bg2[3].update_byte_le(addr % 2, value),
+            0x28..=0x2B => self.bg_rotation_x[0].update_byte_le(addr % 4, value),
+            0x2C..=0x2F => self.bg_rotation_y[0].update_byte_le(addr % 4, value),
+            0x30..=0x31 => self.bg_rotation_reference_bg3[0].update_byte_le(addr % 2, value),
+            0x32..=0x33 => self.bg_rotation_reference_bg3[1].update_byte_le(addr % 2, value),
+            0x34..=0x35 => self.bg_rotation_reference_bg3[2].update_byte_le(addr % 2, value),
+            0x36..=0x37 => self.bg_rotation_reference_bg3[3].update_byte_le(addr % 2, value),
+            0x38..=0x3B => self.bg_rotation_x[1].update_byte_le(addr % 4, value),
+            0x3C..=0x3F => self.bg_rotation_y[1].update_byte_le(addr % 4, value),
+            0x40..=0x41 => self.window_horizontal[0].update_byte_le(addr % 2, value),
+            0x42..=0x43 => self.window_horizontal[1].update_byte_le(addr % 2, value),
+            0x44..=0x45 => self.window_vertical[0].update_byte_le(addr % 2, value),
+            0x46..=0x47 => self.window_vertical[1].update_byte_le(addr % 2, value),
+            0x48..=0x49 => self.window_control_inside.update_byte_le(addr % 2, value),
+            0x4A..=0x4B => self.window_control_outside.update_byte_le(addr % 2, value),
+            0x4C..=0x4F => self.mosaic_function.update_byte_le(addr % 4, value),
+            0x50..=0x51 => self.special.update_byte_le(addr % 2, value),
+            0x52..=0x53 => self.alpha.update_byte_le(addr % 2, value),
+            0x54..=0x55 => self.brightness.update_byte_le(addr % 2, value),
+            0x56 => {
+                // not used
+            }
+            _ => unreachable!(),
         }
     }
 

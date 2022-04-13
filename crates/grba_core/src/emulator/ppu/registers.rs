@@ -207,13 +207,19 @@ pub struct WindowDimensions {
 #[repr(u16)]
 #[derive(Debug, Copy, Clone)]
 pub struct WindowControl {
-    pub winout_0_bg_enable: B4,
+    pub winout_0_bg0_enable: bool,
+    pub winout_0_bg1_enable: bool,
+    pub winout_0_bg2_enable: bool,
+    pub winout_0_bg3_enable: bool,
     pub winout_0_obj_enable: bool,
     pub winout_0_color_special: bool,
     #[skip]
     unused_0: B2,
 
-    pub winobj_1_bg_enable: B4,
+    pub winout_1_bg0_enable: bool,
+    pub winout_1_bg1_enable: bool,
+    pub winout_1_bg2_enable: bool,
+    pub winout_1_bg3_enable: bool,
     pub winobj_1_obj_enable: bool,
     pub winobj_1_color_special: bool,
     #[skip]

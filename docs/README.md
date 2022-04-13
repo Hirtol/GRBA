@@ -54,6 +54,9 @@ Masking R15 nearly everywhere else meant that this only failed now
 Still, I've got a bootable bios now
 ```
 
+#### Debugging
+For generating comparison logs use: `trace 1000000 file.log` in the MGBA debug logger.
+
 ### TODO:
 
 * Timers
