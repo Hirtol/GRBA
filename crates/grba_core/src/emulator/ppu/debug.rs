@@ -52,4 +52,11 @@ impl PPU {
             _ => unreachable!(),
         }
     }
+
+    #[inline]
+    pub fn write_vram_dbg(&mut self, address: MemoryAddress, value: u8) {
+        let addr = (address & 0x1FFFF) as usize;
+
+        self.vram[addr] = value;
+    }
 }

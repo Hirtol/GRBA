@@ -69,7 +69,7 @@ impl DebugView for MemoryEditorView {
         let (bus, cpu) = emu.bus_and_cpu();
 
         for i in request_information.visible_address_range {
-            mem_contents.data.push(bus.read(i as u32, cpu));
+            mem_contents.data.push(bus.read_dbg(i as u32, cpu));
         }
 
         mem_contents
@@ -80,7 +80,7 @@ impl DebugView for MemoryEditorView {
 
         for (address, value) in update.data {
             // TODO: Make a debug write function which ignores data bus shenanigans (like VRAM not being writable with u8)
-            bus.write(address, value);
+            bus.write_dbg(address, value);
         }
     }
 

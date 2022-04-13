@@ -63,7 +63,7 @@ impl DebugView for IoView {
 
         let (bus, cpu) = emu.bus_and_cpu();
         for addr in request_information.visible_address_range.clone() {
-            let byte = bus.read(addr, cpu);
+            let byte = bus.read_dbg(addr, cpu);
             data.push(byte);
         }
 

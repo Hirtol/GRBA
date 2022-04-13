@@ -11,6 +11,8 @@ use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
 
 mod bios;
+#[cfg(feature = "debug-functionality")]
+mod debug;
 pub mod helpers;
 pub mod interrupts;
 pub mod keypad;

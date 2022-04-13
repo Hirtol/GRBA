@@ -9,6 +9,7 @@ cpu-logging = []
 bus-logging = []
 ppu-logging = []
 bin-logging = []
+debug-functionality = []
 
 [dev-dependencies]
 criterion = "0.3.5"

@@ -81,7 +81,7 @@ impl DebugView for CpuExecutionView {
         let (bus, cpu) = emu.bus_and_cpu();
 
         for i in request_information.visible_address_range {
-            result.data.push(bus.read(i as u32, cpu));
+            result.data.push(bus.read_dbg(i as u32, cpu));
         }
 
         result

@@ -37,7 +37,8 @@ pub const FRAME_CYCLES: u32 = 280896;
 // * Mode 3..=5: Bitmap modes
 // One frame is 280896 cycles
 
-pub mod debug;
+#[cfg(feature = "debug-functionality")]
+mod debug;
 mod memory;
 mod palette;
 pub(crate) mod registers;

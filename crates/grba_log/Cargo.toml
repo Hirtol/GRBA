@@ -9,7 +9,7 @@ tabled = { version = "0.4.2", features = ["color"] }
 owo-colors = "3.2.0"
 thiserror = "1.0.30"
 anyhow = "1.0.53"
-grba_core = {path = "../grba_core", features = ["bin-logging"]}
+grba_core = {path = "../grba_core", features = ["bin-logging", "debug-functionality"]}
 itertools = "0.10.3"
 
 # Parsing

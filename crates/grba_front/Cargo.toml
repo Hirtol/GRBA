@@ -18,7 +18,7 @@ itertools = "0.10.3"
 once_cell = "1.9.0"
 
 # Core Dependencies
-grba_core = { path = "../grba_core" }
+grba_core = { path = "../grba_core", features = ["debug-functionality"] }
 capstone = "0.10.0"
 bincode = "1.3.3"
 serde = "1.0.135"
