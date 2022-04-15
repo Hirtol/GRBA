@@ -1,3 +1,4 @@
+use crate::emulator::bus::IO_START;
 use crate::emulator::ppu::{OAM_RAM_SIZE, PPU, VRAM_SIZE};
 use crate::emulator::MemoryAddress;
 use crate::utils::BitOps;
@@ -8,7 +9,6 @@ pub const LCD_VRAM_START: MemoryAddress = 0x0600_0000;
 pub const LCD_VRAM_END: MemoryAddress = 0x0601_7FFF;
 pub const OAM_START: MemoryAddress = 0x0700_0000;
 pub const OAM_END: MemoryAddress = 0x0700_03FF;
-pub const IO_START: MemoryAddress = 0x0400_0000;
 pub const LCD_IO_END: MemoryAddress = 0x4000056;
 
 impl PPU {
@@ -25,11 +25,11 @@ impl PPU {
             0x6..=0x7 => self.vertical_counter.to_le_bytes()[addr % 2],
             0x8..=0xF => self.bg_control[(addr % 8) / 2].to_le_bytes()[addr % 2],
             0x10..=0x3F => {
-                // bg_scrolling is write-only
+                // bg_scrolling is write-only, TODO: Open bus read
                 0xFF
             }
             0x40..=0x47 => {
-                // Window registers are write-only
+                // Window registers are write-only TODO: Open bus read
                 0xFF
             }
             0x48..=0x49 => self.window_control_inside.to_le_bytes()[addr % 2],
@@ -38,6 +38,7 @@ impl PPU {
             0x52..=0x53 => self.alpha.to_le_bytes()[addr % 2],
             0x54..=0x55 => self.brightness.to_le_bytes()[addr % 2],
             _ => {
+                // TODO: Open bus read
                 crate::cpu_log!("ppu-logging"; "Unimplemented IO read at {:08X}", address);
                 0xFF
             }

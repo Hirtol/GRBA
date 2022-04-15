@@ -5,10 +5,10 @@ use enum_iterator::IntoEnumIterator;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 
+use grba_core::emulator::bus::IO_START;
 use grba_core::emulator::debug::{
     BgMode, BG_CONTROL_START, BG_SCROLL_START, LCD_CONTROL_END, LCD_CONTROL_START, LCD_STATUS_END, LCD_STATUS_START,
 };
-use grba_core::emulator::ppu::IO_START;
 use grba_core::emulator::MemoryAddress;
 
 use crate::gui::debug::io_view::io_utils;
@@ -48,8 +48,8 @@ pub static IO_REGISTER_VIEWS: Lazy<[IoView; 28]> = Lazy::new(|| {
         IoView::new_16("Win0V", offset!(IO_START, 0x44), draw_window_vertical_dim_view),
         IoView::new_16("Win1H", offset!(IO_START, 0x42), draw_window_horizontal_dim_view),
         IoView::new_16("Win1V", offset!(IO_START, 0x46), draw_window_vertical_dim_view),
-        IoView::new_16("WinIN", offset!(IO_START, 0x48), draw_winin_view),
-        IoView::new_16("WinOUT", offset!(IO_START, 0x4A), draw_winout_view),
+        IoView::new_16("WinIn", offset!(IO_START, 0x48), draw_winin_view),
+        IoView::new_16("WinOut", offset!(IO_START, 0x4A), draw_winout_view),
         IoView::new_32("Mosaic", offset!(IO_START, 0x4C, 4), draw_mosaic_view),
         IoView::new_16("BldCnt", offset!(IO_START, 0x50), draw_bldcnt_view),
         IoView::new_16("BldAlpha", offset!(IO_START, 0x52), draw_bldalpha_view),
@@ -397,7 +397,7 @@ fn draw_bldalpha_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
 
 fn draw_bldy_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
     let mut changed = false;
-    let mut reg_value = u32::from_le_bytes(reg_value.try_into().unwrap());
+    let mut reg_value = u16::from_le_bytes(reg_value.try_into().unwrap()) as u32;
 
     changed |= io_utils::io_slider(
         ui,

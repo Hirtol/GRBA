@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 owo-colors = "3.2.0"
 anyhow = "1.0.53"
-grba_core = {path = "../grba_core", features = []}
+grba_core = {path = "../grba_core", features = ["debug-functionality"]}
 itertools = "0.10.3"
 
 # Parsing

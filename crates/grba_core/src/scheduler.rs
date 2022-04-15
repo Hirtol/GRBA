@@ -37,7 +37,6 @@ impl Scheduler {
     ///
     /// The event is removed from the scheduler.
     #[inline]
-    #[profiling::function]
     pub fn pop_current(&mut self) -> Option<Event> {
         if self
             .event_queue
@@ -105,6 +104,8 @@ pub enum EventTag {
     HBlankEnd,
     /// Check for interrupts, will be set whenever an interrupt write happens to ensure the CPU can handle it.
     PollInterrupt,
+    /// Start the `Halted` loop, which is only stopped when an enabled interrupt is fired.
+    Halt,
 }
 
 #[derive(Debug, Copy, Clone, Eq)]

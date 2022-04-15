@@ -4,10 +4,10 @@ use cpu::CPU;
 
 use crate::emulator::bus::BiosData;
 use crate::emulator::frame::RgbaFrame;
-use crate::scheduler::EventTag;
+use crate::scheduler::{EmuTime, Event, EventTag};
 use crate::InputKeys;
 
-mod bus;
+pub mod bus;
 pub mod cartridge;
 pub mod cpu;
 pub mod debug;
@@ -108,31 +108,94 @@ impl GBAEmulator {
         self.bus.scheduler.add_time(2);
 
         while let Some(event) = self.bus.scheduler.pop_current() {
-            match event.tag {
-                EventTag::Exit => {
-                    panic!("Exit shouldn't ever be triggered!");
-                }
-                EventTag::VBlank => {
-                    self.bus.ppu.vblank(&mut self.bus.scheduler, &mut self.bus.interrupts);
+            if self.handle_scheduled_event(event) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Handle a scheduled event.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if VBLANK was hit for this event.
+    /// * `false` in all other cases.
+    #[inline(always)]
+    fn handle_scheduled_event(&mut self, event: Event) -> bool {
+        match event.tag {
+            EventTag::Exit => {
+                panic!("Exit shouldn't ever be triggered!");
+            }
+            EventTag::VBlank => {
+                self.bus.ppu.vblank(&mut self.bus.scheduler, &mut self.bus.interrupts);
+                return true;
+            }
+            EventTag::HBlank => {
+                self.bus
+                    .ppu
+                    .hblank_start(&mut self.bus.scheduler, &mut self.bus.interrupts);
+            }
+            EventTag::HBlankEnd => {
+                self.bus
+                    .ppu
+                    .hblank_end(&mut self.bus.scheduler, &mut self.bus.interrupts);
+            }
+            EventTag::PollInterrupt => {
+                self.cpu.poll_interrupts(&mut self.bus);
+            }
+            EventTag::Halt => {
+                println!("Halting!");
+
+                // If this returns `true` then we've hit Vblank and should exit for now.
+                if self.handle_halt() {
                     return true;
-                }
-                EventTag::HBlank => {
-                    self.bus
-                        .ppu
-                        .hblank_start(&mut self.bus.scheduler, &mut self.bus.interrupts);
-                }
-                EventTag::HBlankEnd => {
-                    self.bus
-                        .ppu
-                        .hblank_end(&mut self.bus.scheduler, &mut self.bus.interrupts);
-                }
-                EventTag::PollInterrupt => {
-                    self.cpu.poll_interrupts(&mut self.bus);
                 }
             }
         }
 
         false
+    }
+
+    /// Will handle the loop to handle the HALT state.
+    ///
+    /// # Returns
+    ///
+    /// * `true` if VBLANK is hit during the HALT state, a new HALT event will be scheduled as the next event to be executed.
+    /// * `false` if the HALT state is exited.
+    fn handle_halt(&mut self) -> bool {
+        'halt_loop: loop {
+            while let Some(event) = self.bus.scheduler.pop_current() {
+                match event.tag {
+                    EventTag::VBlank => {
+                        self.bus.ppu.vblank(&mut self.bus.scheduler, &mut self.bus.interrupts);
+
+                        // Persist the HALT state
+                        self.bus.scheduler.schedule_event(EventTag::Halt, EmuTime(0));
+
+                        break 'halt_loop true;
+                    }
+                    EventTag::PollInterrupt => {
+                        self.cpu.poll_interrupts(&mut self.bus);
+
+                        // CPU can disable HALT mode if `if & ie != 0`
+                        if !self.bus.system_control.is_halted {
+                            break 'halt_loop false;
+                        }
+                    }
+                    EventTag::Halt => {
+                        unreachable!("We shouldn't be able to HALT in a HALT!");
+                    }
+                    _ => {
+                        self.handle_scheduled_event(event);
+                    }
+                }
+            }
+
+            // Keep skipping time until we exit out the halt loop.
+            self.bus.scheduler.skip_to_next_event();
+        }
     }
 
     /// Steps the CPU one instruction, and then checks for a breakpoint.

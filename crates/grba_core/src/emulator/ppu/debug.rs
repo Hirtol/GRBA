@@ -1,5 +1,6 @@
 //! All debug related functionality for the PPU
-use crate::emulator::ppu::{IO_START, PPU};
+use crate::emulator::bus::IO_START;
+use crate::emulator::ppu::PPU;
 use crate::emulator::MemoryAddress;
 
 impl PPU {

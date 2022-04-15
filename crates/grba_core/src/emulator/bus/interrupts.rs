@@ -49,7 +49,7 @@ impl InterruptManager {
         self.flags.update_byte_le((address % 2) as usize, new_value);
 
         // Since a potential interrupt could've been left unhandled it's necessary to immediately check for more interrupts.
-        scheduler.schedule_event(EventTag::PollInterrupt, EmuTime(0));
+        scheduler.schedule_event(EventTag::PollInterrupt, EmuTime(1));
     }
 
     pub fn write_ime(&mut self, address: MemoryAddress, value: u8) {
@@ -64,8 +64,8 @@ impl InterruptManager {
         let new_flag = flags_val | interrupt as u16;
         self.flags = InterruptRequestFlags::from(new_flag);
 
-        // Schedule the interrupt to be the first thing that gets handled next.
-        scheduler.schedule_event(EventTag::PollInterrupt, EmuTime(0));
+        // Schedule the interrupt to be the first thing (except for HALT) that gets handled next.
+        scheduler.schedule_event(EventTag::PollInterrupt, EmuTime(1));
     }
 }
 

@@ -31,6 +31,7 @@ impl ArmV4 {
     }
 
     pub fn undefined_instruction(cpu: &mut CPU, _instruction: ArmInstruction, bus: &mut Bus) {
+        println!("Undefined instruction: {:08x}", _instruction);
         cpu.raise_exception(bus, Exception::UndefinedInstruction)
     }
 

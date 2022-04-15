@@ -203,7 +203,8 @@ impl CPU {
 
         // Check if an interrupt in `iflags` has been raised, and that it has also been enabled in `ie`
         if ie & iflags != 0 {
-            // TODO: Take out of HALT mode, then check if interrupts are enabled
+            // Take out of HALT mode, then check if interrupts are enabled
+            bus.system_control.is_halted = false;
 
             // If master interrupts are disabled, then just don't bother.
             if self.registers.cpsr.irq_disable() || !bus.interrupts.master_enable.interrupt_enable() {

@@ -4,11 +4,14 @@ use crate::emulator::bus::bios::GbaBios;
 use crate::emulator::bus::helpers::ReadType;
 use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
 use crate::emulator::bus::keypad::{Keypad, KEYINTERRUPT_END, KEYINTERRUPT_START, KEYSTATUS_END, KEYSTATUS_START};
+use crate::emulator::bus::system_control::{GbaSystemControl, HALT_CNT_ADDR, HaltType, POST_BOOT_FLAG_ADDR, WAIT_CNT_END, WAIT_CNT_START};
 use crate::emulator::cartridge::Cartridge;
 use crate::emulator::cpu::CPU;
-use crate::emulator::ppu::{IO_START, LCD_IO_END, PPU};
+use crate::emulator::ppu::{LCD_IO_END, PPU};
 use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
+
+pub const IO_START: MemoryAddress = 0x0400_0000;
 
 mod bios;
 #[cfg(feature = "debug-functionality")]
@@ -17,6 +20,7 @@ pub mod helpers;
 pub mod interrupts;
 pub mod keypad;
 mod ram;
+mod system_control;
 
 pub struct Bus {
     pub bios: GbaBios,
@@ -24,6 +28,7 @@ pub struct Bus {
     pub interrupts: InterruptManager,
     pub keypad: Keypad,
     pub ram: ram::WorkRam,
+    pub system_control: GbaSystemControl,
     pub ppu: PPU,
     pub scheduler: Scheduler,
 }
@@ -38,6 +43,7 @@ impl Bus {
             scheduler: Scheduler::new(),
             interrupts: InterruptManager::new(),
             keypad: Keypad::default(),
+            system_control: GbaSystemControl::new(),
         };
 
         result.ppu.initial_startup(&mut result.scheduler);
@@ -158,10 +164,12 @@ impl Bus {
             }
             IE_START..=IE_END => self.interrupts.read_ie(addr),
             IF_START..=IF_END => self.interrupts.read_if(addr),
+            WAIT_CNT_START..=WAIT_CNT_END => self.system_control.read_wait_cnt(addr),
             IME_START..=IME_END => self.interrupts.read_ime(addr),
+            POST_BOOT_FLAG_ADDR => self.system_control.read_post_boot(),
             _ => {
                 crate::cpu_log!("bus-logging"; "Unhandled IO read from {:#X}", addr);
-                0xFF
+                self.open_bus_read(addr, cpu)
             }
         }
     }
@@ -179,7 +187,12 @@ impl Bus {
                 .update_byte_le((addr - KEYINTERRUPT_START) as usize, data),
             IE_START..=IE_END => self.interrupts.write_ie(addr, data),
             IF_START..=IF_END => self.interrupts.write_if(addr, data, &mut self.scheduler),
+            WAIT_CNT_START..=WAIT_CNT_END => self.system_control.write_wait_cnt(addr, data),
             IME_START..=IME_END => self.interrupts.write_ime(addr, data),
+            POST_BOOT_FLAG_ADDR => self.system_control.write_post_flag(data),
+            HALT_CNT_ADDR => {
+                self.system_control.write_halt_control(data, &mut self.scheduler);
+            },
             _ => {
                 todo!("IO Write {:#X}", addr)
             }

@@ -1,8 +1,8 @@
 //! All debug related functionality for the [Bus] component.
 
-use crate::emulator::bus::Bus;
+use crate::emulator::bus::{Bus, IO_START};
 use crate::emulator::cpu::CPU;
-use crate::emulator::ppu::{IO_START, LCD_IO_END};
+use crate::emulator::ppu::LCD_IO_END;
 use crate::emulator::MemoryAddress;
 
 impl Bus {
