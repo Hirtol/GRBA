@@ -1,5 +1,5 @@
 //! All debug related functionality for the PPU
-use crate::emulator::ppu::{LCD_IO_START, PPU};
+use crate::emulator::ppu::{IO_START, PPU};
 use crate::emulator::MemoryAddress;
 
 impl PPU {
@@ -8,11 +8,11 @@ impl PPU {
     pub fn read_io_dbg(&mut self, address: MemoryAddress) -> u8 {
         let addr = address as usize;
         // Note that IO is not mirrored, therefore a subtract instead of a modulo
-        let address = address - LCD_IO_START;
+        let address = address - IO_START;
         match address {
-            0x0..=0x1 => self.dispcnt.to_le_bytes()[addr % 2],
+            0x0..=0x1 => self.disp_cnt.to_le_bytes()[addr % 2],
             0x2..=0x3 => self.green_swap.to_le_bytes()[addr % 2],
-            0x4..=0x5 => self.dispstat.to_le_bytes()[addr % 2],
+            0x4..=0x5 => self.disp_stat.to_le_bytes()[addr % 2],
             0x6..=0x7 => self.vertical_counter.to_le_bytes()[addr % 2],
             0x8..=0x9 => self.bg_control[0].to_le_bytes()[addr % 2],
             0xA..=0xB => self.bg_control[1].to_le_bytes()[addr % 2],
@@ -45,7 +45,7 @@ impl PPU {
             0x48..=0x49 => self.window_control_inside.to_le_bytes()[addr % 2],
             0x4A..=0x4B => self.window_control_outside.to_le_bytes()[addr % 2],
             0x4C..=0x4F => self.mosaic_function.to_le_bytes()[addr % 4],
-            0x50..=0x51 => self.special.to_le_bytes()[addr % 2],
+            0x50..=0x51 => self.bld_cnt.to_le_bytes()[addr % 2],
             0x52..=0x53 => self.alpha.to_le_bytes()[addr % 2],
             0x54..=0x55 => self.brightness.to_le_bytes()[addr % 2],
             0x56 => 0xFF,

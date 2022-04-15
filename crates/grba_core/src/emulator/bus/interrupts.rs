@@ -53,7 +53,7 @@ impl InterruptManager {
     }
 
     pub fn write_ime(&mut self, address: MemoryAddress, value: u8) {
-        self.master_enable.update_byte_le((address % 2) as usize, value);
+        self.master_enable.update_byte_le((address % 4) as usize, value);
     }
 
     /// Schedule an interrupt to be checked by the CPU.

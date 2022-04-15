@@ -8,7 +8,7 @@ pub const LCD_VRAM_START: MemoryAddress = 0x0600_0000;
 pub const LCD_VRAM_END: MemoryAddress = 0x0601_7FFF;
 pub const OAM_START: MemoryAddress = 0x0700_0000;
 pub const OAM_END: MemoryAddress = 0x0700_03FF;
-pub const LCD_IO_START: MemoryAddress = 0x0400_0000;
+pub const IO_START: MemoryAddress = 0x0400_0000;
 pub const LCD_IO_END: MemoryAddress = 0x4000056;
 
 impl PPU {
@@ -16,12 +16,12 @@ impl PPU {
     pub fn read_io(&mut self, address: MemoryAddress) -> u8 {
         let addr = address as usize;
         // Note that IO is not mirrored, therefore a subtract instead of a modulo
-        let address = address - LCD_IO_START;
+        let address = address - IO_START;
 
         match address {
-            0x0..=0x1 => self.dispcnt.to_le_bytes()[addr % 2],
+            0x0..=0x1 => self.disp_cnt.to_le_bytes()[addr % 2],
             0x2..=0x3 => self.green_swap.to_le_bytes()[addr % 2],
-            0x4..=0x5 => self.dispstat.to_le_bytes()[addr % 2],
+            0x4..=0x5 => self.disp_stat.to_le_bytes()[addr % 2],
             0x6..=0x7 => self.vertical_counter.to_le_bytes()[addr % 2],
             0x8..=0xF => self.bg_control[(addr % 8) / 2].to_le_bytes()[addr % 2],
             0x10..=0x3F => {
@@ -34,7 +34,7 @@ impl PPU {
             }
             0x48..=0x49 => self.window_control_inside.to_le_bytes()[addr % 2],
             0x4A..=0x4B => self.window_control_outside.to_le_bytes()[addr % 2],
-            0x50..=0x51 => self.special.to_le_bytes()[addr % 2],
+            0x50..=0x51 => self.bld_cnt.to_le_bytes()[addr % 2],
             0x52..=0x53 => self.alpha.to_le_bytes()[addr % 2],
             0x54..=0x55 => self.brightness.to_le_bytes()[addr % 2],
             _ => {
@@ -48,11 +48,11 @@ impl PPU {
     pub fn write_io(&mut self, address: MemoryAddress, value: u8) {
         let addr = address as usize;
         // Note that IO is not mirrored, therefore a subtract instead of a modulo
-        let address = address - LCD_IO_START;
+        let address = address - IO_START;
         match address {
-            0x0..=0x1 => self.dispcnt.update_byte_le(addr % 2, value),
+            0x0..=0x1 => self.disp_cnt.update_byte_le(addr % 2, value),
             0x2..=0x3 => self.green_swap = self.green_swap.change_byte_le(addr % 2, value),
-            0x4..=0x5 => self.dispstat.update_byte_le(addr % 2, value),
+            0x4..=0x5 => self.disp_stat.update_byte_le(addr % 2, value),
             0x6..=0x7 => {
                 // Vertical counter is read only
             }
@@ -87,7 +87,7 @@ impl PPU {
             0x48..=0x49 => self.window_control_inside.update_byte_le(addr % 2, value),
             0x4A..=0x4B => self.window_control_outside.update_byte_le(addr % 2, value),
             0x4C..=0x4F => self.mosaic_function.update_byte_le(addr % 4, value),
-            0x50..=0x51 => self.special.update_byte_le(addr % 2, value),
+            0x50..=0x51 => self.bld_cnt.update_byte_le(addr % 2, value),
             0x52..=0x53 => self.alpha.update_byte_le(addr % 2, value),
             0x54..=0x55 => self.brightness.update_byte_le(addr % 2, value),
             0x56 => {

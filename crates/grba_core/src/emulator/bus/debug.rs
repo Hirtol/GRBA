@@ -2,7 +2,7 @@
 
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::CPU;
-use crate::emulator::ppu::{LCD_IO_END, LCD_IO_START};
+use crate::emulator::ppu::{IO_START, LCD_IO_END};
 use crate::emulator::MemoryAddress;
 
 impl Bus {
@@ -31,7 +31,7 @@ impl Bus {
     #[inline]
     fn read_io_dbg(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         match addr {
-            LCD_IO_START..=LCD_IO_END => self.ppu.read_io_dbg(addr),
+            IO_START..=LCD_IO_END => self.ppu.read_io_dbg(addr),
             _ => self.read_io(addr, cpu),
         }
     }

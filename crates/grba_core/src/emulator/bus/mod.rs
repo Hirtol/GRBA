@@ -6,7 +6,7 @@ use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_EN
 use crate::emulator::bus::keypad::{Keypad, KEYINTERRUPT_END, KEYINTERRUPT_START, KEYSTATUS_END, KEYSTATUS_START};
 use crate::emulator::cartridge::Cartridge;
 use crate::emulator::cpu::CPU;
-use crate::emulator::ppu::{LCD_IO_END, LCD_IO_START, PPU};
+use crate::emulator::ppu::{IO_START, LCD_IO_END, PPU};
 use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
 
@@ -151,7 +151,7 @@ impl Bus {
     #[inline]
     pub fn read_io(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         match addr {
-            LCD_IO_START..=LCD_IO_END => self.ppu.read_io(addr),
+            IO_START..=LCD_IO_END => self.ppu.read_io(addr),
             KEYSTATUS_START..=KEYSTATUS_END => self.keypad.status.to_le_bytes()[(addr - KEYSTATUS_START) as usize],
             KEYINTERRUPT_START..=KEYINTERRUPT_END => {
                 self.keypad.interrupt_control.to_le_bytes()[(addr - KEYINTERRUPT_START) as usize]
@@ -169,7 +169,7 @@ impl Bus {
     #[inline]
     pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
         match addr {
-            LCD_IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
+            IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
             KEYSTATUS_START..=KEYSTATUS_END => {
                 crate::cpu_log!("bus-logging"; "Ignored write to keypad status register: {}", data);
             }
