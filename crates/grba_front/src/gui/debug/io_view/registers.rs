@@ -19,9 +19,12 @@ macro_rules! offset {
 }
 
 /// Ideally this would just be `const`, however, until `&mut` in `fn` is stable we can't have `draw` calls in the
-/// [IoRegisterView] object const fn.
-pub static IO_REGISTER_VIEWS: Lazy<[IoView; 14]> = Lazy::new(|| {
+/// [IoView] object const fn.
+pub static IO_REGISTER_VIEWS: Lazy<[IoView; 17]> = Lazy::new(|| {
     [
+        IoView::new_16("IEnable", 0x04000200..=0x04000201, draw_ie_if_view),
+        IoView::new_16("IFlags", 0x04000202..=0x04000203, draw_ie_if_view),
+        IoView::new_32("IME", 0x04000208..=0x0400020B, draw_ime_view),
         IoView::new_16("DispCnt", LCD_CONTROL_START..=LCD_CONTROL_END, draw_disp_cnt),
         IoView::new_16("DispStat", LCD_STATUS_START..=LCD_STATUS_END, draw_disp_stat_view),
         IoView::new_16("Bg0Control", offset!(BG_CONTROL_START, 0), draw_bg_control_view),
@@ -201,6 +204,45 @@ fn draw_bg_scroll_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
     let mut reg_value = u16::from_le_bytes(reg_value.try_into().unwrap()) as u32;
 
     changed |= io_utils::io_slider(ui, &mut reg_value, 0x0..=0x8, "BG Scroll", 0..=511);
+
+    if changed {
+        Some(reg_value.to_le_bytes().into())
+    } else {
+        None
+    }
+}
+
+fn draw_ie_if_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
+    let mut changed = false;
+    let mut reg_value = u16::from_le_bytes(reg_value.try_into().unwrap()) as u32;
+
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x0, "V Blank Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x1, "H Blank Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x2, "V Counter Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x3, "Timer 0 Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x4, "Timer 1 Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x5, "Timer 2 Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x6, "Timer 3 Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x7, "Serial Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x8, "DMA 0 Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x9, "DMA 1 Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0xA, "DMA 2 Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0xB, "DMA 3 Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0xC, "Keypad Enable");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0xD, "Game Pak IRQ Enable");
+
+    if changed {
+        Some(reg_value.to_le_bytes().into())
+    } else {
+        None
+    }
+}
+
+fn draw_ime_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
+    let mut changed = false;
+    let mut reg_value = u32::from_le_bytes(reg_value.try_into().unwrap());
+
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x0, "Interrupt Master Enable");
 
     if changed {
         Some(reg_value.to_le_bytes().into())
