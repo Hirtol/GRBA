@@ -4,14 +4,14 @@ use crate::utils::BitOps;
 pub const PALETTE_RAM_SIZE: usize = 1024;
 
 #[derive(Debug, Clone)]
-pub struct PaletteCache {
+pub struct PaletteRam {
     /// The raw bytes used by the emulator for storage
     palette_ram: Box<[u8; PALETTE_RAM_SIZE]>,
     /// The persisted palette cache where RGB values are stored for quick lookup
     cache: Box<[Palette; 512]>,
 }
 
-impl PaletteCache {
+impl PaletteRam {
     pub fn new() -> Self {
         Self::default()
     }
@@ -65,7 +65,7 @@ impl PaletteCache {
     }
 }
 
-impl Default for PaletteCache {
+impl Default for PaletteRam {
     fn default() -> Self {
         Self {
             palette_ram: crate::box_array![0; PALETTE_RAM_SIZE],

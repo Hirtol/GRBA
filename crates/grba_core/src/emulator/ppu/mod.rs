@@ -1,6 +1,6 @@
 use crate::emulator::bus::interrupts::{InterruptManager, Interrupts};
 use crate::emulator::frame::RgbaFrame;
-use crate::emulator::ppu::palette::PaletteCache;
+use crate::emulator::ppu::palette::PaletteRam;
 use crate::emulator::ppu::registers::{
     AlphaBlendCoefficients, BgControl, BgMode, BgRotationParam, BgRotationRef, BgScrolling, BrightnessCoefficients,
     ColorSpecialSelection, LcdControl, LcdStatus, MosaicFunction, VerticalCounter, WindowControl, WindowDimensions,
@@ -48,7 +48,7 @@ pub struct PPU {
     // Ram
     frame_buffer: RgbaFrame,
     current_scanline: Box<[RGBA; DISPLAY_WIDTH as usize]>,
-    palette: PaletteCache,
+    palette: PaletteRam,
     oam_ram: Box<[u8; OAM_RAM_SIZE]>,
     vram: Box<[u8; VRAM_SIZE]>,
 
@@ -98,7 +98,7 @@ impl PPU {
         PPU {
             frame_buffer: RgbaFrame::default(),
             current_scanline: crate::box_array![RGBA::default(); DISPLAY_WIDTH as usize],
-            palette: PaletteCache::default(),
+            palette: PaletteRam::default(),
             oam_ram: crate::box_array![0; OAM_RAM_SIZE],
             vram: crate::box_array![0; VRAM_SIZE],
             disp_cnt: LcdControl::new(),
@@ -173,7 +173,6 @@ impl PPU {
     }
 
     pub fn vblank(&mut self, scheduler: &mut Scheduler, interrupts: &mut InterruptManager) {
-        crate::cpu_log!("ppu-logging"; "Vblank fired at time: {:?}", scheduler.current_time);
         self.disp_stat.set_v_blank_flag(true);
 
         if self.disp_stat.v_blank_irq_enable() {
@@ -222,7 +221,7 @@ impl PPU {
         &mut self.frame_buffer
     }
 
-    pub fn palette_cache(&self) -> &PaletteCache {
+    pub fn palette_cache(&self) -> &PaletteRam {
         &self.palette
     }
 }

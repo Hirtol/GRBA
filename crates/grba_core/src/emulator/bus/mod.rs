@@ -4,7 +4,9 @@ use crate::emulator::bus::bios::GbaBios;
 use crate::emulator::bus::helpers::ReadType;
 use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
 use crate::emulator::bus::keypad::{Keypad, KEYINTERRUPT_END, KEYINTERRUPT_START, KEYSTATUS_END, KEYSTATUS_START};
-use crate::emulator::bus::system_control::{GbaSystemControl, HALT_CNT_ADDR, HaltType, POST_BOOT_FLAG_ADDR, WAIT_CNT_END, WAIT_CNT_START};
+use crate::emulator::bus::system_control::{
+    GbaSystemControl, HaltType, HALT_CNT_ADDR, POST_BOOT_FLAG_ADDR, WAIT_CNT_END, WAIT_CNT_START,
+};
 use crate::emulator::cartridge::Cartridge;
 use crate::emulator::cpu::CPU;
 use crate::emulator::ppu::{LCD_IO_END, PPU};
@@ -150,7 +152,7 @@ impl Bus {
                 // todo!("ROM WRITE 3")
             }
             0xE | 0xF => self.rom.write_sram(addr, data),
-            _ => todo!("Not implemented mem range!"),
+            _ => todo!("Not implemented mem range! {:#010X}", addr),
         }
     }
 
@@ -192,7 +194,7 @@ impl Bus {
             POST_BOOT_FLAG_ADDR => self.system_control.write_post_flag(data),
             HALT_CNT_ADDR => {
                 self.system_control.write_halt_control(data, &mut self.scheduler);
-            },
+            }
             _ => {
                 todo!("IO Write {:#X}", addr)
             }
