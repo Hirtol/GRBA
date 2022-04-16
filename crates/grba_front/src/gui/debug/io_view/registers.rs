@@ -24,7 +24,7 @@ macro_rules! offset {
 
 /// Ideally this would just be `const`, however, until `&mut` in `fn` is stable we can't have `draw` calls in the
 /// [IoView] object const fn.
-pub static IO_REGISTER_VIEWS: Lazy<[IoView; 28]> = Lazy::new(|| {
+pub static IO_REGISTER_VIEWS: Lazy<[IoView; 40]> = Lazy::new(|| {
     [
         IoView::new_16("IEnable", offset!(IO_START, 0x200), draw_ie_if_view),
         IoView::new_16("IFlags", offset!(IO_START, 0x202), draw_ie_if_view),
@@ -44,6 +44,18 @@ pub static IO_REGISTER_VIEWS: Lazy<[IoView; 28]> = Lazy::new(|| {
         IoView::new_16("Bg2VOFS", offset!(BG_SCROLL_START, 10), draw_bg_scroll_view),
         IoView::new_16("Bg3HOFS", offset!(BG_SCROLL_START, 12), draw_bg_scroll_view),
         IoView::new_16("Bg3VOFS", offset!(BG_SCROLL_START, 14), draw_bg_scroll_view),
+        IoView::new_16("Bg2PA", offset!(IO_START, 0x20), unimplemented_view),
+        IoView::new_16("Bg2PB", offset!(IO_START, 0x22), unimplemented_view),
+        IoView::new_16("Bg2PC", offset!(IO_START, 0x24), unimplemented_view),
+        IoView::new_16("Bg2PD", offset!(IO_START, 0x26), unimplemented_view),
+        IoView::new_32("Bg2X", offset!(IO_START, 0x28, 4), unimplemented_view),
+        IoView::new_32("Bg2Y", offset!(IO_START, 0x2C, 4), unimplemented_view),
+        IoView::new_16("Bg3PA", offset!(IO_START, 0x30), unimplemented_view),
+        IoView::new_16("Bg3PB", offset!(IO_START, 0x32), unimplemented_view),
+        IoView::new_16("Bg3PC", offset!(IO_START, 0x34), unimplemented_view),
+        IoView::new_16("Bg3PD", offset!(IO_START, 0x36), unimplemented_view),
+        IoView::new_32("Bg3X", offset!(IO_START, 0x38, 4), unimplemented_view),
+        IoView::new_32("Bg3Y", offset!(IO_START, 0x3C, 4), unimplemented_view),
         IoView::new_16("Win0H", offset!(IO_START, 0x40), draw_window_horizontal_dim_view),
         IoView::new_16("Win0V", offset!(IO_START, 0x44), draw_window_vertical_dim_view),
         IoView::new_16("Win1H", offset!(IO_START, 0x42), draw_window_horizontal_dim_view),
@@ -408,6 +420,11 @@ fn draw_bldy_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
     );
 
     changed.then(|| reg_value.to_le_bytes().into())
+}
+
+pub fn unimplemented_view(ui: &mut Ui, _reg_value: &[u8]) -> Option<Vec<u8>> {
+    ui.label("Unimplemented");
+    None
 }
 
 fn format_u16(reg_value: &[u8]) -> String {

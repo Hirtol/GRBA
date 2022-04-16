@@ -22,6 +22,8 @@ pub struct IoView {
 /// Private data for Egui display
 struct IoFrameData {
     selected_reg: usize,
+    search_str: String,
+    implemented_only: bool,
 }
 
 #[derive(Debug, Default)]
@@ -43,7 +45,11 @@ pub struct IoStateResponse {
 
 impl IoView {
     pub fn new() -> Self {
-        let frame_data = IoFrameData { selected_reg: 0 };
+        let frame_data = IoFrameData {
+            selected_reg: 0,
+            search_str: "".to_string(),
+            implemented_only: true,
+        };
 
         Self {
             state: Default::default(),
@@ -102,7 +108,7 @@ impl DebugView for IoView {
     fn draw(&mut self, ctx: &Context, open: &mut bool) -> Option<Self::EmuUpdate> {
         egui::containers::Window::new("IO Viewer")
             .resizable(true)
-            .vscroll(true)
+            .vscroll(false)
             .open(open)
             .show(ctx, |ui| self.draw_ui(ui))?
             .inner?
@@ -114,8 +120,28 @@ impl IoView {
         egui::containers::panel::SidePanel::left("IO Select")
             .resizable(false)
             .show_inside(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    for (i, reg) in registers::IO_REGISTER_VIEWS.iter().enumerate() {
+                egui::ScrollArea::vertical().always_show_scroll(true).show(ui, |ui| {
+                    let resp = egui::TextEdit::singleline(&mut self.frame_data.search_str)
+                        .hint_text("Search...")
+                        .show(ui);
+
+                    if resp.response.clicked() {
+                        self.frame_data.search_str.clear();
+                    }
+
+                    ui.checkbox(&mut self.frame_data.implemented_only, "Impl Only");
+
+                    ui.separator();
+
+                    for (i, reg) in registers::IO_REGISTER_VIEWS
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, reg)| {
+                            !self.frame_data.implemented_only
+                                || reg.draw as usize != registers::unimplemented_view as usize
+                        })
+                        .filter(|(_, reg)| reg.name.contains(&self.frame_data.search_str))
+                    {
                         ui.selectable_value(&mut self.frame_data.selected_reg, i, reg.name);
                     }
                 })
@@ -126,30 +152,37 @@ impl IoView {
         let selected_reg = &registers::IO_REGISTER_VIEWS[frame_data.selected_reg];
         let data_range = selected_reg.address.clone();
 
-        let data = if state.visible_address_range.contains(data_range.start())
-            && state.visible_address_range.contains(data_range.end())
-        {
-            let start = (data_range.start() - state.visible_address_range.start) as usize;
-            &state.data[start..start + data_range.size_hint().0]
-        } else {
-            &[0; 16][0..data_range.size_hint().0]
-        };
+        // Main panel
+        let response = egui::ScrollArea::vertical()
+            .always_show_scroll(true)
+            .show(ui, |ui| {
+                let data = if state.visible_address_range.contains(data_range.start())
+                    && state.visible_address_range.contains(data_range.end())
+                {
+                    let start = (data_range.start() - state.visible_address_range.start) as usize;
+                    &state.data[start..start + data_range.size_hint().0]
+                } else {
+                    // Some random stub data
+                    &[0; 16][0..data_range.size_hint().0]
+                };
 
-        ui.label(selected_reg.name);
+                ui.label(selected_reg.name);
 
-        ui.separator();
+                ui.separator();
 
-        ui.horizontal(|ui| {
-            ui.label(format!("Address: {:#010X}", data_range.start()));
+                ui.horizontal(|ui| {
+                    ui.label(format!("Address: {:#010X}", data_range.start()));
 
-            ui.separator();
+                    ui.separator();
 
-            ui.label(format!("Value: {}", (selected_reg.format)(data)));
-        });
+                    ui.label(format!("Value: {}", (selected_reg.format)(data)));
+                });
 
-        ui.separator();
+                ui.separator();
 
-        let response = (selected_reg.draw)(ui, data)?;
+                (selected_reg.draw)(ui, data)
+            })
+            .inner?;
 
         Some(IoStateResponse {
             data: response
