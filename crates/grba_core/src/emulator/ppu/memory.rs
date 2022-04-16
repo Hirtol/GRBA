@@ -61,14 +61,14 @@ impl PPU {
             0xA..=0xB => self.bg_control[1].update_byte_le(addr % 2, value),
             0xC..=0xD => self.bg_control[2].update_byte_le(addr % 2, value),
             0xE..=0xF => self.bg_control[3].update_byte_le(addr % 2, value),
-            0x10..=0x11 => self.bg_scrolling[0][0].update_byte_le(addr % 2, value),
-            0x12..=0x13 => self.bg_scrolling[1][0].update_byte_le(addr % 2, value),
-            0x14..=0x15 => self.bg_scrolling[2][0].update_byte_le(addr % 2, value),
-            0x16..=0x17 => self.bg_scrolling[3][0].update_byte_le(addr % 2, value),
-            0x18..=0x19 => self.bg_scrolling[0][1].update_byte_le(addr % 2, value),
-            0x1A..=0x1B => self.bg_scrolling[1][1].update_byte_le(addr % 2, value),
-            0x1C..=0x1D => self.bg_scrolling[2][1].update_byte_le(addr % 2, value),
-            0x1E..=0x1F => self.bg_scrolling[3][1].update_byte_le(addr % 2, value),
+            0x10..=0x11 => self.bg_scrolling[0].x.update_byte_le(addr % 2, value),
+            0x12..=0x13 => self.bg_scrolling[1].x.update_byte_le(addr % 2, value),
+            0x14..=0x15 => self.bg_scrolling[2].x.update_byte_le(addr % 2, value),
+            0x16..=0x17 => self.bg_scrolling[3].x.update_byte_le(addr % 2, value),
+            0x18..=0x19 => self.bg_scrolling[0].y.update_byte_le(addr % 2, value),
+            0x1A..=0x1B => self.bg_scrolling[1].y.update_byte_le(addr % 2, value),
+            0x1C..=0x1D => self.bg_scrolling[2].y.update_byte_le(addr % 2, value),
+            0x1E..=0x1F => self.bg_scrolling[3].y.update_byte_le(addr % 2, value),
             0x20..=0x21 => self.bg_rotation_reference_bg2[0].update_byte_le(addr % 2, value),
             0x22..=0x23 => self.bg_rotation_reference_bg2[1].update_byte_le(addr % 2, value),
             0x24..=0x25 => self.bg_rotation_reference_bg2[2].update_byte_le(addr % 2, value),
@@ -142,21 +142,12 @@ impl PPU {
 
     #[inline]
     pub fn read_oam(&mut self, address: MemoryAddress) -> u8 {
-        // Memory is mirrored
-        let addr = address as usize % OAM_RAM_SIZE;
-
-        self.oam_ram[addr]
+        self.oam_ram.read_oam(address)
     }
 
     #[inline]
     pub fn write_oam_16(&mut self, address: MemoryAddress, value: u16) {
-        let addr = address as usize % OAM_RAM_SIZE;
-        let data = value.to_le_bytes();
-        // Better assembly
-        assert!(addr < (OAM_RAM_SIZE - 1));
-
-        self.oam_ram[addr] = data[0];
-        self.oam_ram[addr + 1] = data[1];
+        self.oam_ram.write_oam_16(address, value);
     }
 }
 

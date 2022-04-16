@@ -22,6 +22,16 @@ impl PaletteRam {
         self.cache[index]
     }
 
+    #[inline(always)]
+    pub fn get_bg_palette(&self, index: u8) -> Palette {
+        self.cache[index as usize]
+    }
+
+    #[inline(always)]
+    pub fn get_obj_palette(&self, index: u8) -> Palette {
+        self.cache[256 + index as usize]
+    }
+
     #[inline]
     pub const fn ram(&self) -> &[u8; PALETTE_RAM_SIZE] {
         &self.palette_ram

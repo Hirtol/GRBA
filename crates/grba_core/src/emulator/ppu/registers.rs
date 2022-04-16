@@ -125,7 +125,7 @@ pub struct BgControl {
     /// 2..=3
     ///
     /// (0-3, in units of 16 KBytes) (=BG Tile Data)
-    pub character_base_block: B2,
+    pub tile_data_base: B2,
     /// 4..=5
     ///
     /// Not used (must be zero) (except in NDS mode: MSBs of char base)
@@ -142,7 +142,7 @@ pub struct BgControl {
     /// 8..=12
     ///
     /// (0-31, in units of 2 KBytes) (=BG Map Data)
-    pub screen_base_block: B5,
+    pub tile_map_base: B5,
     /// Bit 13
     ///
     /// For Bg2/Bg3: Display Area Overflow (0=Transparent, 1=Wraparound)
@@ -161,7 +161,7 @@ pub struct BgControl {
 
 #[bitfield(bits = 16)]
 #[repr(u16)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct BgScrolling {
     /// Offset 0..=511
     pub offset: B9,

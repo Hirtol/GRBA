@@ -1,5 +1,6 @@
 use crate::emulator::bus::interrupts::{InterruptManager, Interrupts};
 use crate::emulator::frame::RgbaFrame;
+use crate::emulator::ppu::oam::OamRam;
 use crate::emulator::ppu::palette::PaletteRam;
 use crate::emulator::ppu::registers::{
     AlphaBlendCoefficients, BgControl, BgMode, BgRotationParam, BgRotationRef, BgScrolling, BrightnessCoefficients,
@@ -40,8 +41,16 @@ pub const FRAME_CYCLES: u32 = 280896;
 #[cfg(feature = "debug-functionality")]
 mod debug;
 mod memory;
+mod oam;
 mod palette;
 pub(crate) mod registers;
+mod tile_rendering;
+
+#[derive(Default, Debug, Clone, Copy)]
+pub struct BgScrollingCollection {
+    pub x: BgScrolling,
+    pub y: BgScrolling,
+}
 
 #[derive(Debug, Clone)]
 pub struct PPU {
@@ -49,7 +58,7 @@ pub struct PPU {
     frame_buffer: RgbaFrame,
     current_scanline: Box<[RGBA; DISPLAY_WIDTH as usize]>,
     palette: PaletteRam,
-    oam_ram: Box<[u8; OAM_RAM_SIZE]>,
+    oam_ram: OamRam,
     vram: Box<[u8; VRAM_SIZE]>,
 
     // Registers
@@ -61,7 +70,7 @@ pub struct PPU {
     /// The background control registers, for backgrounds 0..=3
     bg_control: [BgControl; 4],
     /// The background scrolling/offset registers, where `[0]` is X, and `[1]` is Y when indexing a particular background
-    bg_scrolling: [[BgScrolling; 2]; 4],
+    bg_scrolling: [BgScrollingCollection; 4],
     /// The background rotation references, where `[0]` is `BG2`, and `[1]` is `BG3`
     bg_rotation_x: [BgRotationParam; 2],
     bg_rotation_y: [BgRotationParam; 2],
@@ -99,14 +108,14 @@ impl PPU {
             frame_buffer: RgbaFrame::default(),
             current_scanline: crate::box_array![RGBA::default(); DISPLAY_WIDTH as usize],
             palette: PaletteRam::default(),
-            oam_ram: crate::box_array![0; OAM_RAM_SIZE],
+            oam_ram: OamRam::default(),
             vram: crate::box_array![0; VRAM_SIZE],
             disp_cnt: LcdControl::new(),
             green_swap: 0,
             disp_stat: LcdStatus::new(),
             vertical_counter: VerticalCounter::new(),
             bg_control: [BgControl::new(); 4],
-            bg_scrolling: [[BgScrolling::new(); 2]; 4],
+            bg_scrolling: [BgScrollingCollection::default(); 4],
             bg_rotation_x: [BgRotationParam::new(); 2],
             bg_rotation_y: [BgRotationParam::new(); 2],
             bg_rotation_reference_bg2: [BgRotationRef::new(); 4],
@@ -197,7 +206,7 @@ impl PPU {
         // TODO: Backdrop color (when no background has rendered a pixel there (all transparent) should be filled with palette 0)
         // Only really relevant for Mode0..=2
         match self.disp_cnt.bg_mode() {
-            BgMode::Mode0 => {}
+            BgMode::Mode0 => render_scanline_mode0(self),
             BgMode::Mode1 => {}
             BgMode::Mode2 => {}
             BgMode::Mode3 => render_scanline_mode3(self),
@@ -223,6 +232,12 @@ impl PPU {
 
     pub fn palette_cache(&self) -> &PaletteRam {
         &self.palette
+    }
+}
+
+pub fn render_scanline_mode0(ppu: &mut PPU) {
+    if ppu.disp_cnt.screen_display_bg0() {
+        tile_rendering::render_scanline_regular_bg(ppu, 0);
     }
 }
 
@@ -258,7 +273,7 @@ pub fn render_scanline_mode4(ppu: &mut PPU) {
 
     for i in 0..DISPLAY_WIDTH as usize {
         let palette_index = ppu.vram[vram_index + i];
-        let palette = ppu.palette.get_palette(palette_index as usize);
+        let palette = ppu.palette.get_bg_palette(palette_index);
 
         ppu.current_scanline[i] = palette.to_rgba(255);
     }
