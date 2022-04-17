@@ -222,7 +222,9 @@ impl Application {
             RunningState::AudioLimited => {
                 todo!()
             }
-            RunningState::Unbounded => {}
+            RunningState::Unbounded => {
+                *wait_to = Instant::now();
+            }
         }
 
         // Need to render a frame.

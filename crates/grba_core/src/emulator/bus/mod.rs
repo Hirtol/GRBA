@@ -152,7 +152,13 @@ impl Bus {
                 // todo!("ROM WRITE 3")
             }
             0xE | 0xF => self.rom.write_sram(addr, data),
-            _ => todo!("Not implemented mem range! {:#010X}", addr),
+            _ => {
+                todo!(
+                    "Not implemented mem range! {:#010X} - {:?}",
+                    addr,
+                    self.scheduler.current_time
+                )
+            }
         }
     }
 

@@ -178,7 +178,11 @@ impl CPU {
 
                 (pipeline_subtraction, IRQ_ADDR, Mode::IRQ)
             }
-            _ => todo!("Other exceptions aren't used in the GBA? {:?}", exception),
+            _ => todo!(
+                "Other exceptions aren't used in the GBA? {:?} - {:?}",
+                exception,
+                bus.scheduler.current_time
+            ),
         };
 
         let link_reg_value = self.read_reg(PC_REG) - pipeline_subtraction;
