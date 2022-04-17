@@ -109,20 +109,15 @@ pub fn render_scanline_regular_bg_pixel(ppu: &mut PPU, bg: usize) {
             let map_coord = map_base + ((absolute_pixel_x_coord / TILE_WIDTH_PIXELS as usize) * 2);
 
             match screen_size {
-                RegularScreenSize::_512X256 | RegularScreenSize::_512X512 if (absolute_pixel_x_coord % 512) > 255 => {
+                RegularScreenSize::_512X256 | RegularScreenSize::_512X512 if absolute_pixel_x_coord > 255 => {
                     // Due to the fact that screen base blocks are arrayed in sets of 32x32 tiles we need to add
                     // an offset to go to the next block once we cross into its territory.
-                    map_coord + BG_MAP_TEXT_SIZE
+                    // We subtract one map_line (32 x 2 bytes)s worth to get the correct map line.
+                    map_coord + (BG_MAP_TEXT_SIZE - 64)
                 }
                 _ => map_coord,
             }
         };
-        if i == 10 && ppu.vertical_counter.current_scanline() == 24 {
-            println!(
-                "{:?} - abs_x: {}, map_coord: {:?}",
-                scanline_to_draw, absolute_pixel_x_coord, map_coord
-            );
-        }
 
         let map_item: BgMapTextData = u16::from_le_bytes(ppu.vram[map_coord..map_coord + 2].try_into().unwrap()).into();
 
