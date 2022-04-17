@@ -35,6 +35,7 @@ pub struct EmuOptions {
 
 pub struct EmuDebugging {
     pub breakpoints: Vec<MemoryAddress>,
+    pub break_at_cycle: Option<u64>,
 }
 
 impl Default for EmuOptions {
@@ -66,6 +67,7 @@ impl GBAEmulator {
             options,
             debug: EmuDebugging {
                 breakpoints: Vec::new(),
+                break_at_cycle: None
             },
         }
     }
@@ -207,8 +209,13 @@ impl GBAEmulator {
         let vsync = self.step_instruction();
         let next_pc = self.cpu.registers.next_pc();
         let breakpoint_hit = self.debug.breakpoints.iter().copied().any(|addr| next_pc == addr);
-
-        (vsync, breakpoint_hit)
+        
+        if matches!(self.debug.break_at_cycle, Some(cycle) if cycle <= self.bus.scheduler.current_time.0) {
+            self.debug.break_at_cycle = None;
+            (vsync, true)
+        } else {
+            (vsync, breakpoint_hit)
+        }
     }
 
     pub fn key_down(&mut self, key: InputKeys) {

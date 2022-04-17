@@ -13,6 +13,7 @@ use crate::gui::debug::messages::{DebugMessageResponse, DebugMessageUi};
 use crate::gui::debug::palette_view::PaletteView;
 
 mod colors;
+mod utils;
 pub mod cpu_state_view;
 pub mod execution_view;
 pub mod io_view;

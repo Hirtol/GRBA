@@ -21,6 +21,7 @@ pub struct CpuExecutionView {
     debug_enabled: bool,
     selected_address: Option<Address>,
     force_state: Option<State>,
+    break_cycle_input: String,
 }
 
 #[derive(Debug, Default)]
@@ -53,6 +54,7 @@ impl CpuExecutionView {
             capstone,
             debug_enabled: false,
             break_points: vec![],
+            break_cycle_input: String::new(),
         }
     }
 }
@@ -63,6 +65,7 @@ pub enum CpuExecutionUpdate {
     StepFrame,
     SetDebug(bool),
     SetBreakpoints(Vec<MemoryAddress>),
+    SetBreakCycle(u64),
 }
 
 impl DebugView for CpuExecutionView {
@@ -106,6 +109,9 @@ impl DebugView for CpuExecutionView {
                 }
                 CpuExecutionUpdate::SetDebug(value) => emu.0.options.debugging = value,
                 CpuExecutionUpdate::SetBreakpoints(breakpoints) => emu.debug_info().breakpoints = breakpoints,
+                CpuExecutionUpdate::SetBreakCycle(cycle) => {
+                    emu.debug_info().break_at_cycle = Some(cycle);
+                }
             };
         }
     }
@@ -282,6 +288,10 @@ impl CpuExecutionView {
                 .clicked()
             {
                 updates.push(CpuExecutionUpdate::SetDebug(self.debug_enabled));
+            }
+
+            if let Some(cycle) = super::utils::text_edit_uint(ui, &mut self.break_cycle_input, "Cycle Break", 10) {
+                updates.push(CpuExecutionUpdate::SetBreakCycle(cycle));
             }
         });
     }
