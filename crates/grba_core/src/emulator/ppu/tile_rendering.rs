@@ -10,6 +10,7 @@ pub const BG_MAP_TEXT_SIZE: usize = 0x800;
 pub const CHAR_BLOCK_SIZE: usize = 1024 * 16;
 
 const TILE_WIDTH_PIXELS: u16 = 8;
+const TILE_HEIGHT_PIXELS: u16 = 8;
 const TILE_WIDTH_8BPP: u16 = 8;
 const TILE_WIDTH_4BPP: u16 = 4;
 const TILE_SIZE_8BPP: u32 = 64;
@@ -72,6 +73,88 @@ impl RegularScreenSize {
 
     const fn total_map_size(&self) -> u16 {
         self.tiles_wide() * self.tiles_high() * 2
+    }
+}
+
+#[inline]
+pub fn render_scanline_regular_bg_pixel(ppu: &mut PPU, bg: usize) {
+    let cnt = &ppu.bg_control[bg];
+    let scrolling = &ppu.bg_scrolling[bg];
+    let (x_scroll, y_scroll) = (scrolling.x.offset(), scrolling.y.offset());
+    let screen_size = RegularScreenSize::from_u8(cnt.screen_size());
+    let (x_max_px, y_max_px) = (
+        screen_size.tiles_wide() * TILE_WIDTH_PIXELS,
+        screen_size.tiles_high() * TILE_HEIGHT_PIXELS,
+    );
+
+    let tile_base = cnt.tile_data_base() as usize * CHAR_BLOCK_SIZE;
+    let map_base = cnt.tile_map_base() as usize * BG_MAP_TEXT_SIZE;
+    let is_8bpp = cnt.colors_palettes();
+
+    let scanline_to_draw = (ppu.vertical_counter.current_scanline() as u16).wrapping_add(y_scroll) % y_max_px;
+
+    let tile_line_y = scanline_to_draw % TILE_HEIGHT_PIXELS;
+    // + ((x_scroll / TILE_WIDTH_PIXELS) as usize * 2) would be nice, but difficult as we would then need to check how
+    // many pixels to skip in that tile.
+    let map_base = map_base + ((scanline_to_draw / TILE_HEIGHT_PIXELS) as usize * 64);
+
+    for i in 0..DISPLAY_WIDTH as usize {
+        // If the current pixel has already been written to by a higher-priority background/sprite, skip it.
+        if ppu.current_scanline[i] != 0 {
+            continue;
+        }
+
+        let absolute_pixel_x_coord = (i + x_scroll as usize) % x_max_px as usize;
+        let map_coord = {
+            let map_coord = map_base + ((absolute_pixel_x_coord / TILE_WIDTH_PIXELS as usize) * 2);
+
+            match screen_size {
+                RegularScreenSize::_512X256 | RegularScreenSize::_512X512 if (absolute_pixel_x_coord % 512) > 255 => {
+                    // Due to the fact that screen base blocks are arrayed in sets of 32x32 tiles we need to add
+                    // an offset to go to the next block once we cross into its territory.
+                    map_coord + BG_MAP_TEXT_SIZE
+                }
+                _ => map_coord,
+            }
+        };
+        if i == 10 && ppu.vertical_counter.current_scanline() == 24 {
+            println!(
+                "{:?} - abs_x: {}, map_coord: {:?}",
+                scanline_to_draw, absolute_pixel_x_coord, map_coord
+            );
+        }
+
+        let map_item: BgMapTextData = u16::from_le_bytes(ppu.vram[map_coord..map_coord + 2].try_into().unwrap()).into();
+
+        // For tile flipping
+        let tile_y_coord = tile_line_y ^ (0b111 * map_item.vertical_flip() as u16);
+        let tile_x_coord =
+            (absolute_pixel_x_coord % TILE_WIDTH_PIXELS as usize) ^ (0b111 * map_item.horizontal_flip() as usize);
+        let tile_num = map_item.tile_number() as u32;
+
+        let palette_index = if is_8bpp {
+            let tile_line_addr =
+                tile_base + (tile_num * TILE_SIZE_8BPP + (tile_y_coord * TILE_WIDTH_8BPP) as u32) as usize;
+            let tile_pixel_addr = tile_line_addr + tile_x_coord;
+            let palette_index = ppu.vram[tile_pixel_addr];
+
+            palette_index
+        } else {
+            let palette_base = map_item.palette_number() * 16;
+            let tile_line_addr =
+                tile_base + (tile_num * TILE_SIZE_4BPP + (tile_y_coord * TILE_WIDTH_4BPP) as u32) as usize;
+            let tile_pixel_addr = tile_line_addr + (tile_x_coord / 2);
+            let two_palette_indexes = ppu.vram[tile_pixel_addr];
+            let palette_index = (two_palette_indexes >> ((tile_x_coord % 2) * 4)) & 0x0F;
+
+            if palette_index != 0 {
+                palette_index + palette_base
+            } else {
+                palette_index
+            }
+        };
+
+        ppu.current_scanline[i] = palette::convert_bg_to_absolute_palette(palette_index);
     }
 }
 
@@ -192,7 +275,10 @@ fn draw_bg_line(
                     if *pixels_to_skip == 1 {
                         // We should skip the first pixel in the pair
                         *pixels_to_skip = 0;
-                        let palette_index = palette_base + two_pixels.get_bits(4, 7);
+                        let last_pixel = two_pixels.get_bits(4, 7);
+                        // We want to just set 0
+                        let palette_index = if last_pixel != 0 { palette_base + last_pixel } else { 0 };
+
                         ppu.current_scanline[*pixels_drawn as usize] =
                             palette::convert_bg_to_absolute_palette(palette_index);
                         *pixels_drawn += 1;

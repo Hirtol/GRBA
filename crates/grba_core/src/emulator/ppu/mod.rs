@@ -233,6 +233,8 @@ impl PPU {
         for (i, pixel) in self.current_scanline.iter().enumerate() {
             framebuffer_slice[i] = self.palette.get_palette(*pixel as usize).to_rgba(255);
         }
+
+        self.current_scanline.fill(0);
     }
 
     pub fn frame_buffer(&mut self) -> &mut RgbaFrame {
@@ -246,7 +248,7 @@ impl PPU {
 
 pub fn render_scanline_mode0(ppu: &mut PPU) {
     if ppu.disp_cnt.screen_display_bg0() {
-        tile_rendering::render_scanline_regular_bg(ppu, 0);
+        tile_rendering::render_scanline_regular_bg_pixel(ppu, 0);
     }
 }
 
