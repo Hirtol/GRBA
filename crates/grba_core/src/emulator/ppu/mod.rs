@@ -46,6 +46,8 @@ mod palette;
 pub(crate) mod registers;
 mod tile_rendering;
 
+pub type PaletteIndex = u16;
+
 #[derive(Default, Debug, Clone, Copy)]
 pub struct BgScrollingCollection {
     pub x: BgScrolling,
@@ -56,7 +58,7 @@ pub struct BgScrollingCollection {
 pub struct PPU {
     // Ram
     frame_buffer: RgbaFrame,
-    current_scanline: Box<[RGBA; DISPLAY_WIDTH as usize]>,
+    current_scanline: Box<[PaletteIndex; DISPLAY_WIDTH as usize]>,
     palette: PaletteRam,
     oam_ram: OamRam,
     vram: Box<[u8; VRAM_SIZE]>,
@@ -106,7 +108,7 @@ impl PPU {
     pub fn new() -> Self {
         PPU {
             frame_buffer: RgbaFrame::default(),
-            current_scanline: crate::box_array![RGBA::default(); DISPLAY_WIDTH as usize],
+            current_scanline: crate::box_array![0; DISPLAY_WIDTH as usize],
             palette: PaletteRam::default(),
             oam_ram: OamRam::default(),
             vram: crate::box_array![0; VRAM_SIZE],
@@ -202,14 +204,17 @@ impl PPU {
     }
 
     fn render_scanline(&mut self) {
-        crate::cpu_log!("ppu-logging"; "Rendering scanline {} - Mode: {:?}", self.vertical_counter.current_scanline(), self.disp_cnt.bg_mode());
-        // TODO: Backdrop color (when no background has rendered a pixel there (all transparent) should be filled with palette 0)
         // Only really relevant for Mode0..=2
         match self.disp_cnt.bg_mode() {
             BgMode::Mode0 => render_scanline_mode0(self),
             BgMode::Mode1 => {}
             BgMode::Mode2 => {}
-            BgMode::Mode3 => render_scanline_mode3(self),
+            BgMode::Mode3 => {
+                // Due to how we implement rendering we rely on palette indexes in the `current_scanline`.
+                // For mode 3 we therefore render directly to the framebuffer, but we therefore need to do an early return.
+                render_scanline_mode3(self);
+                return;
+            }
             BgMode::Mode4 => render_scanline_mode4(self),
             BgMode::Mode5 => {}
         }
@@ -221,9 +226,13 @@ impl PPU {
     #[inline]
     fn push_current_scanline_to_framebuffer(&mut self) {
         let current_address: usize = self.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
-        // Copy the value of the current scanline to the framebuffer.
-        self.frame_buffer[current_address..current_address + DISPLAY_WIDTH as usize]
-            .copy_from_slice(&*self.current_scanline);
+        let framebuffer_slice = &mut self.frame_buffer[current_address..current_address + DISPLAY_WIDTH as usize];
+
+        // Copy the values of the current scanline to the framebuffer.
+        //TODO: Should backdrop color (palette index 0) be based on the highest-priority BG or the absolute palette 0?
+        for (i, pixel) in self.current_scanline.iter().enumerate() {
+            framebuffer_slice[i] = self.palette.get_palette(*pixel as usize).to_rgba(255);
+        }
     }
 
     pub fn frame_buffer(&mut self) -> &mut RgbaFrame {
@@ -245,12 +254,15 @@ pub fn render_scanline_mode0(ppu: &mut PPU) {
 pub fn render_scanline_mode3(ppu: &mut PPU) {
     let vram_index = ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
 
+    let cur_frame_addr: usize = ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
+    // Since this mode is a little special we directly render to the framebuffer, as we don't get paletted to index.
+    let framebuffer_slice = &mut ppu.frame_buffer[cur_frame_addr..cur_frame_addr + DISPLAY_WIDTH as usize];
     for i in 0..DISPLAY_WIDTH as usize {
         // * 2 since we're rendering one pixel per two bytes
         let index = (vram_index + i) * 2;
         let pixel = u16::from_le_bytes(ppu.vram[index..=index + 1].try_into().unwrap());
 
-        ppu.current_scanline[i] = RGBA {
+        framebuffer_slice[i] = RGBA {
             red: palette::convert_5_to_8_bit_color(pixel.get_bits(0, 4) as u8),
             green: palette::convert_5_to_8_bit_color(pixel.get_bits(5, 9) as u8),
             blue: palette::convert_5_to_8_bit_color(pixel.get_bits(10, 14) as u8),
@@ -273,8 +285,7 @@ pub fn render_scanline_mode4(ppu: &mut PPU) {
 
     for i in 0..DISPLAY_WIDTH as usize {
         let palette_index = ppu.vram[vram_index + i];
-        let palette = ppu.palette.get_bg_palette(palette_index);
-
-        ppu.current_scanline[i] = palette.to_rgba(255);
+        // Background palettes are always located in the first 256 bytes of the palette ram.
+        ppu.current_scanline[i] = palette::convert_bg_to_absolute_palette(palette_index);
     }
 }

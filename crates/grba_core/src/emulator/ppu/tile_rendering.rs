@@ -1,7 +1,7 @@
 use modular_bitfield::bitfield;
 use modular_bitfield::prelude::{B10, B4};
 
-use crate::emulator::ppu::PPU;
+use crate::emulator::ppu::{palette, PPU};
 use crate::utils::BitOps;
 use crate::DISPLAY_WIDTH;
 
@@ -9,6 +9,7 @@ use crate::DISPLAY_WIDTH;
 pub const BG_MAP_TEXT_SIZE: usize = 0x800;
 pub const CHAR_BLOCK_SIZE: usize = 1024 * 16;
 
+const TILE_WIDTH_PIXELS: u16 = 8;
 const TILE_WIDTH_8BPP: u16 = 8;
 const TILE_WIDTH_4BPP: u16 = 4;
 const TILE_SIZE_8BPP: u32 = 64;
@@ -16,7 +17,7 @@ const TILE_SIZE_4BPP: u32 = 32;
 /// The amount of tiles displayed per row, assuming no scrolling.
 ///
 /// `= 30`
-const DISPLAYED_TILES_PER_ROW: u16 = DISPLAY_WIDTH as u16 / TILE_WIDTH_8BPP;
+const DISPLAYED_TILES_PER_ROW: u16 = DISPLAY_WIDTH as u16 / TILE_WIDTH_PIXELS;
 
 #[bitfield(bits = 16)]
 #[repr(u16)]
@@ -89,7 +90,7 @@ pub fn render_scanline_regular_bg(ppu: &mut PPU, bg: usize) {
     // * 2 as each tile map entry is 2 bytes. TODO: Verify map layout for larger (32x64, 64x32, 64x64) screens.
     let tile_map_entries = screen_size.tiles_wide() * 2;
     let tile_lower_bound: u16 =
-        ((scanline_to_be_rendered / TILE_WIDTH_8BPP) * tile_map_entries) + (x_scroll / TILE_WIDTH_8BPP);
+        ((scanline_to_be_rendered / TILE_WIDTH_PIXELS) * tile_map_entries) + (x_scroll / TILE_WIDTH_8BPP);
     let mut tile_higher_bound = tile_lower_bound + DISPLAYED_TILES_PER_ROW * 2;
 
     // Which particular y coordinate to use from the tiles this scanline.
@@ -110,8 +111,8 @@ pub fn render_scanline_regular_bg(ppu: &mut PPU, bg: usize) {
         // Since we have a 1d representation of the tile map we have to subtract `tile_map_entries` to 'negate'
         // the effect of the x wraparound (since this wraparound
         // would have us go to the next y-tile line in the tile map)
-        if (x_scroll + pixels_drawn as u16) >= (screen_size.tiles_wide() * TILE_WIDTH_8BPP) {
-            i -= tile_map_entries;
+        if (x_scroll + pixels_drawn as u16) >= (screen_size.tiles_wide() * TILE_WIDTH_4BPP) {
+            // i -= tile_map_entries;
         }
 
         let addr = map_base + (i % total_tile_map_size) as usize;
@@ -159,8 +160,7 @@ fn draw_bg_line(
                     break;
                 }
 
-                let colour = ppu.palette.get_bg_palette(palette_index);
-                ppu.current_scanline[*pixels_drawn as usize] = colour.to_rgba(255);
+                ppu.current_scanline[*pixels_drawn as usize] = palette::convert_bg_to_absolute_palette(palette_index);
                 *pixels_drawn += 1;
             }
         } else {
@@ -175,8 +175,7 @@ fn draw_bg_line(
                     break;
                 }
 
-                let colour = ppu.palette.get_bg_palette(palette_index);
-                ppu.current_scanline[*pixels_drawn as usize] = colour.to_rgba(255);
+                ppu.current_scanline[*pixels_drawn as usize] = palette::convert_bg_to_absolute_palette(palette_index);
                 *pixels_drawn += 1;
             }
         }
@@ -193,8 +192,9 @@ fn draw_bg_line(
                     if *pixels_to_skip == 1 {
                         // We should skip the first pixel in the pair
                         *pixels_to_skip = 0;
-                        let pixel = ppu.palette.get_bg_palette(palette_base + two_pixels.get_bits(4, 7));
-                        ppu.current_scanline[*pixels_drawn as usize] = pixel.to_rgba(255);
+                        let palette_index = palette_base + two_pixels.get_bits(4, 7);
+                        ppu.current_scanline[*pixels_drawn as usize] =
+                            palette::convert_bg_to_absolute_palette(palette_index);
                         *pixels_drawn += 1;
                     } else {
                         *pixels_to_skip -= 2;
@@ -207,8 +207,9 @@ fn draw_bg_line(
                         } else {
                             // Draw one last pixel
                             //TODO: Verify if 0..=3 or 4..=7
-                            let pixel = ppu.palette.get_bg_palette(palette_base + two_pixels.get_bits(0, 3));
-                            ppu.current_scanline[*pixels_drawn as usize] = pixel.to_rgba(255);
+                            let palette_index = palette_base + two_pixels.get_bits(0, 3);
+                            ppu.current_scanline[*pixels_drawn as usize] =
+                                palette::convert_bg_to_absolute_palette(palette_index);
                             *pixels_drawn += 1;
                             break;
                         }
@@ -219,10 +220,8 @@ fn draw_bg_line(
                         palette_base + two_pixels.get_bits(4, 7),
                     );
 
-                    let first_pixel = ppu.palette.get_bg_palette(pal_1);
-                    let second_pixel = ppu.palette.get_bg_palette(pal_2);
-                    ppu.current_scanline[*pixels_drawn as usize] = first_pixel.to_rgba(255);
-                    ppu.current_scanline[*pixels_drawn as usize + 1] = second_pixel.to_rgba(255);
+                    ppu.current_scanline[*pixels_drawn as usize] = palette::convert_bg_to_absolute_palette(pal_1);
+                    ppu.current_scanline[*pixels_drawn as usize + 1] = palette::convert_bg_to_absolute_palette(pal_2);
                     *pixels_drawn += 2;
                 }
             }
@@ -232,8 +231,9 @@ fn draw_bg_line(
                     if *pixels_to_skip == 1 {
                         // We should skip the first pixel in the pair
                         *pixels_to_skip = 0;
-                        let pixel = ppu.palette.get_bg_palette(palette_base + two_pixels.get_bits(4, 7));
-                        ppu.current_scanline[*pixels_drawn as usize] = pixel.to_rgba(255);
+                        let palette_index = palette_base + two_pixels.get_bits(4, 7);
+                        ppu.current_scanline[*pixels_drawn as usize] =
+                            palette::convert_bg_to_absolute_palette(palette_index);
                         *pixels_drawn += 1;
                     } else {
                         *pixels_to_skip -= 2;
@@ -246,8 +246,9 @@ fn draw_bg_line(
                         } else {
                             // Draw one last pixel
                             //TODO: Verify if 0..=3 or 4..=7
-                            let pixel = ppu.palette.get_bg_palette(palette_base + two_pixels.get_bits(0, 3));
-                            ppu.current_scanline[*pixels_drawn as usize] = pixel.to_rgba(255);
+                            let palette_index = palette_base + two_pixels.get_bits(0, 3);
+                            ppu.current_scanline[*pixels_drawn as usize] =
+                                palette::convert_bg_to_absolute_palette(palette_index);
                             *pixels_drawn += 1;
                             break;
                         }
@@ -258,10 +259,8 @@ fn draw_bg_line(
                         palette_base + two_pixels.get_bits(4, 7),
                     );
 
-                    let first_pixel = ppu.palette.get_bg_palette(pal_1);
-                    let second_pixel = ppu.palette.get_bg_palette(pal_2);
-                    ppu.current_scanline[*pixels_drawn as usize] = first_pixel.to_rgba(255);
-                    ppu.current_scanline[*pixels_drawn as usize + 1] = second_pixel.to_rgba(255);
+                    ppu.current_scanline[*pixels_drawn as usize] = palette::convert_bg_to_absolute_palette(pal_1);
+                    ppu.current_scanline[*pixels_drawn as usize + 1] = palette::convert_bg_to_absolute_palette(pal_2);
                     *pixels_drawn += 2;
                 }
             }

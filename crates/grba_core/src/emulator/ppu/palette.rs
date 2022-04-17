@@ -121,3 +121,15 @@ pub const fn convert_5_to_8_bit_color(color_5: u8) -> u8 {
     let final_color = color_5 << 3;
     final_color | (color_5 >> 2)
 }
+
+/// Identity function as BG palettes always start at 0x0
+#[inline(always)]
+pub const fn convert_bg_to_absolute_palette(bg_index: u8) -> u16 {
+    bg_index as u16
+}
+
+/// Simply offset by 256 to get the correct index for the OBJ palette.
+#[inline(always)]
+pub const fn convert_obj_to_absolute_palette(obj_index: u8) -> u16 {
+    256 + obj_index as u16
+}
