@@ -53,6 +53,7 @@ impl Bus {
         result
     }
 
+    #[inline]
     pub fn read_32(&mut self, addr: MemoryAddress, cpu: &CPU) -> u32 {
         let addr = u32::align_address(addr);
         // Temporary implementation for ease of writing.
@@ -66,6 +67,7 @@ impl Bus {
         ])
     }
 
+    #[inline]
     pub fn read_16(&mut self, addr: MemoryAddress, cpu: &CPU) -> u16 {
         let addr = u16::align_address(addr);
 

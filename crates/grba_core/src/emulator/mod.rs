@@ -67,7 +67,7 @@ impl GBAEmulator {
             options,
             debug: EmuDebugging {
                 breakpoints: Vec::new(),
-                break_at_cycle: None
+                break_at_cycle: None,
             },
         }
     }
@@ -102,6 +102,7 @@ impl GBAEmulator {
     /// # Returns
     ///
     /// `true` if `Vblank` was reached, `false` otherwise.
+    #[inline(always)]
     pub fn step_instruction(&mut self) -> bool {
         self.cpu.step_instruction(&mut self.bus);
 
@@ -209,7 +210,7 @@ impl GBAEmulator {
         let vsync = self.step_instruction();
         let next_pc = self.cpu.registers.next_pc();
         let breakpoint_hit = self.debug.breakpoints.iter().copied().any(|addr| next_pc == addr);
-        
+
         if matches!(self.debug.break_at_cycle, Some(cycle) if cycle <= self.bus.scheduler.current_time.0) {
             self.debug.break_at_cycle = None;
             (vsync, true)

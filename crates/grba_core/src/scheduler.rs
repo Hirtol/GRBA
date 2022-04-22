@@ -61,6 +61,7 @@ impl Scheduler {
         self.event_queue.clear();
     }
 
+    #[inline(always)]
     pub fn add_time(&mut self, time: i32) {
         self.current_time.0 += time as u64;
     }

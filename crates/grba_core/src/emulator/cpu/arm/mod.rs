@@ -22,6 +22,7 @@ pub struct ArmV4;
 
 impl ArmV4 {
     /// Check if the conditional flag set in the provided `instruction` holds.
+    #[inline(always)]
     pub fn condition_holds(cpu: &CPU, instruction: ArmInstruction) -> bool {
         // Upper 4 bits contain the condition code for all ARM instructions
         let flags = instruction >> 28;

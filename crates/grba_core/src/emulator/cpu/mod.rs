@@ -55,6 +55,7 @@ impl CPU {
 
     /// Main stepping function.
     /// Advances the CPU one instruction.
+    #[inline(always)]
     pub fn step_instruction(&mut self, bus: &mut Bus) {
         // We immediately advance the pipeline once to recover from pipeline flush (which only partly fills the pipeline)
         self.advance_pipeline(bus);
@@ -74,7 +75,7 @@ impl CPU {
     }
 
     // Sure hope this gets inlined to prevent excessive `match self.state() {}` calls >.>
-    #[inline]
+    #[inline(always)]
     fn advance_pipeline(&mut self, bus: &mut Bus) {
         self.pipeline[0] = self.pipeline[1];
         self.pipeline[1] = self.pipeline[2];
@@ -110,7 +111,7 @@ impl CPU {
     }
 
     #[profiling::function]
-    #[inline]
+    #[inline(always)]
     fn execute_arm(&mut self, bus: &mut Bus, instruction: ArmInstruction) {
         if !ArmV4::condition_holds(self, instruction) {
             return;
@@ -123,7 +124,7 @@ impl CPU {
     }
 
     #[profiling::function]
-    #[inline]
+    #[inline(always)]
     fn execute_thumb(&mut self, bus: &mut Bus, instruction: ThumbInstruction) {
         let lut_index = instruction.get_bits(8, 15) as usize;
 
