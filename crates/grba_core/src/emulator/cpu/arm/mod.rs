@@ -122,7 +122,9 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // Branch:
         // 101X_XXXX_XXXX
         if (i & 0xE00) == 0b1010_0000_0000 {
-            result[i] = ArmV4::branch_and_link;
+            if let Some(fns) = ArmV4::fill_lut_branch_and_link(i as u32) {
+                result[i] = fns;
+            }
             continue;
         }
 
@@ -157,7 +159,9 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         // Data Processing Immediate:
         // 001X_XXXX_XXXX
         if (i & 0xE00) == 0b0010_0000_0000 {
-            result[i] = ArmV4::data_processing_immediate;
+            if let Some(fns) = ArmV4::fill_lut_data_processing_immediate(i as u32) {
+                result[i] = fns;
+            }
             continue;
         }
 
@@ -199,6 +203,6 @@ mod tests {
         // Check Data Processing matching (AND operation in immediate mode)
         let fn_ref = lut[0b0010_0000_0000];
 
-        assert_eq!(fn_ref as usize, ArmV4::data_processing_immediate as usize);
+        assert_eq!(fn_ref as usize, ArmV4::data_processing_immediate::<0, false> as usize);
     }
 }

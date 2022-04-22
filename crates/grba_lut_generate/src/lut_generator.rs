@@ -1,18 +1,14 @@
-use std::clone;
-use std::ops::{Deref, RangeInclusive};
+use std::ops::Deref;
 
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::parse::{Parse, ParseStream};
-use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, AttributeArgs, Expr, ExprLit, FnArg, ItemFn, Lit, Pat, Path, RangeLimits, Token, Type};
+use syn::{ItemFn, Pat, Type};
 
 use crate::config::{BitfieldFields, BitfieldType, LutMeta};
-use crate::errors::CombineError;
 
-/// Analyzes the given token stream for `#[bitfield]` properties and expands code if valid.
+/// Analyzes the given token stream for `#[create_lut]` properties and expands code if valid.
 pub fn analyse_and_expand(args: TokenStream, input: TokenStream) -> TokenStream {
     match analyse_and_expand_or_error(args, input) {
         Ok(output) => output,
@@ -20,11 +16,11 @@ pub fn analyse_and_expand(args: TokenStream, input: TokenStream) -> TokenStream 
     }
 }
 
-/// Analyzes the given token stream for `#[bitfield]` properties and expands code if valid.
+/// Analyzes the given token stream for `#[create_lut]` properties and expands code if valid.
 ///
 /// # Errors
 ///
-/// If the given token stream does not yield a valid `#[bitfield]` specifier.
+/// If the given token stream does not yield a valid `#[create_lut]` specifier.
 fn analyse_and_expand_or_error(args: TokenStream, input: TokenStream) -> syn::parse::Result<TokenStream> {
     let input = syn::parse::<syn::ItemFn>(input.into())?;
     let args = syn::parse_macro_input::parse::<LutMeta>(args.into())?;
@@ -32,7 +28,7 @@ fn analyse_and_expand_or_error(args: TokenStream, input: TokenStream) -> syn::pa
     let gen_info = generate_info(input, args)?;
     let input = &gen_info.fn_input;
 
-    let expanded_lut = expand_lut(&gen_info);
+    let expanded_lut = expand_lut_fn(&gen_info);
 
     let output = quote::quote_spanned! {input.span()=>
         #expanded_lut
@@ -43,51 +39,44 @@ fn analyse_and_expand_or_error(args: TokenStream, input: TokenStream) -> syn::pa
     Ok(output)
 }
 
-fn expand_lut(gen_info: &LutGeneration) -> TokenStream {
-    let cartesian_input: Vec<_> = gen_info
+/// Expand the LUT function, for the following example:
+///
+/// ```rust
+///
+/// #[grba_lut_generate::create_lut(u32, SET_FLAGS=4)]
+/// fn data_processing<const SET_FLAGS: bool>(cpu: &mut CPU) {
+///     // Something to do with data processing
+/// }
+/// ```
+///
+/// It will look like this:
+///
+/// ```ignore
+/// pub fn fill_lut_data_processing(lookup: u32) -> Option<fn(cpu: &mut CPU)>{
+///   if lookup.get_bits(4u8,4u8)==0u8 as u32 {
+///     return Some(Self::data_processing:: <{
+///       0u8!=0
+///     }>);
+///   }
+///   // Remainder of LUT...
+/// }
+/// ```
+fn expand_lut_fn(gen_info: &LutGeneration) -> TokenStream {
+    let index_ident = quote::format_ident!("lookup");
+    let lut_index_type = &gen_info.args.lut_index;
+
+    let original_function = &gen_info.fn_input.sig.ident;
+    let bitfield_inputs = gen_info
         .bitfield_params
         .iter()
         .map(|i| i.associated_bitfield.b_type.as_inputs())
-        .multi_cartesian_product()
-        .collect();
+        .multi_cartesian_product();
 
-    let fn_identities = (0..cartesian_input.len())
-        .map(|i| quote::format_ident!("{}_gen_{}", gen_info.fn_input.sig.ident, i))
-        .collect_vec();
-    let function_instances = cartesian_input
-        .iter()
-        .zip(fn_identities.iter())
-        .map(|(bitfield_input, fn_identity)| expand_fn_invocation(gen_info, bitfield_input, fn_identity));
+    // All if statements + function invocations for the const parameters we have.
+    let lut_index_checkers = bitfield_inputs.into_iter().map(|inputs| {
+        let bitfield_params = gen_info.bitfield_params.iter().zip(inputs);
 
-    let fill_lut_ident = quote::format_ident!("fill_lut_{}", gen_info.fn_input.sig.ident);
-    let lut_index_type = &gen_info.args.lut_index;
-    let rem_types = gen_info.remaining_params.iter().map(|p| &p.original);
-    let final_function_type = quote::quote_spanned! {gen_info.fn_input.span()=>
-        fn(#(#rem_types),*)
-    };
-    let lut = expand_fill_lut(gen_info, &fn_identities, &cartesian_input);
-
-    let output = quote::quote_spanned! {gen_info.fn_input.span()=>
-        #lut
-
-        #(#function_instances)*
-    };
-
-    output
-}
-
-fn expand_fill_lut(gen_info: &LutGeneration, identities: &[Ident], bitfield_inputs: &[Vec<u8>]) -> TokenStream {
-    let fill_lut_ident = quote::format_ident!("fill_lut_{}", gen_info.fn_input.sig.ident);
-    let index_ident = quote::format_ident!("lookup");
-
-    let lut_index_type = &gen_info.args.lut_index;
-    let rem_types = gen_info.remaining_params.iter().map(|p| &p.original);
-    let final_function_type = quote::quote_spanned! {gen_info.fn_input.span()=>
-        fn(#(#rem_types),*)
-    };
-
-    let final_if_statements = identities.into_iter().zip(bitfield_inputs).map(|(ident, inputs)| {
-        let bitfield_params = gen_info.bitfield_params.iter().zip(inputs).map(|(p, value)| {
+        let bool_exprs = bitfield_params.clone().map(|(p, value)| {
             let (begin_bit, end_bin_inclusive) = match &p.associated_bitfield.b_type {
                 BitfieldType::Range(range) => (*range.start(), *range.end()),
                 BitfieldType::BitIndex(index) => (*index, *index),
@@ -98,73 +87,50 @@ fn expand_fill_lut(gen_info: &LutGeneration, identities: &[Ident], bitfield_inpu
             }
         });
 
-        quote::quote_spanned! {ident.span()=>
-            if #(#bitfield_params)&&* {
-                return Some(Self::#ident);
+        let const_gen_args = bitfield_params.map(|(param, input)| match &param.ty {
+            BitfieldParameterType::Bool => {
+                quote::quote! {
+                    {#input != 0}
+                }
+            }
+            ty => quote::quote! {
+                {#input as #ty}
+            },
+        });
+
+        quote::quote_spanned! {gen_info.fn_input.span()=>
+            if #(#bool_exprs)&&* {
+                return Some(Self::#original_function::<#(#const_gen_args),*>);
             }
         }
     });
 
-    let output = quote::quote_spanned! {gen_info.fn_input.span()=>
+    let fill_lut_ident = quote::format_ident!("fill_lut_{}", gen_info.fn_input.sig.ident);
+    let rem_types = gen_info.fn_params.iter().map(|p| &p.original);
+    let final_function_type = quote::quote_spanned! {gen_info.fn_input.span()=>
+        fn(#(#rem_types),*)
+    };
+
+    quote::quote_spanned! {gen_info.fn_input.span()=>
         pub fn #fill_lut_ident(#index_ident: #lut_index_type) -> Option<#final_function_type> {
-            #(#final_if_statements)*
+            #(#lut_index_checkers)*
 
             None
         }
-    };
-
-    output
-}
-
-fn expand_fn_invocation(gen_info: &LutGeneration, bitfield_input: &[u8], identity: &Ident) -> TokenStream {
-    let original_function = &gen_info.fn_input.sig.ident;
-    let rem_types = gen_info.remaining_params.iter().map(|p| &p.original);
-    let rem_idents = gen_info.remaining_params.iter().map(|p| &p.ident);
-    let bitfield_types = gen_info.bitfield_params.iter().map(|p| &p.ty);
-
-    let final_inputs = bitfield_input
-        .into_iter()
-        .zip(bitfield_types)
-        .map(|(input, ty)| match ty {
-            BitfieldParameterType::Bool => {
-                quote::quote! {
-                    #input != 0
-                }
-            }
-            _ => quote::quote! {
-                #input as #ty
-            },
-        });
-
-    let output = quote::quote! {
-        fn #identity(#(#rem_types),*) {
-            Self::#original_function(#(#rem_idents),*, #(#final_inputs),*)
-        }
-    };
-
-    output
+    }
 }
 
 fn generate_info(input: ItemFn, args: LutMeta) -> syn::parse::Result<LutGeneration> {
-    let mut parameters = FunctionParameter::create_from_iter(&input.sig.inputs);
-
     let bitfield_params: Vec<_> = args
         .bitfields
         .iter()
         .map(|param| {
-            let fn_param_idx = parameters
-                .iter()
-                .enumerate()
-                .find(|(_, p)| p.ident == param.ident)
-                .map(|(i, _)| i);
+            let const_param_found = input.sig.generics.const_params().find(|p| p.ident == param.ident);
 
-            if let Some(i) = fn_param_idx {
-                // Remove it from the remaining parameters.
-                let fn_param = parameters.remove(i);
-
-                Ok(BitfieldParameter {
-                    ident: fn_param.ident.clone(),
-                    ty: BitfieldParameterType::try_from(fn_param.ty.clone())?,
+            if let Some(const_param) = const_param_found {
+                Ok(ConstBitfieldParameter {
+                    _ident: const_param.ident.clone(),
+                    ty: BitfieldParameterType::try_from(const_param.ty.clone())?,
                     associated_bitfield: param.clone(),
                 })
             } else {
@@ -176,23 +142,25 @@ fn generate_info(input: ItemFn, args: LutMeta) -> syn::parse::Result<LutGenerati
         })
         .collect::<syn::Result<Vec<_>>>()?;
 
+    let parameters = FunctionParameter::create_from_iter(&input.sig.inputs);
+
     Ok(LutGeneration {
         fn_input: input,
         args,
         bitfield_params,
-        remaining_params: parameters,
+        fn_params: parameters,
     })
 }
 
 pub struct LutGeneration {
     fn_input: ItemFn,
+    fn_params: Vec<FunctionParameter>,
     args: LutMeta,
-    bitfield_params: Vec<BitfieldParameter>,
-    remaining_params: Vec<FunctionParameter>,
+    bitfield_params: Vec<ConstBitfieldParameter>,
 }
 
-struct BitfieldParameter {
-    ident: syn::Ident,
+struct ConstBitfieldParameter {
+    _ident: Ident,
     ty: BitfieldParameterType,
     associated_bitfield: BitfieldFields,
 }
@@ -248,11 +216,10 @@ impl TryFrom<syn::Type> for BitfieldParameterType {
     }
 }
 
-#[derive(Clone)]
 struct FunctionParameter {
     original: syn::FnArg,
-    ident: syn::Ident,
-    ty: syn::Type,
+    _ident: syn::Ident,
+    _ty: syn::Type,
 }
 
 impl FunctionParameter {
@@ -270,8 +237,8 @@ impl FunctionParameter {
 
                 Some(FunctionParameter {
                     original: arg.clone(),
-                    ident: iden,
-                    ty: typed.ty.deref().clone(),
+                    _ident: iden,
+                    _ty: typed.ty.deref().clone(),
                 })
             })
             .collect()

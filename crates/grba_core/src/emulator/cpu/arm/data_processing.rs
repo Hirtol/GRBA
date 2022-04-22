@@ -7,9 +7,15 @@ use crate::utils::BitOps;
 use num_traits::FromPrimitive;
 
 impl ArmV4 {
-    pub fn data_processing_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
-        let set_condition_code = instruction.check_bit(20);
+    // In the ArmInstruction opcode is bits 21..=24, and set_condition-code is bit 20
+    #[grba_lut_generate::create_lut(u32, OPCODE=5..=8, SET_CONDITION_CODE=4)]
+    #[inline(always)]
+    pub fn data_processing_immediate<const OPCODE: u8, const SET_CONDITION_CODE: bool>(
+        cpu: &mut CPU,
+        instruction: ArmInstruction,
+        bus: &mut Bus,
+    ) {
+        let opcode = DataOperation::from_u8(OPCODE).unwrap();
         let r_d = instruction.get_bits(12, 15) as usize;
 
         let r_op1 = instruction.get_bits(16, 19) as usize;
@@ -23,7 +29,7 @@ impl ArmV4 {
         // It seems that, if rotate == 0, then instead of using RotateRightExtended, it just doesn't change the carry flag.
         let carry = if rotate != 0 { op2_value.check_bit(31) } else { cpu.registers.cpsr.carry() };
 
-        ArmV4::perform_data_operation(cpu, bus, opcode, op1_value, op2_value, r_d, set_condition_code, carry);
+        ArmV4::perform_data_operation(cpu, bus, opcode, op1_value, op2_value, r_d, SET_CONDITION_CODE, carry);
     }
 
     pub fn data_processing_register_immediate_shift(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
@@ -80,6 +86,7 @@ impl ArmV4 {
         cpu.registers.general_purpose[PC_REG] -= 4;
     }
 
+    #[inline(always)]
     fn perform_data_operation(
         cpu: &mut CPU,
         bus: &mut Bus,

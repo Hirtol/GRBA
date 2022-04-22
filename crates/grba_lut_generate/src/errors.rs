@@ -1,22 +1,4 @@
 /// Creates a [`syn::Error`] with the format message and infers the
-/// [`Span`](`proc_macro2::Span`) using [`ToTokens`](`quote::ToTokens`).
-///
-/// # Parameters
-///
-/// - The first argument must implement [`quote::ToTokens`] in order to
-///   infer a [`Span`](`proc_macro2::Span`).
-/// - The second argument is a format string.
-/// - The rest are format string arguments.
-macro_rules! format_err_spanned {
-    ( $tokens:expr, $($msg:tt)* ) => {{
-        ::syn::Error::new_spanned(
-            &$tokens,
-            format_args!($($msg)*)
-        )
-    }}
-}
-
-/// Creates a [`syn::Error`] with the format message and infers the
 /// [`Span`](`proc_macro2::Span`) using [`Spanned`](`syn::spanned::Spanned`).
 ///
 /// # Parameters

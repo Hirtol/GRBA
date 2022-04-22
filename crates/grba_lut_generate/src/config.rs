@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 use std::ops::RangeInclusive;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{Expr, Lit, Path, RangeLimits, Token};
+use syn::{Expr, Lit, RangeLimits, Token};
 
 pub struct LutMeta {
     pub lut_index: ReprKind,

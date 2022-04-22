@@ -13,12 +13,13 @@ impl ArmV4 {
         common_behaviour::branch_and_exchange(cpu, reg_contents, bus);
     }
 
-    pub fn branch_and_link(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        let is_link = instruction.check_bit(24);
+    // `is_link` is actually bit 24 of the instruction, but for our LUT lookup we use bits 20..=27 and bits 4..=7
+    #[grba_lut_generate::create_lut(u32, IS_LINK = 8)]
+    pub fn branch_and_link<const IS_LINK: bool>(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         let offset = sign_extend32(instruction.get_bits(0, 23), 24) << 2;
         let pc = cpu.read_reg(PC_REG);
 
-        if is_link {
+        if IS_LINK {
             // Write the old PC value to the link register.
             // Subtract an  adjustment to account for our pre-fetching (where we're 2 instructions ahead).
             cpu.write_reg(LINK_REG, pc.wrapping_sub(4), bus);
