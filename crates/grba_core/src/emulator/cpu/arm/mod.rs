@@ -200,9 +200,9 @@ mod tests {
 
         assert_eq!(fn_ref as usize, ArmV4::msr_immediate as usize);
 
-        // Check Data Processing matching (AND operation in immediate mode)
-        let fn_ref = lut[0b0010_0000_0000];
+        // Check Branch and Exchange matching
+        let fn_ref = lut[0b0001_0010_0001];
 
-        assert_eq!(fn_ref as usize, ArmV4::data_processing_immediate::<0, false> as usize);
+        assert_eq!(fn_ref as usize, ArmV4::branch_and_exchange as usize);
     }
 }
