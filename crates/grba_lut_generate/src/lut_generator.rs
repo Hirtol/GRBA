@@ -41,7 +41,7 @@ fn analyse_and_expand_or_error(args: TokenStream, input: TokenStream) -> syn::pa
 
 /// Expand the LUT function, for the following example:
 ///
-/// ```rust
+/// ```ignore
 ///
 /// #[grba_lut_generate::create_lut(u32, SET_FLAGS=4)]
 /// fn data_processing<const SET_FLAGS: bool>(cpu: &mut CPU) {

@@ -107,6 +107,7 @@ pub mod common_behaviour {
     /// Check the provided condition code. The expected format is a four bit value in the lower nibble of `condition`
     ///
     /// This `check_condition` function works for both the `ARM` condition codes check, as well as the `THUMB` conditional branches
+    #[inline(always)]
     pub fn check_condition(cpsr: &PSR, condition: u8) -> bool {
         match condition {
             // Is zero set (is equal)
@@ -146,7 +147,7 @@ pub mod common_behaviour {
     /// Defines the `add` instruction behaviour for both the ARM and THUMB modes.
     ///
     /// The `write_flags` parameter is used to determine whether the flags should be written, will be an arithmetic write.
-    #[inline]
+    #[inline(always)]
     pub fn add(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
         let (result, carry) = op1.overflowing_add(op2);
 
@@ -160,7 +161,7 @@ pub mod common_behaviour {
     /// Defines the `sub` instruction behaviour for both the ARM and THUMB modes.
     ///
     /// The `write_flags` parameter is used to determine whether the flags should be written to, it will be an arithmetic write
-    #[inline]
+    #[inline(always)]
     pub fn sub(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
         let (result, carry) = op1.overflowing_sub(op2);
 
@@ -173,7 +174,7 @@ pub mod common_behaviour {
         result
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn adc(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
         // We don't use overflowing_add as we need to do a second add immediately, cheaper to check the bit after.
         let full_result = op1 as u64 + op2 as u64 + cpu.registers.cpsr.carry() as u64;
@@ -186,7 +187,7 @@ pub mod common_behaviour {
         result
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn sbc(cpu: &mut CPU, op1: u32, op2: u32, write_flags: bool) -> u32 {
         let to_subtract = (op2 as u64).wrapping_add((!cpu.registers.cpsr.carry()) as u64);
         let (full_result, carry) = (op1 as u64).overflowing_sub(to_subtract);
@@ -205,7 +206,7 @@ pub mod common_behaviour {
     ///
     /// If the `0th` bit of the `address` is set then the CPU will change to [State::Thumb], otherwise it will switch to
     /// [State::Arm].
-    #[inline]
+    #[inline(always)]
     pub fn branch_and_exchange(cpu: &mut CPU, address: u32, bus: &mut Bus) {
         let to_thumb = address.check_bit(0) as u8;
 
