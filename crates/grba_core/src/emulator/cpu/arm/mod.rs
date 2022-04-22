@@ -65,9 +65,13 @@ pub(crate) fn create_arm_lut() -> ArmLUT {
         if (i & 0xE00) == 0b1000_0000_0000 {
             // Check load bit ahead of time.
             if i.check_bit(4) {
-                result[i] = ArmV4::block_data_transfer_load;
+                if let Some(fns) = ArmV4::fill_lut_block_data_transfer_load(i as u32) {
+                    result[i] = fns;
+                }
             } else {
-                result[i] = ArmV4::block_data_transfer_store;
+                if let Some(fns) = ArmV4::fill_lut_block_data_transfer_store(i as u32) {
+                    result[i] = fns;
+                }
             }
             continue;
         }

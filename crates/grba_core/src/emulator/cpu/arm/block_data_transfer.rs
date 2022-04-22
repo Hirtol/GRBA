@@ -5,41 +5,92 @@ use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 
 impl ArmV4 {
-    pub fn block_data_transfer_store(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
+    #[grba_lut_generate::create_lut(u32, HAS_WRITEBACK = 5, PSR_OR_USER = 6, IS_UP = 7, PRE_INDEXED = 8)]
+    pub fn block_data_transfer_store<
+        const HAS_WRITEBACK: bool,
+        const PSR_OR_USER: bool,
+        const IS_UP: bool,
+        const PRE_INDEXED: bool,
+    >(
+        cpu: &mut CPU,
+        instruction: ArmInstruction,
+        bus: &mut Bus,
+    ) {
         // For the duration of this instruction PC will be 12 ahead instead of just 8.
         cpu.registers.general_purpose[PC_REG] += 4;
-        Self::block_data_transfer(cpu, instruction, bus, false);
+        Self::block_data_transfer::<PSR_OR_USER, false, PRE_INDEXED, IS_UP, HAS_WRITEBACK>(cpu, instruction, bus);
         cpu.registers.general_purpose[PC_REG] -= 4;
     }
 
-    pub fn block_data_transfer_load(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        Self::block_data_transfer(cpu, instruction, bus, true);
+    // Normal bit locations:
+    // * HAS_WRITEBACK: 21
+    // * PSR_OR_USER: 22
+    // * IS_UP: 23
+    // * PRE_INDEXED: 24
+    #[grba_lut_generate::create_lut(u32, HAS_WRITEBACK = 5, PSR_OR_USER = 6, IS_UP = 7, PRE_INDEXED = 8)]
+    pub fn block_data_transfer_load<
+        const HAS_WRITEBACK: bool,
+        const PSR_OR_USER: bool,
+        const IS_UP: bool,
+        const PRE_INDEXED: bool,
+    >(
+        cpu: &mut CPU,
+        instruction: ArmInstruction,
+        bus: &mut Bus,
+    ) {
+        Self::block_data_transfer::<PSR_OR_USER, true, PRE_INDEXED, IS_UP, HAS_WRITEBACK>(cpu, instruction, bus);
     }
 
     #[inline(always)]
-    fn block_data_transfer(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus, is_load: bool) {
-        let psr_or_user = instruction.check_bit(22);
+    fn block_data_transfer<
+        const PSR_OR_USER: bool,
+        const IS_LOAD: bool,
+        const PRE_INDEXED: bool,
+        const IS_UP: bool,
+        const HAS_WRITEBACK: bool,
+    >(
+        cpu: &mut CPU,
+        instruction: ArmInstruction,
+        bus: &mut Bus,
+    ) {
         let register_list = instruction.get_bits(0, 15) as u16;
 
-        if psr_or_user {
-            Self::block_data_transfer_with_s_bit(cpu, instruction, bus, is_load, register_list);
+        if PSR_OR_USER {
+            Self::block_data_transfer_with_s_bit(
+                cpu,
+                instruction,
+                bus,
+                register_list,
+                IS_LOAD,
+                PRE_INDEXED,
+                IS_UP,
+                HAS_WRITEBACK,
+            );
         } else {
-            Self::block_data_transfer_without_s_bit(cpu, instruction, bus, is_load, register_list);
+            Self::block_data_transfer_without_s_bit(
+                cpu,
+                instruction,
+                bus,
+                register_list,
+                IS_LOAD,
+                PRE_INDEXED,
+                IS_UP,
+                HAS_WRITEBACK,
+            );
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn block_data_transfer_without_s_bit(
         cpu: &mut CPU,
         instruction: ArmInstruction,
         bus: &mut Bus,
-        is_load: bool,
         mut register_list: u16,
+        is_load: bool,
+        is_preindexed: bool,
+        is_up: bool,
+        mut has_writeback: bool,
     ) {
-        let is_preindexed = instruction.check_bit(24);
-        let is_up = instruction.check_bit(23);
-        let mut has_writeback = instruction.check_bit(21);
-
         let register_count = register_list.count_ones();
         let reg_base = instruction.get_bits(16, 19) as usize;
 
@@ -77,18 +128,17 @@ impl ArmV4 {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn block_data_transfer_with_s_bit(
         cpu: &mut CPU,
         instruction: ArmInstruction,
         bus: &mut Bus,
-        is_load: bool,
         mut register_list: u16,
+        is_load: bool,
+        is_preindexed: bool,
+        is_up: bool,
+        mut has_writeback: bool,
     ) {
-        let is_preindexed = instruction.check_bit(24);
-        let is_up = instruction.check_bit(23);
-        let mut has_writeback = instruction.check_bit(21);
-
         let register_count = register_list.count_ones();
         let reg_base = instruction.get_bits(16, 19) as usize;
 
@@ -145,7 +195,12 @@ impl ArmV4 {
 
     /// Calculate the `(writeback_address, start_address)` values for a block data transfer.
     #[inline(always)]
-    fn calculate_addresses(is_preindexed: bool, is_up: bool, register_count: u32, start_address: u32) -> (u32, u32) {
+    const fn calculate_addresses(
+        is_preindexed: bool,
+        is_up: bool,
+        register_count: u32,
+        start_address: u32,
+    ) -> (u32, u32) {
         if is_up {
             if register_count != 0 {
                 let final_address = start_address.wrapping_add(4 * register_count);

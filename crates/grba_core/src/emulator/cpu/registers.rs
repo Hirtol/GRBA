@@ -91,7 +91,6 @@ impl Registers {
     ///
     /// * `true` if the `from_mode` and `to_mode` are different (swapped).
     /// * `false` if the `from_mode` and `to_mode` are the same (early return, no swap).
-    #[inline]
     pub fn swap_register_banks(&mut self, from_mode: Mode, to_mode: Mode, swap_spsr: bool) -> bool {
         if from_mode == to_mode {
             return false;
@@ -191,7 +190,6 @@ impl Registers {
     }
 
     /// Write to the CPSR, and if the new mode is different from the current mode, swap the register banks.
-    #[inline]
     pub(crate) fn write_cpsr(&mut self, value: PSR) {
         let old_mode = self.cpsr.mode();
         self.cpsr = value;
