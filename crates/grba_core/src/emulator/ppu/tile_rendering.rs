@@ -93,9 +93,21 @@ pub fn render_scanline_regular_bg_pixel(ppu: &mut PPU, bg: usize) {
     let scanline_to_draw = (ppu.vertical_counter.current_scanline() as u16).wrapping_add(y_scroll) % y_max_px;
 
     let tile_line_y = scanline_to_draw % TILE_HEIGHT_PIXELS;
-    // + ((x_scroll / TILE_WIDTH_PIXELS) as usize * 2) would be nice, but difficult as we would then need to check how
-    // many pixels to skip in that tile.
-    let map_base = map_base + ((scanline_to_draw / TILE_HEIGHT_PIXELS) as usize * 64);
+    let map_base = {
+        // + ((x_scroll / TILE_WIDTH_PIXELS) as usize * 2) would be nice, but difficult as we would then need to check how
+        // many pixels to skip in that tile.
+        let base = map_base + ((scanline_to_draw / TILE_HEIGHT_PIXELS) as usize * (32 * 2));
+
+        match screen_size {
+            RegularScreenSize::_512X512 if scanline_to_draw > 255 => {
+                // Our math above works great for the first two 32x32 tiles (in the 32x64 and 64x32 cases), but
+                // in the 64x64 case we need to add another offset to go to the correct map address once we go down
+                // to the last two screen blocks.
+                base + BG_MAP_TEXT_SIZE
+            }
+            _ => base,
+        }
+    };
 
     for i in 0..DISPLAY_WIDTH as usize {
         // If the current pixel has already been written to by a higher-priority background/sprite, skip it.
