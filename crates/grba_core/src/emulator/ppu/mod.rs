@@ -247,8 +247,30 @@ impl PPU {
 }
 
 pub fn render_scanline_mode0(ppu: &mut PPU) {
-    if ppu.disp_cnt.screen_display_bg0() {
-        tile_rendering::render_scanline_regular_bg_pixel(ppu, 0);
+    for priority in 0..4 {
+        if ppu.disp_cnt.screen_display_bg0() {
+            if ppu.bg_control[0].bg_priority() == priority {
+                tile_rendering::render_scanline_regular_bg_pixel(ppu, 0);
+            }
+        }
+
+        if ppu.disp_cnt.screen_display_bg1() {
+            if ppu.bg_control[1].bg_priority() == priority {
+                tile_rendering::render_scanline_regular_bg_pixel(ppu, 1);
+            }
+        }
+
+        if ppu.disp_cnt.screen_display_bg2() {
+            if ppu.bg_control[2].bg_priority() == priority {
+                tile_rendering::render_scanline_regular_bg_pixel(ppu, 2);
+            }
+        }
+
+        if ppu.disp_cnt.screen_display_bg3() {
+            if ppu.bg_control[3].bg_priority() == priority {
+                tile_rendering::render_scanline_regular_bg_pixel(ppu, 3);
+            }
+        }
     }
 }
 

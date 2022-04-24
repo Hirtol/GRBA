@@ -35,7 +35,6 @@ pub struct BgMapTextData {
 }
 
 /// Regular screen size recorded in BgXCnt
-
 enum RegularScreenSize {
     _256X256 = 0x0,
     _512X256 = 0x1,
