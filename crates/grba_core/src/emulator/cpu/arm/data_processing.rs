@@ -97,6 +97,13 @@ impl ArmV4 {
         set_flags: bool,
         barrel_shift_carry: bool,
     ) {
+        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
+        // Primarily used for `MOVS` when returning from software interrupts.
+        // Important to do this before the data operations due to force-alignment of PC on write
+        if r_d == 15 && set_flags {
+            cpu.registers.write_cpsr(cpu.registers.spsr);
+        }
+
         match opcode {
             DataOperation::And => {
                 let result = op1 & op2;
@@ -189,11 +196,6 @@ impl ArmV4 {
                 }
             }
         };
-
-        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
-        if r_d == 15 && set_flags {
-            cpu.registers.write_cpsr(cpu.registers.spsr);
-        }
     }
 }
 
