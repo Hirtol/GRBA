@@ -32,7 +32,7 @@ impl ArmV4 {
         let imm = instruction.get_bits(0, 7) as u32;
         let new_value = imm.rotate_right(rotate);
 
-        Self::msr_common(cpu, instruction, new_value);
+        Self::msr_common(cpu, bus, instruction, new_value);
     }
 
     /// Transfer register contents to PSR.
@@ -42,10 +42,10 @@ impl ArmV4 {
         let r_m = instruction.get_bits(0, 3) as usize;
         let new_value = cpu.read_reg(r_m);
 
-        Self::msr_common(cpu, instruction, new_value);
+        Self::msr_common(cpu, bus, instruction, new_value);
     }
 
-    fn msr_common(cpu: &mut CPU, instruction: ArmInstruction, new_value: u32) {
+    fn msr_common(cpu: &mut CPU, bus: &mut Bus, instruction: ArmInstruction, new_value: u32) {
         let dest_psr: Psr = instruction.check_bit(22).into();
         let field_mask = instruction.get_bits(16, 19);
 
@@ -72,7 +72,7 @@ impl ArmV4 {
         }
 
         match dest_psr {
-            Psr::Cpsr => cpu.registers.write_cpsr(PSR::from_raw(cur_psr_value)),
+            Psr::Cpsr => cpu.registers.write_cpsr(PSR::from_raw(cur_psr_value), bus),
             Psr::Spsr => cpu.registers.spsr = PSR::from_raw(cur_psr_value),
         };
     }

@@ -1,3 +1,4 @@
+use crate::emulator::bus::Bus;
 use crate::utils::BitOps;
 use num_traits::FromPrimitive;
 
@@ -190,9 +191,11 @@ impl Registers {
     }
 
     /// Write to the CPSR, and if the new mode is different from the current mode, swap the register banks.
-    pub(crate) fn write_cpsr(&mut self, value: PSR) {
+    pub(crate) fn write_cpsr(&mut self, value: PSR, bus: &mut Bus) {
         let old_mode = self.cpsr.mode();
         self.cpsr = value;
+        // Since CPSR can disable interrupts we need to check if any new interrupts exist
+        bus.interrupts.schedule_interrupt(&mut bus.scheduler);
 
         self.swap_register_banks(old_mode, self.cpsr.mode(), true);
     }

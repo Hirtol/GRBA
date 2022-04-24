@@ -101,7 +101,7 @@ impl ArmV4 {
         // Primarily used for `MOVS` when returning from software interrupts.
         // Important to do this before the data operations due to force-alignment of PC on write
         if r_d == 15 && set_flags {
-            cpu.registers.write_cpsr(cpu.registers.spsr);
+            cpu.registers.write_cpsr(cpu.registers.spsr, bus);
         }
 
         match opcode {

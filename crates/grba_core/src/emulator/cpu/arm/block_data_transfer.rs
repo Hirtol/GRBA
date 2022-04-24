@@ -174,7 +174,7 @@ impl ArmV4 {
         // This function has the s-bit set, so we need to handle it.
         if register_list.check_bit(15) && is_load {
             // LDM with R15 in transfer list and S bit set (Mode changes)
-            cpu.registers.write_cpsr(cpu.registers.spsr);
+            cpu.registers.write_cpsr(cpu.registers.spsr, bus);
         } else {
             // For STM instructions data will be taken from the User bank, so we need to switch to that.
             swapped_banks = cpu.registers.swap_register_banks(old_mode, Mode::User, false);
