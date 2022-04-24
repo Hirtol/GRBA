@@ -12,7 +12,6 @@ pub const fn sign_extend32(data: u32, size: u8) -> i32 {
 }
 
 pub trait BitOps {
-    type Output;
     /// Return the bits in the specified range.
     /// Will be optimised by the compiler to a simple `shift` and `and`.
     ///
@@ -57,8 +56,6 @@ macro_rules! impl_bitops {
     ($($t:ty),*) => {
         $(
             impl BitOps for $t {
-                type Output = $t;
-
                 #[inline(always)]
                 fn get_bits(self, begin: u8, end_inclusive: u8) -> $t {
                     (self >> begin) & ((1 << (end_inclusive - begin + 1)) - 1)

@@ -156,6 +156,26 @@ impl GBAEmulator {
                     return true;
                 }
             }
+            EventTag::Timer0Irq => {
+                self.bus
+                    .timers
+                    .timer_overflowed(0, &mut self.bus.scheduler, event.timestamp, &mut self.bus.interrupts);
+            }
+            EventTag::Timer1Irq => {
+                self.bus
+                    .timers
+                    .timer_overflowed(1, &mut self.bus.scheduler, event.timestamp, &mut self.bus.interrupts);
+            }
+            EventTag::Timer2Irq => {
+                self.bus
+                    .timers
+                    .timer_overflowed(2, &mut self.bus.scheduler, event.timestamp, &mut self.bus.interrupts);
+            }
+            EventTag::Timer3Irq => {
+                self.bus
+                    .timers
+                    .timer_overflowed(3, &mut self.bus.scheduler, event.timestamp, &mut self.bus.interrupts);
+            }
         }
 
         false

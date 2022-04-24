@@ -5,8 +5,9 @@ use crate::emulator::bus::helpers::ReadType;
 use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
 use crate::emulator::bus::keypad::{Keypad, KEYINTERRUPT_END, KEYINTERRUPT_START, KEYSTATUS_END, KEYSTATUS_START};
 use crate::emulator::bus::system_control::{
-    GbaSystemControl, HaltType, HALT_CNT_ADDR, POST_BOOT_FLAG_ADDR, WAIT_CNT_END, WAIT_CNT_START,
+    GbaSystemControl, HALT_CNT_ADDR, POST_BOOT_FLAG_ADDR, WAIT_CNT_END, WAIT_CNT_START,
 };
+use crate::emulator::bus::timers::Timers;
 use crate::emulator::cartridge::Cartridge;
 use crate::emulator::cpu::CPU;
 use crate::emulator::ppu::{LCD_IO_END, PPU};
@@ -23,11 +24,13 @@ pub mod interrupts;
 pub mod keypad;
 mod ram;
 mod system_control;
+pub mod timers;
 
 pub struct Bus {
     pub bios: GbaBios,
     pub rom: Cartridge,
     pub interrupts: InterruptManager,
+    pub timers: Timers,
     pub keypad: Keypad,
     pub ram: ram::WorkRam,
     pub system_control: GbaSystemControl,
@@ -44,6 +47,7 @@ impl Bus {
             ppu: PPU::new(),
             scheduler: Scheduler::new(),
             interrupts: InterruptManager::new(),
+            timers: Timers::new(),
             keypad: Keypad::default(),
             system_control: GbaSystemControl::new(),
         };
@@ -168,6 +172,7 @@ impl Bus {
     pub fn read_io(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.read_io(addr),
+            timers::TIMER_IO_START..=timers::TIMER_IO_END => self.timers.read_registers(addr, &mut self.scheduler),
             KEYSTATUS_START..=KEYSTATUS_END => self.keypad.status.to_le_bytes()[(addr - KEYSTATUS_START) as usize],
             KEYINTERRUPT_START..=KEYINTERRUPT_END => {
                 self.keypad.interrupt_control.to_le_bytes()[(addr - KEYINTERRUPT_START) as usize]
@@ -188,6 +193,9 @@ impl Bus {
     pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
+            timers::TIMER_IO_START..=timers::TIMER_IO_END => {
+                self.timers.write_registers(addr, data, &mut self.scheduler)
+            }
             KEYSTATUS_START..=KEYSTATUS_END => {
                 crate::cpu_log!("bus-logging"; "Ignored write to keypad status register: {}", data);
             }

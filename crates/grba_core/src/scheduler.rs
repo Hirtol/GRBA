@@ -107,6 +107,10 @@ pub enum EventTag {
     PollInterrupt,
     /// Start the `Halted` loop, which is only stopped when an enabled interrupt is fired.
     Halt,
+    Timer0Irq,
+    Timer1Irq,
+    Timer2Irq,
+    Timer3Irq,
 }
 
 #[derive(Debug, Copy, Clone, Eq)]
@@ -155,6 +159,12 @@ impl From<u64> for EmuTime {
 
 impl From<u32> for EmuTime {
     fn from(time: u32) -> Self {
+        EmuTime(time as u64)
+    }
+}
+
+impl From<u16> for EmuTime {
+    fn from(time: u16) -> Self {
         EmuTime(time as u64)
     }
 }
