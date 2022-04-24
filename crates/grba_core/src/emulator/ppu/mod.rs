@@ -204,11 +204,10 @@ impl PPU {
     }
 
     fn render_scanline(&mut self) {
-        // Only really relevant for Mode0..=2
         match self.disp_cnt.bg_mode() {
             BgMode::Mode0 => render_scanline_mode0(self),
-            BgMode::Mode1 => {}
-            BgMode::Mode2 => {}
+            BgMode::Mode1 => render_scanline_mode1(self),
+            BgMode::Mode2 => render_scanline_mode2(self),
             BgMode::Mode3 => {
                 // Due to how we implement rendering we rely on palette indexes in the `current_scanline`.
                 // For mode 3 we therefore render directly to the framebuffer, but we therefore need to do an early return.
@@ -269,6 +268,44 @@ pub fn render_scanline_mode0(ppu: &mut PPU) {
         if ppu.disp_cnt.screen_display_bg3() {
             if ppu.bg_control[3].bg_priority() == priority {
                 tile_rendering::render_scanline_regular_bg_pixel(ppu, 3);
+            }
+        }
+    }
+}
+
+pub fn render_scanline_mode1(ppu: &mut PPU) {
+    for priority in 0..4 {
+        if ppu.disp_cnt.screen_display_bg0() {
+            if ppu.bg_control[0].bg_priority() == priority {
+                tile_rendering::render_scanline_regular_bg_pixel(ppu, 0);
+            }
+        }
+
+        if ppu.disp_cnt.screen_display_bg1() {
+            if ppu.bg_control[1].bg_priority() == priority {
+                tile_rendering::render_scanline_regular_bg_pixel(ppu, 1);
+            }
+        }
+
+        if ppu.disp_cnt.screen_display_bg2() {
+            if ppu.bg_control[2].bg_priority() == priority {
+                // TODO: Affine BG
+            }
+        }
+    }
+}
+
+pub fn render_scanline_mode2(ppu: &mut PPU) {
+    for priority in 0..4 {
+        if ppu.disp_cnt.screen_display_bg2() {
+            if ppu.bg_control[2].bg_priority() == priority {
+                // TODO: Affine BG
+            }
+        }
+
+        if ppu.disp_cnt.screen_display_bg3() {
+            if ppu.bg_control[3].bg_priority() == priority {
+                // TODO: Affine BG
             }
         }
     }
