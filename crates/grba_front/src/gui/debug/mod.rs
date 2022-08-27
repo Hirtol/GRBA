@@ -13,13 +13,13 @@ use crate::gui::debug::messages::{DebugMessageResponse, DebugMessageUi};
 use crate::gui::debug::palette_view::PaletteView;
 
 mod colors;
-mod utils;
 pub mod cpu_state_view;
 pub mod execution_view;
 pub mod io_view;
 pub mod memory_view;
 pub mod messages;
 pub mod palette_view;
+mod utils;
 
 pub trait DebugView {
     /// The name of the debug view, used for the menu title.
@@ -47,7 +47,7 @@ pub trait DebugView {
     /// Take the data prepared in [Self::prepare_frame] and update internal state to the provided [Self::RequestedData]
     fn update_requested_data(&mut self, data: Self::RequestedData);
 
-    /// Draw the [DebugView] UI, with data gathered during [Self:":prepare_frame].
+    /// Draw the [DebugView] UI, with data gathered during [Self::prepare_frame].
     ///
     /// Note that there is a one frame delay between [Self::prepare_frame] and [Self::draw].
     ///

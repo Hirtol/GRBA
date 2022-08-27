@@ -210,7 +210,7 @@ impl PPU {
             BgMode::Mode2 => render_scanline_mode2(self),
             BgMode::Mode3 => {
                 // Due to how we implement rendering we rely on palette indexes in the `current_scanline`.
-                // For mode 3 we therefore render directly to the framebuffer, but we therefore need to do an early return.
+                // For mode 3 we therefore render directly to the framebuffer, but because of that we need to do an early return.
                 render_scanline_mode3(self);
                 return;
             }

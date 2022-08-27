@@ -19,8 +19,6 @@ mod multi_load_store;
 /// Contains all Thumb instructions for the ArmV4T.
 pub struct ThumbV4;
 
-impl ThumbV4 {}
-
 pub(crate) fn create_thumb_lut() -> ThumbLUT {
     fn dead_fn(_cpu: &mut CPU, instruction: ThumbInstruction, _bus: &mut Bus) {
         panic!("Unimplemented Thumb instruction: {:#06X}", instruction);

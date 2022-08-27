@@ -1,10 +1,9 @@
-use crossbeam::channel::Sender;
 use egui::mutex::RwLockWriteGuard;
-use egui::{ClippedMesh, Context, Memory, TexturesDelta};
+use egui::{ClippedPrimitive, Context, Memory, TexturesDelta};
 use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
 use serde::{Deserialize, Serialize};
-use std::time::Instant;
+use winit::event_loop::EventLoop;
 use winit::window::Window;
 
 use crate::runner::messages::EmulatorMessage;
@@ -22,7 +21,7 @@ pub struct EguiFramework {
     // Egui WebGPU backend
     rpass: RenderPass,
     screen_descriptor: ScreenDescriptor,
-    paint_jobs: Vec<ClippedMesh>,
+    paint_jobs: Vec<ClippedPrimitive>,
     textures: TexturesDelta,
 
     // State for the GUI
@@ -36,6 +35,7 @@ impl EguiFramework {
         height: u32,
         scale_factor: f32,
         pixels: &pixels::Pixels,
+        event_loop: &EventLoop<()>,
         ui_state: Option<AppUiState>,
     ) -> Self {
         let (egui_ctx, gui) = if let Some(mem) = ui_state {
@@ -47,7 +47,11 @@ impl EguiFramework {
             (Context::default(), Gui::new(None))
         };
 
-        let egui_state = egui_winit::State::from_pixels_per_point(2048, scale_factor);
+        let max_texture_size = pixels.device().limits().max_texture_dimension_2d as usize;
+        let mut egui_state = egui_winit::State::new(event_loop);
+        egui_state.set_pixels_per_point(scale_factor);
+        egui_state.set_max_texture_side(max_texture_size);
+
         let screen_descriptor = ScreenDescriptor {
             physical_width: width,
             physical_height: height,

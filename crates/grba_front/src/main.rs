@@ -67,6 +67,7 @@ impl Application {
             crate::HEIGHT,
             renderer.scale_factor(),
             &renderer.pixels,
+            &event_loop,
             state,
         );
 

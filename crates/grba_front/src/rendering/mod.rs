@@ -80,7 +80,7 @@ impl Renderer {
         gui: &mut EguiFramework,
         state: &mut State,
     ) -> anyhow::Result<()> {
-        let frame = self.pixels.get_frame();
+        let frame = self.pixels.get_frame_mut();
 
         frame.copy_from_slice(framebuffer);
 
