@@ -40,7 +40,7 @@ fn main() {
     let _ = application.run();
 }
 
-pub struct Application {
+struct Application {
     state: State,
     gui: EguiFramework,
     renderer: Renderer,
@@ -169,7 +169,7 @@ impl Application {
                     }
                 }
                 Event::LoopDestroyed => {
-                    config::save_state_and_config(&self.gui);
+                    config::save_state_and_config(&self.gui).expect("Failed to save state & config");
                 }
                 _ => (),
             }

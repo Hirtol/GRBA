@@ -94,7 +94,7 @@ impl DebugView for PaletteView {
                 ui.label("Selection:");
 
                 ui.horizontal(|ui| {
-                    egui::Grid::new("selection-grid").show(ui, |ui| {
+                    egui::Grid::new("selection-grid-left").show(ui, |ui| {
                         ui.colored_label(colors::DARK_PURPLE, "Red:");
                         ui.label(format!("{:#04X}", self.palettes.palettes[self.selected_index].red));
 
@@ -112,7 +112,7 @@ impl DebugView for PaletteView {
 
                     ui.add(Separator::default().vertical());
 
-                    egui::Grid::new("selection-grid").show(ui, |ui| {
+                    egui::Grid::new("selection-grid-right").show(ui, |ui| {
                         ui.colored_label(colors::DARK_PURPLE, "Index:");
                         ui.label(format!("{:#05X} ({:03})", self.selected_index, self.selected_index));
 

@@ -245,7 +245,7 @@ impl PPU {
     }
 }
 
-pub fn render_scanline_mode0(ppu: &mut PPU) {
+fn render_scanline_mode0(ppu: &mut PPU) {
     for priority in 0..4 {
         if ppu.disp_cnt.screen_display_bg0() {
             if ppu.bg_control[0].bg_priority() == priority {
@@ -273,7 +273,7 @@ pub fn render_scanline_mode0(ppu: &mut PPU) {
     }
 }
 
-pub fn render_scanline_mode1(ppu: &mut PPU) {
+fn render_scanline_mode1(ppu: &mut PPU) {
     for priority in 0..4 {
         if ppu.disp_cnt.screen_display_bg0() {
             if ppu.bg_control[0].bg_priority() == priority {
@@ -295,7 +295,7 @@ pub fn render_scanline_mode1(ppu: &mut PPU) {
     }
 }
 
-pub fn render_scanline_mode2(ppu: &mut PPU) {
+fn render_scanline_mode2(ppu: &mut PPU) {
     for priority in 0..4 {
         if ppu.disp_cnt.screen_display_bg2() {
             if ppu.bg_control[2].bg_priority() == priority {
@@ -312,7 +312,7 @@ pub fn render_scanline_mode2(ppu: &mut PPU) {
 }
 
 #[profiling::function]
-pub fn render_scanline_mode3(ppu: &mut PPU) {
+fn render_scanline_mode3(ppu: &mut PPU) {
     let vram_index = ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
 
     let cur_frame_addr: usize = ppu.vertical_counter.current_scanline() as usize * DISPLAY_WIDTH as usize;
@@ -334,7 +334,7 @@ pub fn render_scanline_mode3(ppu: &mut PPU) {
 
 /// Render a full scanline of mode 4.
 #[profiling::function]
-pub fn render_scanline_mode4(ppu: &mut PPU) {
+fn render_scanline_mode4(ppu: &mut PPU) {
     const FRAME_0_ADDR: usize = 0x0;
     const FRAME_1_ADDR: usize = 0xA000;
 
