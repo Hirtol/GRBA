@@ -59,7 +59,7 @@ pub struct GBAEmulator {
 impl GBAEmulator {
     pub fn new(rom: Cartridge, mut options: EmuOptions) -> Self {
         let has_bios = options.bios.is_some();
-        let mut mmu = Bus::new(rom, vec_to_bios_data(options.bios.take()));
+        let mut mmu = Bus::new(rom, vec_to_bios_data(options.bios.clone()));
 
         GBAEmulator {
             cpu: CPU::new(options.skip_bios || !has_bios, &mut mmu),
@@ -70,6 +70,14 @@ impl GBAEmulator {
                 break_at_cycle: None,
             },
         }
+    }
+
+    /// Reset the emulator, while keeping breakpoints/settings.
+    pub fn reset(&mut self) {
+        let has_bios = self.options.bios.is_some();
+        let cartridge = std::mem::replace(&mut self.bus.rom, Cartridge::default());
+        self.bus = Bus::new(cartridge, vec_to_bios_data(self.options.bios.clone()));
+        self.cpu = CPU::new(self.options.skip_bios || !has_bios, &mut self.bus);
     }
 
     /// Run the emulator until it has reached Vblank

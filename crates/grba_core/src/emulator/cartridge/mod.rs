@@ -1,6 +1,7 @@
 use crate::emulator::bus::helpers::ReadType;
 use crate::emulator::cartridge::header::CartridgeHeader;
 use crate::emulator::{AlignedAddress, MemoryAddress};
+use std::ops::{Deref, DerefMut};
 
 pub mod header;
 
@@ -90,6 +91,18 @@ impl Cartridge {
     }
 }
 
+#[doc(hidden)]
+/// Purely used for debugging.
+impl Default for Cartridge {
+    fn default() -> Self {
+        Cartridge {
+            header: CartridgeHeader::new(&[0; 2000]),
+            rom: Vec::new(),
+            saved_ram: Box::new(FakeRam),
+        }
+    }
+}
+
 /// Fill a ROM with OoB data for reads.
 ///
 /// Implementation translated from [open_agb](https://github.com/profi200/open_agb_firm/blob/a9fcf853bb2b21623f528ac23675c8af05180297/source/arm11/open_agb_firm.c#L119)
@@ -100,4 +113,20 @@ pub fn fill_rom_out_of_bounds(rom: &mut Vec<u8>) {
     // TODO: ROM Mirroring for the NES Series? See implementation in [open_agb]
     // TODO: Use proper ROM values (Address/2 & 0xFFFF)
     rom.resize(MAX_ROM_SIZE, 0xFF);
+}
+
+struct FakeRam;
+
+impl Deref for FakeRam {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        todo!()
+    }
+}
+
+impl DerefMut for FakeRam {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        todo!()
+    }
 }

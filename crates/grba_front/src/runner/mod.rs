@@ -134,6 +134,10 @@ fn run_emulator(
                 EmulatorMessage::Unpause => {
                     log::info!("Tried to unpause when not paused");
                 }
+                EmulatorMessage::Reset => {
+                    log::trace!("Resetting Emulator");
+                    emu.reset();
+                }
             }
         }
 
@@ -198,6 +202,10 @@ fn pause_loop(
                 }
                 EmulatorMessage::Pause => log::info!("Tried to pause when already paused"),
                 EmulatorMessage::Unpause => break 'pause_loop false,
+                EmulatorMessage::Reset => {
+                    log::trace!("Resetting Emulator");
+                    emu.reset();
+                }
             }
         }
 

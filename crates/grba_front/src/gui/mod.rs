@@ -169,6 +169,13 @@ impl Gui {
                         state.pause(state.paused);
                         ui.close_menu()
                     }
+
+                    if ui.button("Reset").clicked() {
+                        if let Some(emu) = state.current_emu.as_ref() {
+                            emu.request_sender.send(EmulatorMessage::Reset).unwrap();
+                        }
+                        ui.close_menu()
+                    }
                 });
 
                 self.debug_view.draw_menu_button(ui);

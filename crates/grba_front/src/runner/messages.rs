@@ -8,6 +8,7 @@ pub enum EmulatorMessage {
     Debug(DebugMessageUi),
     KeyDown(InputKeys),
     KeyUp(InputKeys),
+    Reset,
     Pause,
     Unpause,
 }
