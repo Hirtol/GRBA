@@ -50,8 +50,8 @@ impl Default for Registers {
     fn default() -> Self {
         Registers {
             general_purpose: [0; 16],
-            cpsr: PSR::from_raw(0x000000DF),
-            spsr: PSR::from_raw(0x000000DF),
+            cpsr: PSR::from_raw(0x00000013),
+            spsr: PSR::from_raw(0),
             spsr_bank: [PSR::default(); 5],
             r8_bank: [0; 2],
             r9_bank: [0; 2],
@@ -289,8 +289,8 @@ impl From<u32> for PSR {
             overflow: value.check_bit(28),
             irq_disable: value.check_bit(7),
             fiq_disable: value.check_bit(6),
-            state: State::from_u32(value >> 5 & 1).unwrap(),
-            mode: Mode::from_u32(value & 0x1F).unwrap_or(Mode::System),
+            state: State::from_u32(value.check_bit(5) as u32).unwrap(),
+            mode: Mode::from_u32(value.get_bits(0, 4)).unwrap_or(Mode::System),
             reserved: value & 0x0FFF_FF00,
         }
     }

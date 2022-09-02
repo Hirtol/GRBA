@@ -127,28 +127,29 @@ fn render_psr(ui: &mut Ui, psr: &PSR) {
             let text = RichText::new(format!("{:b}", psr.sign() as u8)).background_color(LIGHT_GREY);
             ui.label(text);
 
-            ui.colored_label(colors::DARK_PURPLE, "N");
+            ui.colored_label(colors::DARK_PURPLE, "N").on_hover_text("Signed Flag");
         });
 
         ui.vertical(|ui| {
             let text = RichText::new(format!("{:b}", psr.zero() as u8)).background_color(LIGHT_GREY);
             ui.label(text);
 
-            ui.colored_label(colors::DARK_PURPLE, "Z");
+            ui.colored_label(colors::DARK_PURPLE, "Z").on_hover_text("Zero Flag");
         });
 
         ui.vertical(|ui| {
             let text = RichText::new(format!("{:b}", psr.carry() as u8)).background_color(LIGHT_GREY);
             ui.label(text);
 
-            ui.colored_label(colors::DARK_PURPLE, "C");
+            ui.colored_label(colors::DARK_PURPLE, "C").on_hover_text("Carry Flag");
         });
 
         ui.vertical(|ui| {
             let text = RichText::new(format!("{:b}", psr.overflow() as u8)).background_color(LIGHT_GREY);
             ui.label(text);
 
-            ui.colored_label(colors::DARK_PURPLE, "V");
+            ui.colored_label(colors::DARK_PURPLE, "V")
+                .on_hover_text("Signed Overflow Flag");
         });
 
         ui.vertical(|ui| {
@@ -163,21 +164,23 @@ fn render_psr(ui: &mut Ui, psr: &PSR) {
             let text = RichText::new(format!("{:b}", psr.irq_disable() as u8)).background_color(LIGHT_GREY);
             ui.label(text);
 
-            ui.colored_label(colors::DARK_PURPLE, "I");
+            ui.colored_label(colors::DARK_PURPLE, "I")
+                .on_hover_text("Disable IRQ, if set disables IRQ");
         });
 
         ui.vertical(|ui| {
             let text = RichText::new(format!("{:b}", psr.fiq_disable() as u8)).background_color(LIGHT_GREY);
             ui.label(text);
 
-            ui.colored_label(colors::DARK_PURPLE, "F");
+            ui.colored_label(colors::DARK_PURPLE, "F")
+                .on_hover_text("Disable FIQ, if set disables FIQ (Unused in GBA)");
         });
 
         ui.vertical(|ui| {
             let text = RichText::new(format!("{:b}", psr.state() as u8)).background_color(LIGHT_GREY);
             ui.label(text);
 
-            ui.colored_label(colors::DARK_PURPLE, "T");
+            ui.colored_label(colors::DARK_PURPLE, "T").on_hover_text("State Flag");
         });
 
         ui.vertical(|ui| {
@@ -185,7 +188,8 @@ fn render_psr(ui: &mut Ui, psr: &PSR) {
             let size = ui.label(text).rect.size();
             ui.allocate_ui(size, |ui| {
                 ui.centered_and_justified(|ui| {
-                    ui.colored_label(colors::DARK_PURPLE, "Mode");
+                    ui.colored_label(colors::DARK_PURPLE, "Mode")
+                        .on_hover_text("Mode of execution");
                 });
             });
         });
