@@ -28,6 +28,34 @@ pub fn test_fuzz_thumb_data_processing() {
     run_fuzz_test("THUMB_DataProcessing.gba");
 }
 
+#[test]
+pub fn test_gba_test_arm() {
+    let mut emu = setup::get_emu("gba_tests/arm.gba");
+    let mut debug_emu = DebugEmulator(&mut emu);
+
+    while debug_emu.cpu().registers.general_purpose[PC_REG] != 0x0800_1EC0 {
+        debug_emu.0.run_to_vblank();
+        // Check for an ARM test failure
+        if debug_emu.cpu().registers.general_purpose[12] != 0 {
+            panic!("Failure: {:#08X}", debug_emu.cpu().registers.general_purpose[12]);
+        }
+    }
+}
+
+#[test]
+pub fn test_gba_test_thumb() {
+    let mut emu = setup::get_emu("gba_tests/thumb.gba");
+    let mut debug_emu = DebugEmulator(&mut emu);
+
+    while debug_emu.cpu().registers.general_purpose[PC_REG] != 0x0800_0AB0 {
+        debug_emu.0.run_to_vblank();
+        // Check for an ARM test failure
+        if debug_emu.cpu().registers.general_purpose[7] != 0 {
+            panic!("Failure: {:#08X}", debug_emu.cpu().registers.general_purpose[12]);
+        }
+    }
+}
+
 /// Run any Fuzz test in `tests/assets/` and print out the failure case if the test fails.
 ///
 /// # Arguments
