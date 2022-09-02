@@ -94,17 +94,17 @@ impl DebugView for CpuExecutionView {
         for update in update {
             match update {
                 CpuExecutionUpdate::StepInstruction => {
-                    let (vblank, breakpoint_hit) = emu.0.step_instruction_debug();
+                    let (_, breakpoint_hit) = emu.0.step_instruction_debug();
 
                     if breakpoint_hit {
-                        println!("Breakpoint hit");
+                        log::debug!("Breakpoint hit");
                     }
                 }
                 CpuExecutionUpdate::StepFrame => {
                     let breakpoint = emu.0.run_to_vblank_debug();
 
                     if breakpoint {
-                        println!("Breakpoint reached");
+                        log::debug!("Breakpoint reached");
                     }
                 }
                 CpuExecutionUpdate::SetDebug(value) => emu.0.options.debugging = value,

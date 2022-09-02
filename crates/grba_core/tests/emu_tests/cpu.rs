@@ -49,7 +49,7 @@ pub fn test_gba_test_thumb() {
 
     while debug_emu.cpu().registers.general_purpose[PC_REG] != 0x0800_0AB0 {
         debug_emu.0.run_to_vblank();
-        // Check for an ARM test failure
+        // Check for an Thumb test failure
         if debug_emu.cpu().registers.general_purpose[7] != 0 {
             panic!("Failure: {:#08X}", debug_emu.cpu().registers.general_purpose[12]);
         }

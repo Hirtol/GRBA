@@ -20,34 +20,6 @@ pub mod ppu;
 pub type MemoryAddress = u32;
 pub type AlignedAddress = u32;
 
-#[derive(Debug)]
-pub struct EmuOptions {
-    /// Whether to skip the bios.
-    /// This is automatically enabled if no BIOS is provided.
-    pub skip_bios: bool,
-    /// BIOS to use.
-    /// If none is provided then the bios region of memory will be zeroed out, and `skip_bios` will be forcefully enabled.
-    pub bios: Option<Vec<u8>>,
-    /// `true` if the emulator should run in debug mode.
-    /// This will enable breakpoints.
-    pub debugging: bool,
-}
-
-pub struct EmuDebugging {
-    pub breakpoints: Vec<MemoryAddress>,
-    pub break_at_cycle: Option<u64>,
-}
-
-impl Default for EmuOptions {
-    fn default() -> Self {
-        EmuOptions {
-            skip_bios: true,
-            bios: None,
-            debugging: false,
-        }
-    }
-}
-
 /// The main emulator struct
 pub struct GBAEmulator {
     pub(crate) cpu: CPU,
@@ -58,11 +30,10 @@ pub struct GBAEmulator {
 
 impl GBAEmulator {
     pub fn new(rom: Cartridge, mut options: EmuOptions) -> Self {
-        let has_bios = options.bios.is_some();
         let mut mmu = Bus::new(rom, vec_to_bios_data(options.bios.clone()));
 
         GBAEmulator {
-            cpu: CPU::new(options.skip_bios || !has_bios, &mut mmu),
+            cpu: CPU::new(options.should_skip_bios(), &mut mmu),
             bus: mmu,
             options,
             debug: EmuDebugging {
@@ -74,10 +45,9 @@ impl GBAEmulator {
 
     /// Reset the emulator, while keeping breakpoints/settings.
     pub fn reset(&mut self) {
-        let has_bios = self.options.bios.is_some();
         let cartridge = std::mem::replace(&mut self.bus.rom, Cartridge::default());
         self.bus = Bus::new(cartridge, vec_to_bios_data(self.options.bios.clone()));
-        self.cpu = CPU::new(self.options.skip_bios || !has_bios, &mut self.bus);
+        self.cpu = CPU::new(self.options.should_skip_bios(), &mut self.bus);
     }
 
     /// Run the emulator until it has reached Vblank
@@ -267,4 +237,38 @@ impl GBAEmulator {
 fn vec_to_bios_data(data: Option<Vec<u8>>) -> Box<BiosData> {
     let data = data.unwrap_or_else(|| vec![0; std::mem::size_of::<BiosData>()]);
     Box::try_from(data.into_boxed_slice()).unwrap()
+}
+
+#[derive(Debug)]
+pub struct EmuOptions {
+    /// Whether to skip the bios.
+    /// This is automatically enabled if no BIOS is provided.
+    pub skip_bios: bool,
+    /// BIOS to use.
+    /// If none is provided then the bios region of memory will be zeroed out, and `skip_bios` will be forcefully enabled.
+    pub bios: Option<Vec<u8>>,
+    /// `true` if the emulator should run in debug mode.
+    /// This will enable breakpoints.
+    pub debugging: bool,
+}
+
+impl EmuOptions {
+    pub fn should_skip_bios(&self) -> bool {
+        self.skip_bios || self.bios.is_none()
+    }
+}
+
+pub struct EmuDebugging {
+    pub breakpoints: Vec<MemoryAddress>,
+    pub break_at_cycle: Option<u64>,
+}
+
+impl Default for EmuOptions {
+    fn default() -> Self {
+        EmuOptions {
+            skip_bios: true,
+            bios: None,
+            debugging: false,
+        }
+    }
 }
