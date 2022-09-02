@@ -27,6 +27,11 @@ jobs:
           profile: default
           override: true
 
+      - name: Install Latest Nextest Release
+        shell: bash
+        run: |
+          curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1.2.0
 
@@ -39,8 +44,8 @@ jobs:
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --workspace --verbose
+          command: nextest
+          args: run --workspace
 
       - name: Clear the cargo caches
         run: |
