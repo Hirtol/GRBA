@@ -149,7 +149,9 @@ impl CPU {
         crate::cpu_log!("Switching CPU state to {:?}", new_state);
         if self.state() != new_state {
             self.registers.cpsr.set_state(new_state);
-            // TODO: Do we need to flush pipeline here? At the very least probably need to align PC to new state?
+            // Do we need to flush pipeline here? At the very least probably need to align PC to new state?
+            // After looking at the EMU discord I think the answer is: No, so long as we don't write to R15 we don't
+            // flush the pipeline.
         }
     }
 

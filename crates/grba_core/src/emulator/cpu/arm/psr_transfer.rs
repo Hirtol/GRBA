@@ -29,7 +29,7 @@ impl ArmV4 {
     pub fn msr_immediate(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
         // Shift amount is 0 extended to 32 bits, then rotated right by `rotate amount * 2`
         let rotate = instruction.get_bits(8, 11) * 2;
-        let imm = instruction.get_bits(0, 7) as u32;
+        let imm = instruction.get_bits(0, 7);
         let new_value = imm.rotate_right(rotate);
 
         Self::msr_common(cpu, bus, instruction, new_value);

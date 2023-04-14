@@ -100,6 +100,9 @@ impl ArmV4 {
         // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
         // Primarily used for `MOVS` when returning from software interrupts.
         // Important to do this before the data operations due to force-alignment of PC on write
+        //TODO: This r_d == 15 && set_flags check *may* have to be handled differently due to the fact that in arm.gba
+        // we're currently failing the log diff on instruction 555 (cycle 1110), where the CMP result
+        // Consider https://discord.com/channels/465585922579103744/465586361731121162/913580452395229186
         if r_d == 15 && set_flags {
             cpu.registers.write_cpsr(cpu.registers.spsr, bus);
         }
@@ -107,17 +110,19 @@ impl ArmV4 {
         match opcode {
             DataOperation::And => {
                 let result = op1 & op2;
-                cpu.write_reg(r_d, result, bus);
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
+
+                cpu.write_reg(r_d, result, bus);
             }
             DataOperation::Eor => {
                 let result = op1 ^ op2;
-                cpu.write_reg(r_d, result, bus);
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
+
+                cpu.write_reg(r_d, result, bus);
             }
             DataOperation::Sub => {
                 let result = common_behaviour::sub(cpu, op1, op2, set_flags);
@@ -169,31 +174,35 @@ impl ArmV4 {
             }
             DataOperation::Orr => {
                 let result = op1 | op2;
-                cpu.write_reg(r_d, result, bus);
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
+
+                cpu.write_reg(r_d, result, bus);
             }
             DataOperation::Mov => {
                 let result = op2;
-                cpu.write_reg(r_d, result, bus);
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
+
+                cpu.write_reg(r_d, result, bus);
             }
             DataOperation::Bic => {
                 let result = op1 & !op2;
-                cpu.write_reg(r_d, result, bus);
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
+
+                cpu.write_reg(r_d, result, bus);
             }
             DataOperation::Mvn => {
                 let result = !op2;
-                cpu.write_reg(r_d, result, bus);
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
+
+                cpu.write_reg(r_d, result, bus);
             }
         };
     }

@@ -198,6 +198,8 @@ impl Registers {
         bus.interrupts.schedule_interrupt(&mut bus.scheduler);
 
         self.swap_register_banks(old_mode, self.cpsr.mode(), true);
+
+        // TODO: PC alignment if the state is no longer the same?
     }
 }
 
