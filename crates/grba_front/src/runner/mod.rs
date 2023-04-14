@@ -146,10 +146,8 @@ fn run_emulator(
         if emu.options.debugging {
             let breakpoint_hit = emu.run_to_vblank_debug();
 
-            if breakpoint_hit {
-                if pause_loop(emu, &response_sender, &request_receiver, &frame_sender) {
-                    break 'mainloop;
-                }
+            if breakpoint_hit && pause_loop(emu, &response_sender, &request_receiver, &frame_sender) {
+                break 'mainloop;
             }
         } else {
             emu.run_to_vblank();

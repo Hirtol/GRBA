@@ -236,7 +236,7 @@ impl Application {
 
         for _ in 0..frames_to_render {
             let frame = {
-                let mut emu = state.current_emu.as_mut().unwrap();
+                let emu = state.current_emu.as_mut().unwrap();
                 // Handle emulator responses to our messages
                 Self::handle_debug_messages(gui, control_flow, emu);
 

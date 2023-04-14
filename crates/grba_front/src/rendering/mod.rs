@@ -80,7 +80,7 @@ impl Renderer {
         gui: &mut EguiFramework,
         state: &mut State,
     ) -> anyhow::Result<()> {
-        let frame = self.pixels.get_frame_mut();
+        let frame = self.pixels.frame_mut();
 
         frame.copy_from_slice(framebuffer);
 
@@ -122,7 +122,7 @@ impl Renderer {
 
         // Resize the window
         if let Some(size) = input.window_resized() {
-            self.pixels.resize_surface(size.width, size.height);
+            let _ = self.pixels.resize_surface(size.width, size.height);
             gui.resize(size.width, size.height);
         }
 

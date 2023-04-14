@@ -180,7 +180,7 @@ impl<'a> Widget for PaletteWidget<'a> {
         let (rect, response) = ui.allocate_at_least(self.desired_size, Sense::click());
 
         if ui.is_rect_visible(rect) {
-            let color = egui::color::Color32::from_rgb(self.palette.red, self.palette.green, self.palette.blue);
+            let color = Color32::from_rgb(self.palette.red, self.palette.green, self.palette.blue);
 
             ui.painter().add(RectShape {
                 rect,

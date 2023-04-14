@@ -40,7 +40,7 @@ impl EguiFramework {
     ) -> Self {
         let (egui_ctx, gui) = if let Some(mem) = ui_state {
             let egui_ctx = Context::default();
-            *egui_ctx.memory() = mem.egui;
+            egui_ctx.memory_mut(|writer| *writer = mem.egui);
 
             (egui_ctx, Gui::new(Some(mem.debug_ui)))
         } else {
@@ -113,7 +113,7 @@ impl EguiFramework {
 
     /// Handle input events from the window manager.
     pub fn handle_event(&mut self, event: &winit::event::WindowEvent) {
-        self.egui_state.on_event(&self.egui_ctx, event);
+        let _ = self.egui_state.on_event(&self.egui_ctx, event);
     }
 
     /// Resize egui.
@@ -131,8 +131,8 @@ impl EguiFramework {
     }
 
     /// The memory of EGUI with regard to windows and state.
-    pub fn memory(&self) -> RwLockWriteGuard<'_, Memory> {
-        self.egui_ctx.memory()
+    pub fn memory(&self) -> Memory {
+        self.egui_ctx.memory(|mem| mem.clone())
     }
 }
 

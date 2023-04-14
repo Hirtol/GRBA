@@ -18,7 +18,7 @@ pub fn save_state_and_config(gui: &EguiFramework) -> anyhow::Result<()> {
 
     let ui_state = AppUiState {
         debug_ui: gui.gui.debug_view.state.clone(),
-        egui: gui.memory().clone(),
+        egui: gui.memory(),
     };
 
     bincode::serialize_into(file, &ui_state)?;

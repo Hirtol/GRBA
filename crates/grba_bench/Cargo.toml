@@ -5,10 +5,10 @@ edition = "2021"
 
 [dependencies]
 owo-colors = "3.2.0"
-anyhow = "1.0.53"
+anyhow.workspace = true
 grba_core = {path = "../grba_core", features = ["debug-functionality"]}
-itertools = "0.10.3"
+itertools.workspace = true
 
 # Parsing
 memmap2 = "0.5.2"
-clap = { version = "3.0.14", features = ["derive", "env"] }
+clap.workspace = true

@@ -41,3 +41,11 @@ debug = 1
 resolver = "2"
 members = ["crates/grba_core", "crates/grba_front", "crates/grba_test", "crates/grba_log", "crates/grba_bench", "crates/grba_lut_generate"]
 default-members = ["crates/grba_front"]
+
+[workspace.dependencies]
+itertools = "0.10.3"
+clap = { version = "4.2.1", features = ["derive", "env"] }
+anyhow = "1.0.53"
+
+log = "0.4.11"
+simplelog = "0.12.1"

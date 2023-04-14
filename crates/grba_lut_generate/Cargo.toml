@@ -10,4 +10,4 @@ proc-macro = true
 quote = "1.0.17"
 syn = { version = "1.0.91", features = ["full"] }
 proc-macro2 = "1.0.37"
-itertools = "0.10.3"
+itertools.workspace = true
