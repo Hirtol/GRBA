@@ -1,5 +1,5 @@
 //! Ugly
-use clap::{AppSettings, Parser, Subcommand};
+use clap::Parser;
 use grba_core::emulator::cartridge::header::CartridgeHeader;
 use grba_core::emulator::cartridge::Cartridge;
 use grba_core::emulator::{EmuOptions, GBAEmulator};
@@ -31,7 +31,7 @@ fn main() {
     }
 
     println!(
-        "Executing took {:?} for a total of {:.2} frames per second",
+        "Executing took {:.2?} for a total of {:.2} frames per second",
         start.elapsed(),
         args.frames as f64 / start.elapsed().as_secs_f64()
     );
