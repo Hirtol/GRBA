@@ -1,11 +1,12 @@
+#![feature(type_name_of_val)]
+
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use clap::Parser;
 use image::{EncodableLayout, ImageBuffer};
 use rayon::prelude::*;
-use serde::Serialize;
 
 use grba_core::emulator::frame::RgbaFrame;
 
@@ -13,6 +14,7 @@ use crate::config::ClapArgs;
 use crate::utils::MemoryRam;
 
 mod config;
+mod panics;
 mod utils;
 
 fn main() -> anyhow::Result<()> {
@@ -39,37 +41,39 @@ fn main() -> anyhow::Result<()> {
     let roms_to_run = utils::list_files_with_extensions(&test_roms, ".gba")?;
     let bios = std::fs::read(bios_path)?;
 
-    let frame_results = roms_to_run
-        .into_iter()
-        .par_bridge()
-        .map(|rom| {
-            let name = get_rom_fs_name(&rom);
-            let runner_output = std::fs::read(&rom).context("Couldn't read ROM").and_then(|rom_data| {
-                let frames = config
-                    .custom_configs
-                    .get(&name)
-                    .map(|conf| conf.num_frames)
-                    .unwrap_or(clap_args.frames);
+    let frame_results = panics::run_in_custom_handler(|| {
+        roms_to_run
+            .into_iter()
+            .par_bridge()
+            .map(|rom| {
+                let name = get_rom_fs_name(&rom);
+                let runner_output = std::fs::read(&rom).context("Couldn't read ROM").and_then(|rom_data| {
+                    let frames = config
+                        .custom_configs
+                        .get(&name)
+                        .map(|conf| conf.num_frames)
+                        .unwrap_or(clap_args.frames);
 
-                let now = Instant::now();
-                let out = run_normal_test(rom_data, frames, &bios)?;
-                // let frame = run_normal_test(rom_data, frames, &bios)?;
+                    let now = Instant::now();
+                    let out = run_normal_test(&rom, rom_data, frames, &bios)?;
+                    // let frame = run_normal_test(rom_data, frames, &bios)?;
 
-                Ok(RunnerOutput {
-                    rom_path: rom.clone(),
-                    rom_name: name.clone(),
-                    time_taken: now.elapsed(),
-                    frame_output: out,
+                    Ok(RunnerOutput {
+                        rom_path: rom.clone(),
+                        rom_name: name.clone(),
+                        time_taken: now.elapsed(),
+                        frame_output: out,
+                    })
+                });
+
+                runner_output.map_err(|e| RunnerError {
+                    rom_path: rom,
+                    rom_name: name,
+                    context: e,
                 })
-            });
-
-            runner_output.map_err(|e| RunnerError {
-                rom_path: rom,
-                rom_name: name,
-                context: e,
             })
-        })
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+    });
 
     let results = process_results(frame_results, &output_path, &snapshots);
 
@@ -215,7 +219,7 @@ pub fn process_results(
         .collect()
 }
 
-pub fn run_normal_test(rom: Vec<u8>, frames_to_run: u32, bios: &[u8]) -> anyhow::Result<RgbaFrame> {
+pub fn run_normal_test(rom_path: &Path, rom: Vec<u8>, frames_to_run: u32, bios: &[u8]) -> anyhow::Result<RgbaFrame> {
     let out = std::panic::catch_unwind(move || {
         let emu_options = grba_core::emulator::EmuOptions {
             skip_bios: true,
@@ -232,7 +236,13 @@ pub fn run_normal_test(rom: Vec<u8>, frames_to_run: u32, bios: &[u8]) -> anyhow:
         emu.frame_buffer().clone()
     });
 
-    Ok(out.unwrap())
+    match out {
+        Ok(frame) => Ok(frame),
+        Err(e) => Err(anyhow!(
+            "Caught an emulator panic: `{}`",
+            panics::correlate(&rom_path.as_os_str().to_string_lossy())
+        )),
+    }
 }
 
 /// Will clean and setup the directory structure in the output directory as follows:
