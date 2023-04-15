@@ -1,13 +1,15 @@
-use crate::{setup, RunnerError, RunnerOutput};
-use image::{EncodableLayout, ImageBuffer};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use image::{EncodableLayout, ImageBuffer};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
+use crate::{setup, EmuContext, RunnerError, RunnerOutput};
+
+pub type TestOutput = EmuContext<TestOutputContext>;
+
 #[derive(Debug)]
-pub struct TestOutput {
-    pub rom_path: PathBuf,
-    pub rom_name: String,
+pub struct TestOutputContext {
     pub time_taken: Option<Duration>,
     pub output: TestOutputType,
 }
@@ -45,7 +47,7 @@ pub fn process_results(
                 let image_frame: ImageBuffer<image::Rgba<u8>, &[u8]> = if let Some(img) = image::ImageBuffer::from_raw(
                     grba_core::DISPLAY_WIDTH,
                     grba_core::DISPLAY_HEIGHT,
-                    runner_output.frame_output.as_bytes(),
+                    runner_output.context.frame_output.as_bytes(),
                 ) {
                     img
                 } else {
@@ -99,18 +101,14 @@ pub fn process_results(
             };
 
             match lambda() {
-                Ok(output) => TestOutput {
-                    rom_path: runner_output.rom_path,
-                    rom_name: runner_output.rom_name,
-                    time_taken: Some(runner_output.time_taken),
+                Ok(output) => runner_output.map(|context| TestOutputContext {
+                    time_taken: Some(context.time_taken),
                     output,
-                },
-                Err(e) => TestOutput {
-                    rom_path: runner_output.rom_path,
-                    rom_name: runner_output.rom_name,
-                    time_taken: Some(runner_output.time_taken),
+                }),
+                Err(e) => runner_output.map(|context| TestOutputContext {
+                    time_taken: Some(context.time_taken),
                     output: TestOutputType::Error { reason: e },
-                },
+                }),
             }
         })
         .collect()
@@ -118,11 +116,9 @@ pub fn process_results(
 
 impl From<RunnerError> for TestOutput {
     fn from(value: RunnerError) -> Self {
-        TestOutput {
-            rom_path: value.rom_path,
-            rom_name: value.rom_name,
+        value.map(|error| TestOutputContext {
             time_taken: None,
-            output: TestOutputType::Error { reason: value.context },
-        }
+            output: TestOutputType::Error { reason: error },
+        })
     }
 }

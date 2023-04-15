@@ -56,14 +56,15 @@ fn main() -> anyhow::Result<()> {
                         .unwrap_or(clap_args.frames);
 
                     let now = Instant::now();
-                    let out = run_normal_test(&rom, rom_data, frames, &bios)?;
-                    // let frame = run_normal_test(rom_data, frames, &bios)?;
+                    let frame = run_normal_test(&rom, rom_data, frames, &bios)?;
 
                     Ok(RunnerOutput {
                         rom_path: rom.clone(),
                         rom_name: name.clone(),
-                        time_taken: now.elapsed(),
-                        frame_output: out,
+                        context: RunnerOutputContext {
+                            time_taken: now.elapsed(),
+                            frame_output: frame,
+                        },
                     })
                 });
 
@@ -82,17 +83,28 @@ fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
-pub struct RunnerError {
+#[derive(Debug)]
+pub struct EmuContext<T> {
     pub rom_path: PathBuf,
     pub rom_name: String,
-    pub context: anyhow::Error,
+    pub context: T,
 }
 
+impl<T> EmuContext<T> {
+    pub fn map<E, F: FnOnce(T) -> E>(self, op: F) -> EmuContext<E> {
+        EmuContext {
+            rom_path: self.rom_path,
+            rom_name: self.rom_name,
+            context: op(self.context),
+        }
+    }
+}
+
+pub type RunnerError = EmuContext<anyhow::Error>;
+pub type RunnerOutput = EmuContext<RunnerOutputContext>;
+
 #[derive(Debug)]
-pub struct RunnerOutput {
-    pub rom_path: PathBuf,
-    pub rom_name: String,
+pub struct RunnerOutputContext {
     pub time_taken: Duration,
     pub frame_output: RgbaFrame,
 }
