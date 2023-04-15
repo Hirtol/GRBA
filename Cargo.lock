@@ -1470,6 +1470,7 @@ dependencies = [
  "image",
  "log",
  "once_cell",
+ "owo-colors",
  "rayon",
  "serde",
  "serde_json",

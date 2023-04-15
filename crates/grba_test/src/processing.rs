@@ -31,6 +31,15 @@ pub enum TestOutputType {
     },
 }
 
+impl TestOutputType {
+    pub fn to_error(&self) -> Option<&anyhow::Error> {
+        match self {
+            TestOutputType::Error { reason } => Some(reason),
+            _ => None,
+        }
+    }
+}
+
 pub fn process_results(
     results: Vec<Result<RunnerOutput, RunnerError>>,
     output: &Path,

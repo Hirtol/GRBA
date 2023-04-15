@@ -13,6 +13,7 @@ use crate::config::ClapArgs;
 use crate::utils::MemoryRam;
 
 mod config;
+mod formatting;
 mod panics;
 mod processing;
 mod setup;
@@ -21,6 +22,10 @@ mod utils;
 fn main() -> anyhow::Result<()> {
     let clap_args = ClapArgs::parse();
     let config = config::load_config()?;
+
+    rayon::ThreadPoolBuilder::default()
+        .num_threads(config.max_parallelism.get())
+        .build_global()?;
 
     let test_roms = clap_args
         .test_rom_dir
@@ -41,6 +46,9 @@ fn main() -> anyhow::Result<()> {
     // Run the tests
     let roms_to_run = utils::list_files_with_extensions(test_roms, ".gba")?;
     let bios = std::fs::read(bios_path)?;
+    let formatter = formatting::SimpleReporter::new(&output_path);
+
+    formatter.handle_start(&roms_to_run);
 
     let frame_results = panics::run_in_custom_handler(|| {
         roms_to_run
@@ -79,7 +87,7 @@ fn main() -> anyhow::Result<()> {
 
     let results = processing::process_results(frame_results, &output_path, &snapshots);
 
-    println!("{:#?}", results);
+    formatter.handle_complete_tests(&results);
 
     Ok(())
 }
