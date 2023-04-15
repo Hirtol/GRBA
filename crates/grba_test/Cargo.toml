@@ -15,5 +15,10 @@ grba_core = {path = "../grba_core"}
 crossbeam = "0.8.0"
 rayon = "1.5.1"
 image = "0.24.6"
-miette = { version = "3.3.0", features = ["fancy"] }
+fxhash = "0.2.1"
+
+serde.workspace = true
+serde_json.workspace = true
+
+#miette = { version = "3.3.0", features = ["fancy"] }
 

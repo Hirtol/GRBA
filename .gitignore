@@ -3,3 +3,4 @@
 roms/
 docs/debugger
 .cargo/
+grba_test_output

@@ -1,0 +1,8 @@
+{
+  "max_parallelism": 24,
+  "test_rom_dir": "./test_roms",
+  "output_path": "./grba_test_output",
+  "snapshot_path": "./test_roms/expected",
+  "bios_path": "./roms/gba_bios.bin",
+  "custom_configs": {}
+}
