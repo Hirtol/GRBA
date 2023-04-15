@@ -34,6 +34,7 @@ pub fn run_in_custom_handler<R>(function: impl FnOnce() -> R) -> R {
                     None => "Box<dyn Any>",
                 },
             };
+
             let thread = std::thread::current();
             let correlation = PanicCorrelation {
                 panic_msg: msg.to_string(),
