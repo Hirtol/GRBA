@@ -17,14 +17,28 @@ pub struct TestConfig {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct CustomRomTest {
-    /// The amount of frames to emulate
+    /// The amount of frames to emulate initially
     pub num_frames: u32,
+    /// The sequence of instructions to run *after* the initial `num_frames`
+    #[serde(default)]
+    pub sequences: HashMap<String, Vec<TestSequenceInstructions>>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub enum TestSequenceInstructions {
-    DumpFrame,
+    /// Dump the current frame and use it for future comparisons in the test-runner.
+    /// The dump's ID will be the `rom_id + DumpName`.
+    DumpFrame(String),
+    /// Advance the given number of frames
     AdvanceFrames(u32),
+    /// Provide the given input for the next frame.
+    ///
+    /// Will run 2 frames implicitly, one with the key pressed, and then one where it is released.
     Input(grba_core::InputKeys),
+    /// Hold the given input for the given amount of frames.
+    ///
+    /// Will implicitly run `n + 1` frames as the input has to be released for at least one frame
+    HoldInputFor(grba_core::InputKeys, u32),
 }
 
 impl Default for TestConfig {
@@ -53,6 +67,14 @@ pub fn load_config() -> anyhow::Result<TestConfig> {
 
         Ok(defaults)
     }
+}
+
+pub fn save_config(config: &TestConfig) -> anyhow::Result<()> {
+    let path = Path::new("./grba_test_conf.json");
+
+    serde_json::to_writer_pretty(std::fs::File::create(path)?, config)?;
+
+    Ok(())
 }
 
 #[derive(clap::Parser, Debug)]

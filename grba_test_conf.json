@@ -6,7 +6,107 @@
   "bios_path": "./roms/gba_bios.bin",
   "custom_configs": {
     "pipelineFun": {
-      "num_frames": 10
+      "num_frames": 10,
+      "sequence": []
+    },
+    "armwrestler-gba-fixed": {
+      "num_frames": 5,
+      "sequences": {
+        "arm": [
+          {
+            "HoldInputFor": [
+              "Start",
+              2
+            ]
+          },
+          {
+            "DumpFrame": "alu_1"
+          },
+          {
+            "HoldInputFor": [
+              "Start",
+              2
+            ]
+          },
+          {
+            "DumpFrame": "alu_2"
+          },
+          {
+            "HoldInputFor": [
+              "Start",
+              2
+            ]
+          },
+          {
+            "DumpFrame": "load_1"
+          },
+          {
+            "HoldInputFor": [
+              "Start",
+              2
+            ]
+          },
+          {
+            "DumpFrame": "load_2"
+          },
+          {
+            "HoldInputFor": [
+              "Start",
+              2
+            ]
+          },
+          {
+            "DumpFrame": "ldm_str"
+          }
+        ],
+        "thumb": [
+          {
+            "HoldInputFor": [
+              "Down",
+              2
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "Down",
+              2
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "Down",
+              2
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "Start",
+              2
+            ]
+          },
+          {
+            "DumpFrame": "alu"
+          },
+          {
+            "HoldInputFor": [
+              "Start",
+              2
+            ]
+          },
+          {
+            "DumpFrame": "ldr_str"
+          },
+          {
+            "HoldInputFor": [
+              "Start",
+              2
+            ]
+          },
+          {
+            "DumpFrame": "ldm_stm"
+          }
+        ]
+      }
     }
   }
 }
