@@ -162,7 +162,7 @@ impl CPU {
 
         let (pipeline_subtraction, jump_addr, new_mode) = match exception {
             Exception::SoftwareInterrupt => {
-                println!("Raising Software Interrupt");
+                // println!("Raising Software Interrupt");
                 let pipeline_subtraction = match self.state() {
                     State::Arm => 4,
                     State::Thumb => 2,
@@ -171,7 +171,7 @@ impl CPU {
                 (pipeline_subtraction, SOFTWARE_INTERRUPT_ADDR, Mode::Supervisor)
             }
             Exception::Interrupt => {
-                println!("Raising IRQ");
+                // println!("Raising IRQ");
                 // In this case users should return to the PC before this interrupt would be executed using the SUBS, r14, #4 instruction.
                 // For Thumb we therefore need to not subtract anything, and for ARM only 4.
                 let pipeline_subtraction = match self.state() {

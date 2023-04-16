@@ -60,6 +60,6 @@ pub struct ClapArgs {
     #[clap(short)]
     pub bios: Option<PathBuf>,
     /// The amount of frames to emulate
-    #[clap(short, default_value = "50")]
+    #[clap(short, default_value = "5")]
     pub frames: u32,
 }

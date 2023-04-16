@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use anyhow::Context;
 use owo_colors::{CssColors, OwoColorize};
@@ -22,7 +23,7 @@ impl SimpleReporter {
         println!("=== Running {} Snapshot Tests ===\n", test_roms.len().green())
     }
 
-    pub fn handle_complete_tests(&self, reports: &[TestOutput]) {
+    pub fn handle_complete_tests(&self, reports: &[TestOutput], time_taken: Duration) {
         let (mut passed, mut failed, mut unchanged, mut changed, mut errors) = (vec![], vec![], vec![], vec![], vec![]);
 
         for report in reports {
@@ -51,7 +52,7 @@ impl SimpleReporter {
         }
 
         if !failed.is_empty() {
-            println!("{}\n", "== Found failures ==".on_color(CssColors::Orange));
+            println!("{}\n", "== Found failures ==".on_color(CssColors::DarkCyan));
 
             for fail in &failed {
                 let (failure_path, snapshot_path) = match &fail.context.output {
@@ -62,11 +63,7 @@ impl SimpleReporter {
                     _ => panic!(),
                 };
 
-                println!(
-                    "= {}(file://{:?}) =",
-                    fail.rom_name.color(CssColors::Orange),
-                    fail.rom_path
-                );
+                println!("= {}({:?}) =", fail.rom_name.color(CssColors::DarkCyan), fail.rom_path);
                 println!("Failed snapshot test",);
                 println!("Was: {:?}", failure_path);
                 println!("Expected: {:?}", snapshot_path);
@@ -89,11 +86,11 @@ impl SimpleReporter {
                 };
 
                 println!(
-                    "- {}({:?})",
+                    "= {}({:?}) =",
                     change.rom_name.color(CssColors::RebeccaPurple),
                     change.rom_path
                 );
-                println!("-- {changed_path_dump:?}");
+                println!("Changed: {changed_path_dump:?}");
             }
 
             println!()
@@ -104,7 +101,12 @@ impl SimpleReporter {
         let errors_len = errors.len();
 
         // Final Report
-        println!("=== {} - Ran {} Tests ===", "Report".green(), reports.len().green());
+        println!(
+            "=== {} - Ran {} Tests in {:.2?} ===",
+            "Report".green(),
+            reports.len().green(),
+            time_taken.purple()
+        );
 
         let no_longer_failing = passed
             .iter()

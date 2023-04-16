@@ -50,6 +50,7 @@ fn main() -> anyhow::Result<()> {
 
     formatter.handle_start(&roms_to_run);
 
+    let now = Instant::now();
     let frame_results = panics::run_in_custom_handler(|| {
         roms_to_run
             .into_iter()
@@ -87,7 +88,7 @@ fn main() -> anyhow::Result<()> {
 
     let results = processing::process_results(frame_results, &output_path, &snapshots);
 
-    formatter.handle_complete_tests(&results);
+    formatter.handle_complete_tests(&results, now.elapsed());
 
     Ok(())
 }
