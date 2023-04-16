@@ -13,7 +13,7 @@ mod utils;
 
 fn main() -> anyhow::Result<()> {
     let clap_args = ClapArgs::parse();
-    let mut config = config::load_config()?;
+    let config = config::load_config()?;
 
     let test_roms = clap_args
         .test_rom_dir
