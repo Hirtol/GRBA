@@ -9,6 +9,31 @@
       "num_frames": 10,
       "sequence": []
     },
+    "brin_demo": {
+      "num_frames": 5,
+      "sequences": {
+        "scrolling": [
+          {
+            "HoldInputFor": [
+              "Right",
+              60
+            ]
+          },
+          {
+            "DumpFrame": "60_frames"
+          },
+          {
+            "HoldInputFor": [
+              "Right",
+              120
+            ]
+          },
+          {
+            "DumpFrame": "grid_wrap"
+          }
+        ]
+      }
+    },
     "armwrestler-gba-fixed": {
       "num_frames": 5,
       "sequences": {
