@@ -1087,6 +1087,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "emu_test_runner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fxhash",
+ "image",
+ "indicatif",
+ "once_cell",
+ "owo-colors",
+ "rayon",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1484,6 +1499,7 @@ dependencies = [
  "anyhow",
  "clap 4.2.2",
  "crossbeam",
+ "emu_test_runner",
  "fxhash",
  "grba_core",
  "image",

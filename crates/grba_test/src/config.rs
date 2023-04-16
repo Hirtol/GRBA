@@ -6,7 +6,7 @@ pub type RomName = String;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct TestConfig {
-    pub max_parallelism: NonZeroUsize,
+    pub num_threads: NonZeroUsize,
     /// The path of the directory with all test roms
     pub test_rom_dir: PathBuf,
     pub output_path: PathBuf,
@@ -21,10 +21,16 @@ pub struct CustomRomTest {
     pub num_frames: u32,
 }
 
+pub enum TestSequenceInstructions {
+    DumpFrame,
+    AdvanceFrames(u32),
+    Input(grba_core::InputKeys),
+}
+
 impl Default for TestConfig {
     fn default() -> Self {
         Self {
-            max_parallelism: std::thread::available_parallelism().unwrap(),
+            num_threads: std::thread::available_parallelism().unwrap(),
             test_rom_dir: PathBuf::from("./test_roms"),
             output_path: PathBuf::from("./grba_test_output"),
             snapshot_path: PathBuf::from("./test_roms/expected"),
@@ -54,7 +60,7 @@ pub fn load_config() -> anyhow::Result<TestConfig> {
 pub struct ClapArgs {
     /// The path of the directory with all test roms, if not provided the config's value will be used
     pub test_rom_dir: Option<PathBuf>,
-    /// The path where the results will be dumped, as well as the expected images saved for snapshot testing.
+    /// The path where the results will be dumped.
     #[clap(short)]
     pub output_path: Option<PathBuf>,
     #[clap(short)]
@@ -62,4 +68,6 @@ pub struct ClapArgs {
     /// The amount of frames to emulate
     #[clap(short, default_value = "5")]
     pub frames: u32,
+    /// The amount of threads to use, by default will use as many threads as the system has.
+    pub num_threads: Option<NonZeroUsize>,
 }
