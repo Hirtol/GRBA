@@ -23,7 +23,7 @@ impl ArmV4 {
         // We have to operate on an immediate value
         // Shift amount is 0 extended to 32 bits, then rotated right by `rotate amount * 2`
         let rotate = instruction.get_bits(8, 11) * 2;
-        let imm = instruction.get_bits(0, 7) as u32;
+        let imm = instruction.get_bits(0, 7);
         let op2_value = imm.rotate_right(rotate);
         // We don't use the barrel shifter `ShiftType::RotateRight` here because of this strange situation.
         // It seems that, if rotate == 0, then instead of using RotateRightExtended, it just doesn't change the carry flag.
