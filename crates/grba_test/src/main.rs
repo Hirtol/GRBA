@@ -1,5 +1,3 @@
-#![feature(type_name_of_val)]
-
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
