@@ -4,7 +4,7 @@ use std::path::Path;
 
 use emu_test_runner::inputs::{get_rom_fs_id, TestCandidate};
 
-use crate::config::{CustomRomTest, TestConfig, TestSequenceInstructions};
+use crate::config::{TestConfig, TestSequenceInstructions};
 
 pub struct CustomRomTestSequence<'a> {
     pub num_frames: u32,
@@ -37,9 +37,7 @@ pub fn find_all_tests<'a>(
                                 },
                             );
                         })
-                        .map(|(test_name, _)| {
-                            TestCandidate::new(format!("{basic_rom_id}_{test_name}"), path.clone(), true)
-                        })
+                        .map(|(test_name, _)| TestCandidate::new(format!("{basic_rom_id}_{test_name}"), path.clone()))
                         .collect();
                 } else {
                     sequences.insert(
@@ -52,7 +50,7 @@ pub fn find_all_tests<'a>(
                 }
             }
 
-            vec![TestCandidate::new(basic_rom_id.into_owned(), path, false)]
+            vec![TestCandidate::new(basic_rom_id.into_owned(), path)]
         })
         .collect();
 

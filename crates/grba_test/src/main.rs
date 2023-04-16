@@ -1,12 +1,9 @@
 use anyhow::Context;
 use clap::Parser;
 use emu_test_runner::formatters::simple::SimpleConsoleFormatter;
-use emu_test_runner::inputs::TestCandidate;
 use emu_test_runner::options::EmuRunnerOptions;
 use emu_test_runner::outputs::FrameOutput;
 use emu_test_runner::EmuTestRunner;
-
-use grba_core::emulator::frame::RgbaFrame;
 
 use crate::config::{ClapArgs, TestSequenceInstructions};
 use crate::utils::MemoryRam;
@@ -41,6 +38,7 @@ fn main() -> anyhow::Result<()> {
         expected_frame_width: grba_core::DISPLAY_WIDTH as usize,
         expected_frame_height: grba_core::DISPLAY_HEIGHT as usize,
         put_sequence_tests_in_subfolder: true,
+        copy_comparison_image: true,
     };
     let runner = EmuTestRunner::new(formatter, options)?;
 
