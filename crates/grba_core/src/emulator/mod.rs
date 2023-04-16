@@ -127,7 +127,7 @@ impl GBAEmulator {
                 self.cpu.poll_interrupts(&mut self.bus);
             }
             EventTag::Halt => {
-                println!("Halting!");
+                // println!("Halting!");
 
                 // If this returns `true` then we've hit Vblank and should exit for now.
                 if self.handle_halt() {

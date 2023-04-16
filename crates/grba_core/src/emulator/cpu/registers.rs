@@ -50,7 +50,7 @@ impl Default for Registers {
     fn default() -> Self {
         Registers {
             general_purpose: [0; 16],
-            cpsr: PSR::from_raw(0x0000001F), // Technically the initial mode should be SUPERVISOR (aka 0x13), but then one *needs* to run the BIOS, or bugs will occur.
+            cpsr: PSR::from_raw(0x000000DF), // Technically the initial mode should be SUPERVISOR (aka 0x13), but then one *needs* to run the BIOS, or bugs will occur.
             spsr: PSR::from_raw(0),
             spsr_bank: [PSR::default(); 5],
             r8_bank: [0; 2],

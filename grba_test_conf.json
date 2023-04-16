@@ -4,5 +4,9 @@
   "output_path": "./grba_test_output",
   "snapshot_path": "./test_roms/expected",
   "bios_path": "./roms/gba_bios.bin",
-  "custom_configs": {}
+  "custom_configs": {
+    "pipelineFun": {
+      "num_frames": 10
+    }
+  }
 }
