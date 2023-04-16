@@ -102,8 +102,7 @@ impl SimpleReporter {
 
         // Final Report
         println!(
-            "=== {} - Ran {} Tests in {:.2?} ===",
-            "Report".green(),
+            "=== Report - Ran {} Tests in {:.2?} ===",
             reports.len().green(),
             time_taken.purple()
         );

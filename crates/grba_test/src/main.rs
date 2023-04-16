@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use indicatif::ParallelProgressIterator;
 use rayon::prelude::*;
 
 use grba_core::emulator::frame::RgbaFrame;
@@ -51,8 +52,7 @@ fn main() -> anyhow::Result<()> {
     let now = Instant::now();
     let frame_results = panics::run_in_custom_handler(|| {
         roms_to_run
-            .into_iter()
-            .par_bridge()
+            .into_par_iter()
             .map(|rom| {
                 let name = get_rom_fs_name(&rom);
                 let runner_output = std::fs::read(&rom).context("Couldn't read ROM").and_then(|rom_data| {
@@ -81,6 +81,7 @@ fn main() -> anyhow::Result<()> {
                     context: e,
                 })
             })
+            .progress()
             .collect::<Vec<_>>()
     });
 
