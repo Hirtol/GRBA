@@ -7,6 +7,7 @@ use crate::gui::debug::cpu_state_view::CpuStateView;
 use crate::gui::debug::execution_view::CpuExecutionView;
 use crate::gui::debug::io_view::IoView;
 use grba_core::emulator::debug::DebugEmulator;
+use crate::gui::debug::emu_state::EmuStateView;
 
 use crate::gui::debug::memory_view::MemoryEditorView;
 use crate::gui::debug::messages::{DebugMessageResponse, DebugMessageUi};
@@ -14,6 +15,7 @@ use crate::gui::debug::palette_view::PaletteView;
 
 mod colors;
 pub mod cpu_state_view;
+pub mod emu_state;
 pub mod execution_view;
 pub mod io_view;
 pub mod memory_view;
@@ -61,6 +63,7 @@ pub trait DebugView {
 pub struct UiState {
     pub memory_open: bool,
     pub cpu_open: bool,
+    pub emu_state_open: bool,
     pub palette_open: bool,
     pub cpu_execute_open: bool,
     pub io_open: bool,
@@ -69,9 +72,10 @@ pub struct UiState {
 pub struct DebugViewManager {
     memory: MemoryEditorView,
     cpu_viewer: CpuStateView,
+    emu_viewer: EmuStateView,
     palette_viewer: PaletteView,
     cpu_execution: CpuExecutionView,
-    io_viewer: io_view::IoView,
+    io_viewer: IoView,
 
     pub state: UiState,
 }
@@ -98,6 +102,11 @@ impl DebugViewManager {
                 let result = CpuStateView::prepare_frame(emu, request);
 
                 (DebugMessageResponse::CpuResponse(result), false)
+            }
+            DebugMessageUi::EmuRequest(request) => {
+                let result = EmuStateView::prepare_frame(emu, request);
+
+                (DebugMessageResponse::EmuResponse(result), false)
             }
             DebugMessageUi::PaletteRequest(request) => {
                 let result = PaletteView::prepare_frame(emu, request);
@@ -133,6 +142,7 @@ impl DebugViewManager {
         Self {
             memory: MemoryEditorView::new(Default::default()),
             cpu_viewer: CpuStateView::new(),
+            emu_viewer: EmuStateView::new(),
             palette_viewer: PaletteView::new(),
             cpu_execution: CpuExecutionView::new(),
             io_viewer: IoView::new(),
@@ -148,6 +158,9 @@ impl DebugViewManager {
             }
             DebugMessageResponse::CpuResponse(data) => {
                 self.cpu_viewer.update_requested_data(data);
+            },
+            DebugMessageResponse::EmuResponse(data) => {
+                self.emu_viewer.update_requested_data(data)
             }
             DebugMessageResponse::PaletteResponse(data) => {
                 self.palette_viewer.update_requested_data(data);
@@ -176,6 +189,10 @@ impl DebugViewManager {
             }
 
             if ui.checkbox(&mut self.state.cpu_open, CpuStateView::NAME).clicked() {
+                ui.close_menu();
+            }
+
+            if ui.checkbox(&mut self.state.emu_state_open, EmuStateView::NAME).clicked() {
                 ui.close_menu();
             }
 
@@ -219,6 +236,13 @@ impl DebugViewManager {
             let request = self.cpu_viewer.request_information();
 
             result.push(DebugMessageUi::CpuRequest(request));
+        }
+
+        if self.state.emu_state_open {
+            let _ = self.emu_viewer.draw(ctx, &mut self.state.emu_state_open);
+            let request = self.emu_viewer.request_information();
+
+            result.push(DebugMessageUi::EmuRequest(request));
         }
 
         if self.state.cpu_execute_open {

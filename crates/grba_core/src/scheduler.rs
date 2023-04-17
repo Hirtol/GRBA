@@ -23,6 +23,11 @@ impl Scheduler {
         }
     }
 
+    /// For debug purposes one can clone the current event queue.
+    pub fn event_queue(&self) -> Vec<Event> {
+        self.event_queue.clone().into_sorted_vec()
+    }
+
     /// Set the current time to the next closest event.
     #[inline]
     pub fn skip_to_next_event(&mut self) {
