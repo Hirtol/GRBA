@@ -4,6 +4,7 @@ use emu_test_runner::formatters::simple::SimpleConsoleFormatter;
 use emu_test_runner::options::EmuRunnerOptions;
 use emu_test_runner::outputs::FrameOutput;
 use emu_test_runner::EmuTestRunner;
+use std::time::Duration;
 
 use crate::config::{ClapArgs, TestSequenceInstructions};
 use crate::utils::MemoryRam;
@@ -39,12 +40,13 @@ fn main() -> anyhow::Result<()> {
         expected_frame_height: grba_core::DISPLAY_HEIGHT as usize,
         put_sequence_tests_in_subfolder: true,
         copy_comparison_image: true,
+        timeout: Some(Duration::from_secs(5)),
     };
     let runner = EmuTestRunner::new(formatter, options)?;
 
     let bios = std::fs::read(bios_path)?;
 
-    runner.run_tests(tests.into_iter(), |test, rom_data| {
+    let output = runner.run_tests(tests.into_iter(), |test, rom_data| {
         if let Some(custom_conf) = test_id_sequence_map.get(&test.rom_id) {
             let frames_to_run = custom_conf.num_frames;
 
@@ -56,9 +58,13 @@ fn main() -> anyhow::Result<()> {
         } else {
             vec![run_normal_test(rom_data, clap_args.frames, &bios)]
         }
-    })?;
+    });
 
-    Ok(())
+    if output.is_err() {
+        std::process::exit(1);
+    } else {
+        Ok(())
+    }
 }
 
 pub fn run_normal_test(rom: Vec<u8>, frames_to_run: u32, bios: &[u8]) -> FrameOutput {

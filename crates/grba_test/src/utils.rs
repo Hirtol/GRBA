@@ -23,6 +23,11 @@ pub fn find_all_tests<'a>(
         .flat_map(|path| {
             let basic_rom_id = get_rom_fs_id(&path);
 
+            if basic_rom_id.contains("IGNORED") {
+                println!("Skipping ignored test: `{}`", basic_rom_id);
+                return vec![];
+            }
+
             if let Some(cfg) = config.custom_configs.get(basic_rom_id.as_ref()) {
                 if !cfg.sequences.is_empty() {
                     return cfg
