@@ -1,8 +1,9 @@
+use modular_bitfield::prelude::*;
+
 use crate::emulator::bus::interrupts::{InterruptManager, Interrupts};
 use crate::emulator::{AlignedAddress, MemoryAddress};
 use crate::scheduler::{EmuTime, EventTag, Scheduler};
 use crate::utils::BitOps;
-use modular_bitfield::prelude::*;
 
 pub const TIMER_IO_START: MemoryAddress = 0x0400_0100;
 pub const TIMER_IO_END: MemoryAddress = 0x0400_010F;
@@ -140,6 +141,7 @@ impl Timers {
     }
 }
 
+#[derive(Debug)]
 struct Timer {
     control: TimerControl,
     value: u16,
@@ -158,7 +160,10 @@ impl Timer {
 
     #[inline]
     pub fn calculate_overflow_time(&self) -> EmuTime {
-        EmuTime((u16::MAX - self.value) as u64 * self.control.timer_frequency().to_ticks())
+        // u16::MAX + 1, as it technically only overflows at that point.
+        // Needed else we enter an infinite loop if the load_value = 0xFFFF!
+        const MAX_COUNT: u64 = 0x10000;
+        EmuTime((MAX_COUNT - self.value as u64) * self.control.timer_frequency().to_ticks())
     }
 }
 
@@ -175,7 +180,7 @@ impl Default for Timer {
 
 #[bitfield(bits = 16)]
 #[repr(u16)]
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug)]
 struct TimerControl {
     timer_frequency: TimerFrequency,
     cascade_mode: bool,
