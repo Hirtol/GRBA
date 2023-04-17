@@ -33,9 +33,7 @@ impl InterruptManager {
         self.flags.to_le_bytes()[(address - IF_START) as usize]
     }
 
-    pub fn read_ime(&mut self, address: MemoryAddress, scheduler: &mut Scheduler) -> u8 {
-        // As interrupts can be enabled here we need to schedule a check for awaiting interrupts
-        self.schedule_interrupt(scheduler);
+    pub fn read_ime(&mut self, address: MemoryAddress) -> u8 {
         self.master_enable.to_le_bytes()[(address - IME_START) as usize]
     }
 
@@ -54,7 +52,9 @@ impl InterruptManager {
         self.schedule_interrupt(scheduler);
     }
 
-    pub fn write_ime(&mut self, address: MemoryAddress, value: u8) {
+    pub fn write_ime(&mut self, address: MemoryAddress, value: u8, scheduler: &mut Scheduler) {
+        // As interrupts can be enabled here we need to schedule a check for awaiting interrupts
+        self.schedule_interrupt(scheduler);
         self.master_enable.update_byte_le((address % 4) as usize, value);
     }
 

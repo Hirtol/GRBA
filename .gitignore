@@ -5,3 +5,4 @@ docs/debugger
 .cargo/
 grba_test_output
 *.bin
+test_roms/private

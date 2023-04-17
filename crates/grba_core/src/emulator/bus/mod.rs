@@ -180,7 +180,7 @@ impl Bus {
             IE_START..=IE_END => self.interrupts.read_ie(addr),
             IF_START..=IF_END => self.interrupts.read_if(addr),
             WAIT_CNT_START..=WAIT_CNT_END => self.system_control.read_wait_cnt(addr),
-            IME_START..=IME_END => self.interrupts.read_ime(addr, &mut self.scheduler),
+            IME_START..=IME_END => self.interrupts.read_ime(addr),
             POST_BOOT_FLAG_ADDR => self.system_control.read_post_boot(),
             _ => {
                 crate::cpu_log!("bus-logging"; "Unhandled IO read from {:#X}", addr);
@@ -206,7 +206,7 @@ impl Bus {
             IE_START..=IE_END => self.interrupts.write_ie(addr, data),
             IF_START..=IF_END => self.interrupts.write_if(addr, data, &mut self.scheduler),
             WAIT_CNT_START..=WAIT_CNT_END => self.system_control.write_wait_cnt(addr, data),
-            IME_START..=IME_END => self.interrupts.write_ime(addr, data),
+            IME_START..=IME_END => self.interrupts.write_ime(addr, data, &mut self.scheduler),
             POST_BOOT_FLAG_ADDR => self.system_control.write_post_flag(data),
             HALT_CNT_ADDR => {
                 self.system_control.write_halt_control(data, &mut self.scheduler);
