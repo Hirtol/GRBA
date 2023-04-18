@@ -17,6 +17,10 @@
 * [TONC](https://www.coranac.com/projects/tonc/) (GBA Tutorials and Demos)
 * [MGBA Blog](https://mgba.io/2015/06/27/cycle-counting-prefetch/)
 * [Homebrew Development](https://patater.com/gbaguy/gbaasm.htm)
+* [NanoBoyAdvance Blog](https://github.com/nba-emu/NanoBoyAdvance/blob/master/docs/ACCURACY.md)
+
+## Tests
+* [GameTech](https://emulation.gametechwiki.com/index.php/GBA_Tests)
 
 ## Demo Links
 * [GBADev](https://www.gbadev.org/demos.php?showinfo=527)
