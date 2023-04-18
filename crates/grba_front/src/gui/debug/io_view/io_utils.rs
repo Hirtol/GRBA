@@ -66,7 +66,7 @@ pub fn io_radio(ui: &mut Ui, register_contents: &mut u32, bit_range: RangeInclus
             let mut changed = false;
 
             for i in 0..(2u32.pow(bit_range.size_hint().0 as u32)) {
-                changed |= ui.radio_value(&mut current_val, i as u32, format!("{}", i)).changed();
+                changed |= ui.radio_value(&mut current_val, i, format!("{}", i)).changed();
             }
 
             changed

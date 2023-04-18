@@ -14,10 +14,10 @@ pub fn save_state_and_config(gui: &EguiFramework) -> anyhow::Result<()> {
 
     std::fs::create_dir_all(&persistence)?;
 
-    let mut file = File::create(persistence.join(GUI_STATE_FILE))?;
+    let file = File::create(persistence.join(GUI_STATE_FILE))?;
 
     let ui_state = AppUiState {
-        debug_ui: gui.gui.debug_view.state.clone(),
+        debug_ui: gui.gui.debug_view.state,
         egui: gui.memory(),
     };
 
@@ -27,7 +27,7 @@ pub fn save_state_and_config(gui: &EguiFramework) -> anyhow::Result<()> {
 }
 
 pub fn deserialise_state_and_config() -> Option<AppUiState> {
-    let mut file = File::open(get_persistences_dir().join(GUI_STATE_FILE)).ok()?;
+    let file = File::open(get_persistences_dir().join(GUI_STATE_FILE)).ok()?;
 
     bincode::deserialize_from(file).ok()
 }

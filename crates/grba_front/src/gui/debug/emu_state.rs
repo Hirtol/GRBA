@@ -39,7 +39,7 @@ impl DebugView for EmuStateView {
         }
     }
 
-    fn update_emu(emu: &mut DebugEmulator, update: Self::EmuUpdate) {}
+    fn update_emu(_emu: &mut DebugEmulator, _update: Self::EmuUpdate) {}
 
     fn request_information(&mut self) -> Self::RequestInformation {
         EmuStateRequest

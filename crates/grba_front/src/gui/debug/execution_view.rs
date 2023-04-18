@@ -2,14 +2,13 @@ use std::ops::Range;
 
 use capstone::prelude::{BuildsCapstone, BuildsCapstoneSyntax};
 use capstone::{arch, Capstone};
-use egui::{Context, Direction, Layout, RichText, ScrollArea, Sense, Separator, TextStyle, Ui, Vec2};
+use egui::{Context, RichText, ScrollArea, Sense, TextStyle, Ui, Vec2};
 use egui_memory_editor::Address;
 
-use grba_core::emulator::cpu::registers::{Registers, State, PSR};
+use grba_core::emulator::cpu::registers::{Registers, State};
 use grba_core::emulator::debug::DebugEmulator;
 use grba_core::emulator::MemoryAddress;
 
-use crate::gui::debug::colors::{DARK_GREY, LIGHT_GREY};
 use crate::gui::debug::{colors, DebugView};
 
 pub struct CpuExecutionView {
@@ -178,7 +177,7 @@ impl CpuExecutionView {
         let address_space = pc.saturating_sub(40)..pc + 0x500;
         let max_lines = address_space.len();
 
-        let mut scroll = ScrollArea::vertical()
+        let scroll = ScrollArea::vertical()
             .id_source("execution_view")
             .max_height(f32::INFINITY)
             .auto_shrink([false, true]);
@@ -329,7 +328,6 @@ impl CpuExecutionView {
 
     /// Return the line height for the current provided `Ui` and selected `TextStyle`s
     fn get_line_height(&self, ui: &mut Ui) -> f32 {
-        let text_style = ui.text_style_height(&TextStyle::Monospace);
-        text_style
+        ui.text_style_height(&TextStyle::Monospace)
     }
 }

@@ -7,7 +7,7 @@ pub fn exchangers<T: Clone>(first_item: T) -> (ExchangerSender<T>, ExchangerRece
     // Fill the buffer channel to start the transactions.
     let _ = buffer_sender.send(first_item.clone());
 
-    let mut exc_recv = ExchangerReceiver {
+    let exc_recv = ExchangerReceiver {
         item_receiver: receiver,
         buffer_sender,
         last_item: first_item,
@@ -81,7 +81,7 @@ impl<T> ExchangerSender<T> {
         let old_buffer = self
             .buffer_receiver
             .recv()
-            .map_err(|e| crossbeam::channel::TrySendError::Disconnected(()))?;
+            .map_err(|_e| crossbeam::channel::TrySendError::Disconnected(()))?;
         let new_frame = std::mem::replace(frame, old_buffer);
 
         self.item_sender.try_send(new_frame).map_err(|e| match e {

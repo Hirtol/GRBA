@@ -1,18 +1,11 @@
 use egui::epaint::RectShape;
-use egui::{
-    Align, Color32, Context, Direction, Layout, Response, RichText, Rounding, Sense, Separator, Stroke, TextStyle, Ui,
-    Vec2, Widget,
-};
-use egui_memory_editor::MemoryEditor;
+use egui::{Color32, Context, Response, Rounding, Sense, Separator, Stroke, TextStyle, Ui, Vec2, Widget};
+
 use itertools::Itertools;
 
-use grba_core::emulator::cpu::registers::{Mode, Registers, PSR};
 use grba_core::emulator::debug::DebugEmulator;
 use grba_core::emulator::ppu::Palette;
 
-use crate::gui::debug::colors::{DARK_GREY, LIGHT_GREY};
-use crate::gui::debug::cpu_state_view::{CpuState, CpuStateRequest, CpuStateView};
-use crate::gui::debug::memory_view::{MemContents, MemRequest, MemResponse, MemoryEditorView};
 use crate::gui::debug::{colors, DebugView};
 
 pub struct PaletteView {
@@ -49,11 +42,11 @@ impl DebugView for PaletteView {
 
     fn prepare_frame(emu: &mut DebugEmulator, _request_information: Self::RequestInformation) -> Self::RequestedData {
         PaletteState {
-            palettes: emu.bus().ppu.palette_cache().cache().clone(),
+            palettes: *emu.bus().ppu.palette_cache().cache(),
         }
     }
 
-    fn update_emu(emu: &mut DebugEmulator, update: Self::EmuUpdate) {}
+    fn update_emu(_emu: &mut DebugEmulator, _update: Self::EmuUpdate) {}
 
     fn request_information(&mut self) -> Self::RequestInformation {
         PaletteStateRequest

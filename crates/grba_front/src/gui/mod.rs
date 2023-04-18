@@ -1,4 +1,3 @@
-use egui::mutex::RwLockWriteGuard;
 use egui::{ClippedPrimitive, Context, Memory, TexturesDelta};
 use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
@@ -6,9 +5,10 @@ use serde::{Deserialize, Serialize};
 use winit::event_loop::EventLoop;
 use winit::window::Window;
 
-use crate::runner::messages::EmulatorMessage;
 pub use debug::messages::{DebugMessageResponse, DebugMessageUi};
 pub use debug::DebugViewManager;
+
+use crate::runner::messages::EmulatorMessage;
 
 mod debug;
 

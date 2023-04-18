@@ -1,9 +1,9 @@
 use crate::gui::EguiFramework;
 use crate::rendering::framerate::FrameRate;
-use crate::runner::messages::EmulatorMessage;
-use crate::{gui, State};
+
+use crate::State;
 use anyhow::Context;
-use crossbeam::channel::Sender;
+
 use pixels::Pixels;
 use std::time::Instant;
 use winit::event_loop::EventLoop;
@@ -45,24 +45,21 @@ impl Renderer {
                 .with_title(options.title)
                 .with_inner_size(size)
                 .with_min_inner_size(size)
-                .build(&event_loop)?
+                .build(event_loop)?
         };
 
         let pixels = {
             let window_size = window.inner_size();
             let surface_texture = pixels::SurfaceTexture::new(window_size.width, window_size.height, &window);
 
-            let pixels =
-                pixels::PixelsBuilder::new(grba_core::DISPLAY_WIDTH, grba_core::DISPLAY_HEIGHT, surface_texture)
-                    .request_adapter_options(wgpu::RequestAdapterOptions {
-                        power_preference: wgpu::PowerPreference::HighPerformance,
-                        force_fallback_adapter: false,
-                        compatible_surface: None,
-                    })
-                    .present_mode(wgpu::PresentMode::Immediate)
-                    .build()?;
-
-            pixels
+            pixels::PixelsBuilder::new(grba_core::DISPLAY_WIDTH, grba_core::DISPLAY_HEIGHT, surface_texture)
+                .request_adapter_options(wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    force_fallback_adapter: false,
+                    compatible_surface: None,
+                })
+                .present_mode(wgpu::PresentMode::Immediate)
+                .build()?
         };
 
         Ok(Self {

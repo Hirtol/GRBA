@@ -1,12 +1,12 @@
-use egui::{Color32, Context, Direction, Layout, RichText, Separator, TextStyle, Ui, Vec2};
-use egui_memory_editor::MemoryEditor;
+use egui::{Context, RichText, Separator, TextStyle, Ui};
+
 use itertools::Itertools;
 
 use grba_core::emulator::cpu::registers::{Mode, Registers, PSR};
 use grba_core::emulator::debug::DebugEmulator;
 
 use crate::gui::debug::colors::{DARK_GREY, LIGHT_GREY};
-use crate::gui::debug::memory_view::{MemContents, MemRequest, MemResponse, MemoryEditorView};
+
 use crate::gui::debug::{colors, DebugView};
 
 pub struct CpuStateView {
@@ -43,7 +43,7 @@ impl DebugView for CpuStateView {
         }
     }
 
-    fn update_emu(emu: &mut DebugEmulator, update: Self::EmuUpdate) {}
+    fn update_emu(_emu: &mut DebugEmulator, _update: Self::EmuUpdate) {}
 
     fn request_information(&mut self) -> Self::RequestInformation {
         CpuStateRequest

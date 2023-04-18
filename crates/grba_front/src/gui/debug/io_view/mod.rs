@@ -1,15 +1,13 @@
 use std::ops::Range;
 
-use egui::{Context, Direction, Layout, RichText, Separator, TextStyle, Ui, Vec2};
+use egui::{Context, Ui};
 use itertools::Itertools;
 
-use grba_core::emulator::cpu::registers::{Mode, Registers, PSR};
+use grba_core::emulator::cpu::registers::Registers;
 use grba_core::emulator::debug::DebugEmulator;
 use grba_core::emulator::MemoryAddress;
 
-use crate::gui::debug::colors::LIGHT_GREY;
-use crate::gui::debug::memory_view::{MemContents, MemRequest, MemResponse, MemoryEditorView};
-use crate::gui::debug::{colors, DebugView};
+use crate::gui::debug::DebugView;
 
 mod io_utils;
 mod registers;
@@ -81,7 +79,7 @@ impl DebugView for IoView {
     }
 
     fn update_emu(emu: &mut DebugEmulator, update: Self::EmuUpdate) {
-        let (bus, cpu) = emu.bus_and_cpu();
+        let (bus, _cpu) = emu.bus_and_cpu();
 
         for (address, value) in update.data {
             // TODO: Make a debug write function which ignores data bus shenanigans (like VRAM not being writable with u8)

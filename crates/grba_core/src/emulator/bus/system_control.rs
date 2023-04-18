@@ -1,4 +1,3 @@
-use crate::emulator::bus::interrupts::{IE_START, IF_START, IME_START};
 use crate::emulator::MemoryAddress;
 use crate::scheduler::{EmuTime, EventTag, Scheduler};
 use modular_bitfield::bitfield;

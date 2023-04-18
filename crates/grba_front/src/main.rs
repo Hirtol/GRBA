@@ -7,13 +7,11 @@ use winit::event_loop::{ControlFlow, EventLoop};
 
 use grba_core::emulator::cartridge::header::CartridgeHeader;
 use grba_core::emulator::cartridge::Cartridge;
-use grba_core::emulator::ppu::RGBA;
 
 use crate::gui::EguiFramework;
 use crate::rendering::{Renderer, RendererOptions};
 use crate::runner::messages::EmulatorResponse;
 use crate::runner::{EmulatorRunner, RunnerHandle};
-use crate::utils::BoolUtils;
 
 pub const WIDTH: u32 = 1280;
 pub const HEIGHT: u32 = 720;
@@ -83,7 +81,7 @@ impl Application {
     }
 
     pub fn run(mut self) -> anyhow::Result<()> {
-        self.event_loop.run(move |event, window, control_flow| {
+        self.event_loop.run(move |event, _window, control_flow| {
             // Handle input events
             if self.input.update(&event) {
                 // Close events
@@ -250,7 +248,7 @@ impl Application {
         Ok(())
     }
 
-    fn handle_debug_messages(gui: &mut EguiFramework, control_flow: &mut ControlFlow, emu: &mut RunnerHandle) {
+    fn handle_debug_messages(gui: &mut EguiFramework, _control_flow: &mut ControlFlow, emu: &mut RunnerHandle) {
         while let Ok(response) = emu.response_receiver.try_recv() {
             match response {
                 EmulatorResponse::Debug(msg) => gui.gui.debug_view.handle_response_message(msg),

@@ -6,7 +6,7 @@ use crate::runner::frame_exchanger::{ExchangerReceiver, ExchangerSender};
 use grba_core::emulator::cartridge::Cartridge;
 use grba_core::emulator::debug::DebugEmulator;
 use grba_core::emulator::frame::RgbaFrame;
-use grba_core::emulator::ppu::RGBA;
+
 use grba_core::emulator::EmuOptions;
 use grba_core::emulator::GBAEmulator;
 use grba_core::InputKeys;

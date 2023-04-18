@@ -126,7 +126,7 @@ fn draw_disp_cnt(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
     let mut reg_value = u16::from_le_bytes(reg_value.try_into().unwrap()) as u32;
 
     let items = enum_iterator::all::<BgMode>().map(|m| format!("{:?}", m)).collect_vec();
-    changed |= io_utils::io_list(ui, &mut reg_value, 0..=2, "Bg Mode", &*items);
+    changed |= io_utils::io_list(ui, &mut reg_value, 0..=2, "Bg Mode", &items);
 
     changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x4, "Display Frame Select (BG-Modes 4,5 only)");
     changed |= io_utils::io_checkbox(

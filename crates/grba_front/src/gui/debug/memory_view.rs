@@ -76,7 +76,7 @@ impl DebugView for MemoryEditorView {
     }
 
     fn update_emu(emu: &mut DebugEmulator, update: Self::EmuUpdate) {
-        let (bus, cpu) = emu.bus_and_cpu();
+        let (bus, _cpu) = emu.bus_and_cpu();
 
         for (address, value) in update.data {
             // TODO: Make a debug write function which ignores data bus shenanigans (like VRAM not being writable with u8)

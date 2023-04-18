@@ -4,10 +4,10 @@ use egui::{Context, Ui};
 use serde::{Deserialize, Serialize};
 
 use crate::gui::debug::cpu_state_view::CpuStateView;
+use crate::gui::debug::emu_state::EmuStateView;
 use crate::gui::debug::execution_view::CpuExecutionView;
 use crate::gui::debug::io_view::IoView;
 use grba_core::emulator::debug::DebugEmulator;
-use crate::gui::debug::emu_state::EmuStateView;
 
 use crate::gui::debug::memory_view::MemoryEditorView;
 use crate::gui::debug::messages::{DebugMessageResponse, DebugMessageUi};
@@ -158,10 +158,8 @@ impl DebugViewManager {
             }
             DebugMessageResponse::CpuResponse(data) => {
                 self.cpu_viewer.update_requested_data(data);
-            },
-            DebugMessageResponse::EmuResponse(data) => {
-                self.emu_viewer.update_requested_data(data)
             }
+            DebugMessageResponse::EmuResponse(data) => self.emu_viewer.update_requested_data(data),
             DebugMessageResponse::PaletteResponse(data) => {
                 self.palette_viewer.update_requested_data(data);
             }
@@ -192,7 +190,10 @@ impl DebugViewManager {
                 ui.close_menu();
             }
 
-            if ui.checkbox(&mut self.state.emu_state_open, EmuStateView::NAME).clicked() {
+            if ui
+                .checkbox(&mut self.state.emu_state_open, EmuStateView::NAME)
+                .clicked()
+            {
                 ui.close_menu();
             }
 
