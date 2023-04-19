@@ -12,6 +12,7 @@ use crate::gui::EguiFramework;
 use crate::rendering::{Renderer, RendererOptions};
 use crate::runner::messages::EmulatorResponse;
 use crate::runner::{EmulatorRunner, RunnerHandle};
+use crate::utils::MainArgs;
 
 pub const WIDTH: u32 = 1280;
 pub const HEIGHT: u32 = 720;
@@ -33,7 +34,8 @@ fn main() {
     #[cfg(feature = "bin-logging")]
     debug::setup_emulator_logger("./emu.logbin").expect("Failed to setup bin logger");
 
-    let application = Application::new().expect("Failed to create application");
+    let cli_options = utils::parse_main_args().expect("Failed to parse arguments");
+    let application = Application::new(cli_options).expect("Failed to create application");
 
     let _ = application.run();
 }
@@ -55,8 +57,8 @@ impl Application {
     // sadly, no f32 in const context :(
     const FRAME_DURATION: Duration = Duration::from_nanos(16742706);
 
-    pub fn new() -> anyhow::Result<Application> {
-        let state = config::deserialise_state_and_config();
+    pub fn new(cli_options: MainArgs) -> anyhow::Result<Application> {
+        let gui_state = config::deserialise_state_and_config();
         let event_loop = EventLoop::new();
         let input = winit_input_helper::WinitInputHelper::new();
         let renderer = Renderer::new(&event_loop, RendererOptions::default())?;
@@ -66,11 +68,11 @@ impl Application {
             renderer.scale_factor(),
             &renderer.pixels,
             &event_loop,
-            state,
+            gui_state,
         );
 
         Ok(Application {
-            state: State::new(),
+            state: State::new(cli_options),
             gui,
             renderer,
             input,
@@ -105,7 +107,7 @@ impl Application {
                     match event {
                         WindowEvent::DroppedFile(path) => {
                             log::debug!("Dropped file: {:?}", path);
-                            let rom = handle_file_drop(path);
+                            let rom = load_gba_cartridge(path);
 
                             if let Some(rom) = rom {
                                 self.state.load_cartridge(rom);
@@ -279,6 +281,8 @@ pub struct State {
     pub run_state: RunningState,
     /// Whether the emulator is paused
     pub paused: bool,
+    /// The location of the BIOS file.
+    pub bios_location: PathBuf,
 }
 
 impl State {
@@ -304,19 +308,28 @@ impl State {
 }
 
 impl State {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(cli_options: MainArgs) -> Self {
+        let mut result = Self {
             current_emu: None,
             current_header: None,
             run_state: RunningState::FrameLimited,
             paused: false,
+            bios_location: cli_options.bios,
+        };
+
+        // Set the initial state according to our CLI parameters
+        if let Some(initial_rom) = cli_options.execute_path {
+            let cartridge = load_gba_cartridge(initial_rom).expect("Initial ROM was an invalid GBA cartridge");
+            result.load_cartridge(cartridge);
+            result.pause(cli_options.start_paused)
         }
+
+        result
     }
 
     pub fn load_cartridge(&mut self, cartridge: Cartridge) {
         self.current_header = Some(cartridge.header().clone());
-        //TODO: User supplied bios location
-        let bios = std::fs::read("roms/gba_bios.bin").unwrap();
+        let bios = std::fs::read(&self.bios_location).unwrap();
 
         let runner = EmulatorRunner::new(cartridge, Some(bios));
         self.current_emu = Some(runner.run(self.paused));
@@ -329,15 +342,15 @@ impl State {
         // Send a message to the emulator thread to pause/unpause
         if let Some(emu) = &self.current_emu {
             if pause {
-                emu.pause();
+                let _ = emu.pause();
             } else {
-                emu.unpause();
+                let _ = emu.unpause();
             }
         }
     }
 }
 
-fn handle_file_drop(path: PathBuf) -> Option<Cartridge> {
+fn load_gba_cartridge(path: PathBuf) -> Option<Cartridge> {
     let extension = path.extension()?.to_str()?;
 
     if extension == "gba" {
@@ -379,7 +392,7 @@ fn handle_key(input: KeyboardInput, state: &mut State, renderer: &mut Renderer) 
 
     match key {
         VirtualKeyCode::U if input.state == ElementState::Released => {
-            println!("{:?}", state.run_state);
+            log::debug!("Run State: {:?}", state.run_state);
             if state.run_state == RunningState::Unbounded {
                 state.run_default();
             } else {

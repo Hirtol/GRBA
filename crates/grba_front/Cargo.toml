@@ -26,6 +26,9 @@ memmap2 = "0.5.2"
 platform-dirs = "0.3.0"
 enum-iterator = "1.4.0"
 
+image = "0.24.1"
+pico-args = "0.5.0"
+
 # Frontend
 clap.workspace = true
 cpal = "0.15.2"
@@ -42,5 +45,4 @@ spin_sleep = "1.0.0"
 # Profiling
 profiling = "1.0.5"
 tracy-client = { version = "0.15.2", features = ["enable"], optional = true }
-image = "0.24.1"
 

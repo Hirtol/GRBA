@@ -2,7 +2,26 @@ use grba_core::emulator::ppu::RGBA;
 use grba_core::FRAMEBUFFER_SIZE;
 use image::imageops::FilterType;
 use image::ImageBuffer;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+pub struct MainArgs {
+    pub execute_path: Option<PathBuf>,
+    pub start_paused: bool,
+    pub bios: PathBuf,
+}
+
+pub fn parse_main_args() -> Option<MainArgs> {
+    let mut parser = pico_args::Arguments::from_env();
+
+    Some(MainArgs {
+        start_paused: parser.contains(["-p", "--paused"]),
+        bios: parser
+            .opt_value_from_str("--bios")
+            .ok()?
+            .unwrap_or("roms/gba_bios.bin".into()),
+        execute_path: parser.opt_free_from_str().ok()?,
+    })
+}
 
 pub trait BoolUtils {
     fn toggle(&mut self);
