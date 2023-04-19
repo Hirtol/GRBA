@@ -1,6 +1,7 @@
 use bus::Bus;
 use cartridge::Cartridge;
 use cpu::CPU;
+use debug::EmuDebugState;
 
 use crate::emulator::bus::BiosData;
 use crate::emulator::frame::RgbaFrame;
@@ -24,7 +25,7 @@ pub type AlignedAddress = u32;
 pub struct GBAEmulator {
     pub(crate) cpu: CPU,
     pub(crate) bus: Bus,
-    pub(crate) debug: EmuDebugging,
+    pub(crate) debug: EmuDebugState,
     pub options: EmuOptions,
 }
 
@@ -36,9 +37,10 @@ impl GBAEmulator {
             cpu: CPU::new(options.should_skip_bios(), &mut mmu),
             bus: mmu,
             options,
-            debug: EmuDebugging {
+            debug: EmuDebugState {
                 breakpoints: Vec::new(),
                 break_at_cycle: None,
+                last_hit_breakpoint: None,
             },
         }
     }
@@ -207,13 +209,18 @@ impl GBAEmulator {
     pub fn step_instruction_debug(&mut self) -> (bool, bool) {
         let vsync = self.step_instruction();
         let next_pc = self.cpu.registers.next_pc();
-        let breakpoint_hit = self.debug.breakpoints.iter().copied().any(|addr| next_pc == addr);
+        let breakpoint_hit = self.debug.breakpoints.iter().copied().find(|addr| next_pc == *addr);
 
         if matches!(self.debug.break_at_cycle, Some(cycle) if cycle <= self.bus.scheduler.current_time.0) {
             self.debug.break_at_cycle = None;
+            self.debug.last_hit_breakpoint = Some(debug::Breakpoint::Cycle(self.bus.scheduler.current_time));
             (vsync, true)
         } else {
-            (vsync, breakpoint_hit)
+            if let Some(breakpoint) = breakpoint_hit {
+                self.debug.last_hit_breakpoint = Some(debug::Breakpoint::Address(breakpoint));
+            }
+
+            (vsync, breakpoint_hit.is_some())
         }
     }
 
@@ -256,11 +263,6 @@ impl EmuOptions {
     pub fn should_skip_bios(&self) -> bool {
         self.skip_bios || self.bios.is_none()
     }
-}
-
-pub struct EmuDebugging {
-    pub breakpoints: Vec<MemoryAddress>,
-    pub break_at_cycle: Option<u64>,
 }
 
 impl Default for EmuOptions {

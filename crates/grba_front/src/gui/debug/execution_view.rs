@@ -6,7 +6,7 @@ use egui::{Context, Key, RichText, ScrollArea, Sense, TextStyle, Ui, Vec2};
 use egui_memory_editor::Address;
 
 use grba_core::emulator::cpu::registers::{Registers, State};
-use grba_core::emulator::debug::DebugEmulator;
+use grba_core::emulator::debug::{Breakpoint, DebugEmulator};
 use grba_core::emulator::MemoryAddress;
 
 use crate::gui::debug::{colors, DebugView};
@@ -15,14 +15,19 @@ pub struct CpuExecutionView {
     cpu_state: CpuState,
     last_visible_address: Range<Address>,
     break_points: Vec<MemoryAddress>,
+    cycle_break: Option<u64>,
     // Display
     capstone: Capstone,
     debug_enabled: bool,
     selected_address: Option<Address>,
     force_state: Option<State>,
+    frame_state: FrameState,
+}
 
+pub struct FrameState {
     break_cycle_input: String,
     add_breakpoint_input: String,
+    jump_to_pc: bool,
 }
 
 #[derive(Debug, Default)]
@@ -30,6 +35,7 @@ pub struct CpuState {
     registers: Registers,
     visible_address_range: Range<Address>,
     data: Vec<u8>,
+    last_hit_breakpoint: Option<Breakpoint>,
 }
 
 #[derive(Debug)]
@@ -55,8 +61,12 @@ impl CpuExecutionView {
             capstone,
             debug_enabled: false,
             break_points: vec![],
-            break_cycle_input: String::new(),
-            add_breakpoint_input: String::new(),
+            frame_state: FrameState {
+                break_cycle_input: String::new(),
+                add_breakpoint_input: String::new(),
+                jump_to_pc: false,
+            },
+            cycle_break: None,
         }
     }
 }
@@ -67,7 +77,10 @@ pub enum CpuExecutionUpdate {
     StepFrame,
     SetDebug(bool),
     SetBreakpoints(Vec<MemoryAddress>),
-    SetBreakCycle(u64),
+    /// Set the break cycle at the `u64`th clock cycle if the `bool` is `false`.
+    ///
+    /// Otherwise interpret the `u64` as a relative clock.
+    SetBreakCycle(Option<(bool, u64)>),
 }
 
 impl DebugView for CpuExecutionView {
@@ -81,6 +94,7 @@ impl DebugView for CpuExecutionView {
             registers: emu.cpu().registers.clone(),
             visible_address_range: request_information.visible_address_range.clone(),
             data: Vec::with_capacity(request_information.visible_address_range.len()),
+            last_hit_breakpoint: emu.debug_info().last_hit_breakpoint.clone(),
         };
 
         let (bus, cpu) = emu.bus_and_cpu();
@@ -111,8 +125,18 @@ impl DebugView for CpuExecutionView {
                 }
                 CpuExecutionUpdate::SetDebug(value) => emu.0.options.debugging = value,
                 CpuExecutionUpdate::SetBreakpoints(breakpoints) => emu.debug_info().breakpoints = breakpoints,
-                CpuExecutionUpdate::SetBreakCycle(cycle) => {
-                    emu.debug_info().break_at_cycle = Some(cycle);
+                CpuExecutionUpdate::SetBreakCycle(Some((is_relative, cycle))) => {
+                    if is_relative {
+                        emu.debug_info().break_at_cycle = Some(emu.bus().scheduler.current_time.0 + cycle);
+                    } else {
+                        emu.debug_info().break_at_cycle = Some(cycle);
+                    }
+                }
+                CpuExecutionUpdate::SetBreakCycle(None) => {
+                    emu.debug_info().break_at_cycle = None;
+                    if matches!(emu.debug_info().last_hit_breakpoint, Some(Breakpoint::Cycle(_))) {
+                        emu.debug_info().last_hit_breakpoint = None;
+                    }
                 }
             };
         }
@@ -182,10 +206,15 @@ impl CpuExecutionView {
         let address_space = pc.saturating_sub(40)..pc + 0x500;
         let max_lines = address_space.len();
 
-        let scroll = ScrollArea::vertical()
+        let mut scroll = ScrollArea::vertical()
             .id_source("execution_view")
             .max_height(f32::INFINITY)
             .auto_shrink([false, true]);
+
+        if self.frame_state.jump_to_pc {
+            self.frame_state.jump_to_pc = false;
+            scroll = scroll.vertical_scroll_offset(line_height * 10.);
+        }
 
         scroll.show_rows(ui, line_height, max_lines, |ui, line_range| {
             // Persist the visible range for future queries.
@@ -226,6 +255,7 @@ impl CpuExecutionView {
                         let response = ui
                             .add(egui::Label::new(start_text).sense(Sense::click()))
                             .on_hover_text("Click to select, right-click to set breakpoint");
+
                         // Select the address
                         if response.clicked() {
                             if response.double_clicked() {
@@ -263,31 +293,63 @@ impl CpuExecutionView {
             .resizable(true)
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical().always_show_scroll(true).show(ui, |ui| {
-                    let resp = egui::TextEdit::singleline(&mut self.add_breakpoint_input)
+                    let resp = egui::TextEdit::singleline(&mut self.frame_state.add_breakpoint_input)
                         .hint_text("Add Breakpoint")
                         .show(ui);
 
                     if resp.response.lost_focus() && ui.input(|ui| ui.key_pressed(Key::Enter)) {
                         let trimmed = self
+                            .frame_state
                             .add_breakpoint_input
                             .strip_prefix("0x")
-                            .unwrap_or(&self.add_breakpoint_input);
+                            .unwrap_or(&self.frame_state.add_breakpoint_input);
                         let address = Address::from_str_radix(trimmed, 16).ok();
 
                         if let Some(address) = address {
                             self.break_points.push(address as MemoryAddress);
                         } else {
-                            log::warn!("Tried to enter invalid address: `{}`", self.add_breakpoint_input);
+                            log::warn!(
+                                "Tried to enter invalid address: `{}`",
+                                self.frame_state.add_breakpoint_input
+                            );
                         }
 
                         updates.push(CpuExecutionUpdate::SetBreakpoints(self.break_points.clone()));
                     }
 
                     if resp.response.clicked() {
-                        self.add_breakpoint_input.clear();
+                        self.frame_state.add_breakpoint_input.clear();
+                    }
+
+                    if let Some((mode, cycle)) = super::utils::text_edit_uint(
+                        ui,
+                        &mut self.frame_state.break_cycle_input,
+                        "Cycle Break",
+                        "Set the breakpoint at the given cycle.\nUse #{CYCLE} for a relative offset",
+                        10,
+                    ) {
+                        // Doesn't account for relative... yeah...
+                        self.cycle_break = Some(cycle);
+                        updates.push(CpuExecutionUpdate::SetBreakCycle(Some((mode.is_relative(), cycle))));
                     }
 
                     ui.separator();
+
+                    if let Some(cycle) = self.cycle_break {
+                        let mut text = RichText::new(format!("Cycle({cycle})"));
+
+                        if matches!(&self.cpu_state.last_hit_breakpoint, Some(Breakpoint::Cycle(_))) {
+                            text = text.color(colors::DARK_RED);
+                        }
+
+                        ui.horizontal(|ui| {
+                            ui.label(text);
+                            if ui.button("🗑").clicked() {
+                                self.cycle_break = None;
+                                updates.push(CpuExecutionUpdate::SetBreakCycle(None));
+                            }
+                        });
+                    }
 
                     let mut to_delete = None;
 
@@ -312,6 +374,14 @@ impl CpuExecutionView {
 
     fn draw_actions(&mut self, ui: &mut Ui, updates: &mut Vec<CpuExecutionUpdate>) {
         ui.horizontal(|ui| {
+            if ui
+                .button("Jump PC")
+                .on_hover_text("Jump the cursor back to the current PC")
+                .clicked()
+            {
+                self.frame_state.jump_to_pc = true
+            }
+
             if ui.button("Step").clicked() {
                 updates.push(CpuExecutionUpdate::StepInstruction);
             }
@@ -346,15 +416,11 @@ impl CpuExecutionView {
             }
 
             if ui
-                .checkbox(&mut self.debug_enabled, "Debug Enabled")
+                .checkbox(&mut self.debug_enabled, "Debug")
                 .on_hover_text("If enabled will allow breakpoints to work")
                 .clicked()
             {
                 updates.push(CpuExecutionUpdate::SetDebug(self.debug_enabled));
-            }
-
-            if let Some(cycle) = super::utils::text_edit_uint(ui, &mut self.break_cycle_input, "Cycle Break", 10) {
-                updates.push(CpuExecutionUpdate::SetBreakCycle(cycle));
             }
         });
     }
