@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use capstone::prelude::{BuildsCapstone, BuildsCapstoneSyntax};
 use capstone::{arch, Capstone};
-use egui::{Context, RichText, ScrollArea, Sense, TextStyle, Ui, Vec2};
+use egui::{Context, Key, RichText, ScrollArea, Sense, TextStyle, Ui, Vec2};
 use egui_memory_editor::Address;
 
 use grba_core::emulator::cpu::registers::{Registers, State};
@@ -20,7 +20,9 @@ pub struct CpuExecutionView {
     debug_enabled: bool,
     selected_address: Option<Address>,
     force_state: Option<State>,
+
     break_cycle_input: String,
+    add_breakpoint_input: String,
 }
 
 #[derive(Debug, Default)]
@@ -54,6 +56,7 @@ impl CpuExecutionView {
             debug_enabled: false,
             break_points: vec![],
             break_cycle_input: String::new(),
+            add_breakpoint_input: String::new(),
         }
     }
 }
@@ -157,6 +160,8 @@ impl DebugView for CpuExecutionView {
 
 impl CpuExecutionView {
     pub fn draw_window_content(&mut self, ui: &mut Ui, updates: &mut Vec<CpuExecutionUpdate>) {
+        self.draw_breakpoints_info(ui, updates);
+
         self.draw_actions(ui, updates);
 
         ui.separator();
@@ -213,6 +218,9 @@ impl CpuExecutionView {
 
                         if is_breakpoint {
                             start_text = start_text.background_color(colors::LIGHT_RED);
+                            if is_pc {
+                                start_text = start_text.color(colors::LIGHT_GREY)
+                            }
                         }
 
                         let response = ui
@@ -220,6 +228,11 @@ impl CpuExecutionView {
                             .on_hover_text("Click to select, right-click to set breakpoint");
                         // Select the address
                         if response.clicked() {
+                            if response.double_clicked() {
+                                ui.output_mut(|o| {
+                                    o.copied_text = format!("0x{:01$X}", start_address, address_characters);
+                                })
+                            }
                             if matches!(self.selected_address, Some(address) if address == start_address) {
                                 self.selected_address = None;
                             } else {
@@ -229,8 +242,7 @@ impl CpuExecutionView {
                         // Set breakpoint
                         if response.secondary_clicked() {
                             if self.break_points.contains(&(start_address as MemoryAddress)) {
-                                self.break_points
-                                    .retain(|address| *address != start_address as MemoryAddress);
+                                self.delete_breakpoint(start_address as MemoryAddress);
                             } else {
                                 self.break_points.push(start_address as MemoryAddress);
                             }
@@ -244,6 +256,58 @@ impl CpuExecutionView {
                     }
                 });
         });
+    }
+
+    fn draw_breakpoints_info(&mut self, ui: &mut Ui, updates: &mut Vec<CpuExecutionUpdate>) {
+        egui::containers::panel::SidePanel::left("Breakpoints")
+            .resizable(true)
+            .show_inside(ui, |ui| {
+                egui::ScrollArea::vertical().always_show_scroll(true).show(ui, |ui| {
+                    let resp = egui::TextEdit::singleline(&mut self.add_breakpoint_input)
+                        .hint_text("Add Breakpoint")
+                        .show(ui);
+
+                    if resp.response.lost_focus() && ui.input(|ui| ui.key_pressed(Key::Enter)) {
+                        let trimmed = self
+                            .add_breakpoint_input
+                            .strip_prefix("0x")
+                            .unwrap_or(&self.add_breakpoint_input);
+                        let address = Address::from_str_radix(trimmed, 16).ok();
+
+                        if let Some(address) = address {
+                            self.break_points.push(address as MemoryAddress);
+                        } else {
+                            log::warn!("Tried to enter invalid address: `{}`", self.add_breakpoint_input);
+                        }
+
+                        updates.push(CpuExecutionUpdate::SetBreakpoints(self.break_points.clone()));
+                    }
+
+                    if resp.response.clicked() {
+                        self.add_breakpoint_input.clear();
+                    }
+
+                    ui.separator();
+
+                    let mut to_delete = None;
+
+                    for (i, addr) in self.break_points.iter().enumerate() {
+                        ui.horizontal(|ui| {
+                            ui.label(format!("{:#X}", addr));
+                            if ui.button("🗑").clicked() {
+                                to_delete = Some(*addr);
+                            }
+                        });
+                    }
+
+                    if let Some(delete) = to_delete {
+                        self.delete_breakpoint(delete);
+                        updates.push(CpuExecutionUpdate::SetBreakpoints(self.break_points.clone()));
+                    }
+
+                    ui.shrink_width_to_current();
+                })
+            });
     }
 
     fn draw_actions(&mut self, ui: &mut Ui, updates: &mut Vec<CpuExecutionUpdate>) {
@@ -329,5 +393,9 @@ impl CpuExecutionView {
     /// Return the line height for the current provided `Ui` and selected `TextStyle`s
     fn get_line_height(&self, ui: &mut Ui) -> f32 {
         ui.text_style_height(&TextStyle::Monospace)
+    }
+
+    fn delete_breakpoint(&mut self, address: MemoryAddress) {
+        self.break_points.retain(|item| *item != address)
     }
 }
