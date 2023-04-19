@@ -41,6 +41,7 @@ pub enum Breakpoint {
 }
 
 pub struct EmuDebugState {
+    /// Expects a sorted [Vec].
     pub breakpoints: Vec<MemoryAddress>,
     pub break_at_cycle: Option<u64>,
     pub last_hit_breakpoint: Option<Breakpoint>,

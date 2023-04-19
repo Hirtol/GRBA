@@ -124,7 +124,10 @@ impl DebugView for CpuExecutionView {
                     }
                 }
                 CpuExecutionUpdate::SetDebug(value) => emu.0.options.debugging = value,
-                CpuExecutionUpdate::SetBreakpoints(breakpoints) => emu.debug_info().breakpoints = breakpoints,
+                CpuExecutionUpdate::SetBreakpoints(mut breakpoints) => {
+                    breakpoints.sort();
+                    emu.debug_info().breakpoints = breakpoints
+                }
                 CpuExecutionUpdate::SetBreakCycle(Some((is_relative, cycle))) => {
                     if is_relative {
                         emu.debug_info().break_at_cycle = Some(emu.bus().scheduler.current_time.0 + cycle);

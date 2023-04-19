@@ -209,15 +209,16 @@ impl GBAEmulator {
     pub fn step_instruction_debug(&mut self) -> (bool, bool) {
         let vsync = self.step_instruction();
         let next_pc = self.cpu.registers.next_pc();
-        let breakpoint_hit = self.debug.breakpoints.iter().copied().find(|addr| next_pc == *addr);
+        
+        let breakpoint_hit = self.debug.breakpoints.binary_search(&next_pc).ok();
 
         if matches!(self.debug.break_at_cycle, Some(cycle) if cycle <= self.bus.scheduler.current_time.0) {
             self.debug.break_at_cycle = None;
             self.debug.last_hit_breakpoint = Some(debug::Breakpoint::Cycle(self.bus.scheduler.current_time));
             (vsync, true)
         } else {
-            if let Some(breakpoint) = breakpoint_hit {
-                self.debug.last_hit_breakpoint = Some(debug::Breakpoint::Address(breakpoint));
+            if breakpoint_hit.is_some() {
+                self.debug.last_hit_breakpoint = Some(debug::Breakpoint::Address(next_pc));
             }
 
             (vsync, breakpoint_hit.is_some())
