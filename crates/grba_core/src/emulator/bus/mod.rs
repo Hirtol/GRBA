@@ -1,6 +1,10 @@
 pub use bios::BiosData;
 
 use crate::emulator::bus::bios::GbaBios;
+use crate::emulator::bus::dma::{
+    DmaChannels, DMA_0_ADDR_START, DMA_0_CONTROL_END, DMA_0_CONTROL_START, DMA_1_CONTROL_END, DMA_1_CONTROL_START,
+    DMA_2_CONTROL_END, DMA_2_CONTROL_START, DMA_3_ADDR_END, DMA_3_CONTROL_END, DMA_3_CONTROL_START,
+};
 use crate::emulator::bus::helpers::ReadType;
 use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
 use crate::emulator::bus::keypad::{Keypad, KEYINTERRUPT_END, KEYINTERRUPT_START, KEYSTATUS_END, KEYSTATUS_START};
@@ -19,6 +23,7 @@ pub const IO_START: MemoryAddress = 0x0400_0000;
 mod bios;
 #[cfg(feature = "debug-functionality")]
 mod debug;
+pub mod dma;
 pub mod helpers;
 pub mod interrupts;
 pub mod keypad;
@@ -33,6 +38,7 @@ pub struct Bus {
     pub timers: Timers,
     pub keypad: Keypad,
     pub ram: ram::WorkRam,
+    pub dma: DmaChannels,
     pub system_control: GbaSystemControl,
     pub ppu: PPU,
     pub scheduler: Scheduler,
@@ -42,6 +48,7 @@ impl Bus {
     pub fn new(rom: Cartridge, bios: Box<BiosData>) -> Self {
         let mut result = Self {
             ram: ram::WorkRam::new(),
+            dma: DmaChannels::new(),
             rom,
             bios: GbaBios::new(bios),
             ppu: PPU::new(),
@@ -172,6 +179,18 @@ impl Bus {
     pub fn read_io(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.read_io(addr),
+            DMA_0_CONTROL_START..=DMA_0_CONTROL_END => {
+                self.dma.channel(0).control().to_le_bytes()[(addr - DMA_0_CONTROL_START) as usize]
+            }
+            DMA_1_CONTROL_START..=DMA_1_CONTROL_END => {
+                self.dma.channel(1).control().to_le_bytes()[(addr - DMA_1_CONTROL_START) as usize]
+            }
+            DMA_2_CONTROL_START..=DMA_2_CONTROL_END => {
+                self.dma.channel(2).control().to_le_bytes()[(addr - DMA_2_CONTROL_START) as usize]
+            }
+            DMA_3_CONTROL_START..=DMA_3_CONTROL_END => {
+                self.dma.channel(3).control().to_le_bytes()[(addr - DMA_3_CONTROL_START) as usize]
+            }
             timers::TIMER_IO_START..=timers::TIMER_IO_END => self.timers.read_registers(addr, &mut self.scheduler),
             KEYSTATUS_START..=KEYSTATUS_END => self.keypad.status.to_le_bytes()[(addr - KEYSTATUS_START) as usize],
             KEYINTERRUPT_START..=KEYINTERRUPT_END => {
@@ -193,6 +212,7 @@ impl Bus {
     pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
+            DMA_0_ADDR_START..=DMA_3_ADDR_END => self.dma.write_channel(addr, data),
             timers::TIMER_IO_START..=timers::TIMER_IO_END => {
                 self.timers.write_registers(addr, data, &mut self.scheduler)
             }

@@ -1,5 +1,6 @@
 //! All debug related functionality for the [Bus] component.
 
+use crate::emulator::bus::dma::{DMA_0_ADDR_START, DMA_3_ADDR_END};
 use crate::emulator::bus::{Bus, IO_START};
 use crate::emulator::cpu::CPU;
 use crate::emulator::ppu::LCD_IO_END;
@@ -32,6 +33,7 @@ impl Bus {
     fn read_io_dbg(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.read_io_dbg(addr),
+            DMA_0_ADDR_START..=DMA_3_ADDR_END => self.dma.read_debug(addr),
             _ => self.read_io(addr, cpu),
         }
     }
