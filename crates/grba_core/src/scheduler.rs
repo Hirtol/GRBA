@@ -104,7 +104,6 @@ impl Default for Scheduler {
 pub enum EventTag {
     /// Shouldn't ever be reached, but will ensure the emulator will exit correctly.
     Exit,
-
     VBlank,
     HBlank,
     HBlankEnd,
@@ -116,6 +115,11 @@ pub enum EventTag {
     Timer1Irq,
     Timer2Irq,
     Timer3Irq,
+    //TODO: Implement DMA priority
+    Dma0End,
+    Dma1End,
+    Dma2End,
+    Dma3End,
 }
 
 #[derive(Debug, Copy, Clone, Eq)]
