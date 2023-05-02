@@ -123,13 +123,7 @@ impl Application {
                 Event::RedrawRequested(_) => {
                     if self.state.current_emu.is_none() {
                         // No emu, don't draw excessively.
-                        *control_flow = ControlFlow::WaitUntil(Instant::now() + Self::FRAME_DURATION);
-
-                        let now = Instant::now();
-
-                        if now <= self.wait_to {
-                            *control_flow = ControlFlow::WaitUntil(self.wait_to);
-
+                        if Instant::now() >= self.wait_to {
                             let render_result = self.renderer.render_pixels(
                                 &[0; grba_core::FRAMEBUFFER_SIZE * 4],
                                 &mut self.gui,
@@ -140,10 +134,11 @@ impl Application {
                             if render_result.is_err() {
                                 *control_flow = ControlFlow::Exit;
                             }
-                        } else {
+
                             self.wait_to += Self::FRAME_DURATION;
                         }
 
+                        *control_flow = ControlFlow::Wait;
                         return;
                     } else {
                         // We have an emulator, so run as fast as we can.
