@@ -2,6 +2,7 @@ use egui::{ClippedPrimitive, Context, Memory, TexturesDelta};
 use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
 use pixels::{wgpu, PixelsContext};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use winit::event_loop::EventLoop;
 use winit::window::Window;
 
@@ -71,7 +72,9 @@ impl EguiFramework {
     }
 
     /// Prepare egui.
-    pub fn prepare(&mut self, window: &Window, state: &mut crate::State) {
+    ///
+    /// Returns when the next repaint is expected (if `Duration::zero()` then immediate).
+    pub fn prepare(&mut self, window: &Window, state: &mut crate::State) -> Duration {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
         let full_output = self.egui_ctx.run(raw_input, |egui_ctx| {
@@ -83,6 +86,8 @@ impl EguiFramework {
         self.egui_state
             .handle_platform_output(window, &self.egui_ctx, full_output.platform_output);
         self.paint_jobs = self.egui_ctx.tessellate(full_output.shapes);
+
+        full_output.repaint_after
     }
 
     /// Render egui.

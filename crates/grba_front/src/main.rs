@@ -138,7 +138,7 @@ impl Application {
                             self.wait_to += Self::FRAME_DURATION;
                         }
 
-                        *control_flow = ControlFlow::Wait;
+                        *control_flow = ControlFlow::WaitUntil(self.wait_to);
                         return;
                     } else {
                         // We have an emulator, so run as fast as we can.
@@ -146,8 +146,15 @@ impl Application {
                     }
 
                     let error = if self.state.paused {
-                        // If paused just wait
-                        Self::handle_paused(&mut self.state, &mut self.renderer, &mut self.gui, control_flow)
+                        if Instant::now() >= self.wait_to {
+                            self.wait_to += Self::FRAME_DURATION;
+                            *control_flow = ControlFlow::WaitUntil(self.wait_to);
+
+                            Self::handle_paused(&mut self.state, &mut self.renderer, &mut self.gui, control_flow)
+                        } else {
+                            *control_flow = ControlFlow::WaitUntil(self.wait_to);
+                            Ok(())
+                        }
                     } else {
                         Self::handle_draw(
                             &mut self.state,
@@ -177,8 +184,6 @@ impl Application {
         gui: &mut EguiFramework,
         control_flow: &mut ControlFlow,
     ) -> anyhow::Result<()> {
-        *control_flow = ControlFlow::WaitUntil(Instant::now() + Self::FRAME_DURATION);
-
         let frame = match &mut state.current_emu {
             Some(emu) => {
                 // Handle emulator responses to our messages

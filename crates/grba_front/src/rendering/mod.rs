@@ -5,7 +5,7 @@ use crate::State;
 use anyhow::Context;
 
 use pixels::Pixels;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use winit::event_loop::EventLoop;
 use winit::window::{Fullscreen, Window, WindowId};
 
@@ -71,17 +71,19 @@ impl Renderer {
     }
 
     /// Renders the main window's contents (The framebuffer).
+    ///
+    /// Returns when the GUI expects the next repaint. If `Duration::zero()` then an immediate repaint is expected.
     pub fn render_pixels(
         &mut self,
         framebuffer: &[u8],
         gui: &mut EguiFramework,
         state: &mut State,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Duration> {
         let frame = self.pixels.frame_mut();
 
         frame.copy_from_slice(framebuffer);
 
-        gui.prepare(&self.primary_window, state);
+        let next_repaint = gui.prepare(&self.primary_window, state);
 
         // Render everything together
         let result = self
@@ -99,7 +101,7 @@ impl Renderer {
 
         self.framerate.frame_finished();
 
-        result
+        result.map(|_| next_repaint)
     }
 
     /// For when using a second window as the Egui interface.
