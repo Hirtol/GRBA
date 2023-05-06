@@ -232,7 +232,8 @@ impl Bus {
                 self.system_control.write_halt_control(data, &mut self.scheduler);
             }
             _ => {
-                todo!("IO Write {:#X}", addr)
+                // println!("IO WRITE: {:#X} - Character: {}", addr, data as char);
+                // todo!("IO Write {:#X}", addr)
             }
         }
     }

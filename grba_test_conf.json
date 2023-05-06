@@ -9,6 +9,124 @@
       "num_frames": 10,
       "sequence": []
     },
+    "mgba_suite": {
+      "num_frames": 5,
+      "sequences": {
+        "memory_tests": [
+          {
+            "Input": "A"
+          },
+          {
+            "AdvanceFrames": 60
+          },
+          {
+            "DumpFrame": "capture"
+          }
+        ],
+        "quick_tests": [
+          {
+            "HoldInputFor": [
+              "Down",
+              2
+            ]
+          },
+          {
+            "Input": "A"
+          },
+          {
+            "AdvanceFrames": 20
+          },
+          {
+            "DumpFrame": "io_tests"
+          },
+          {
+            "HoldInputFor": [
+              "B",
+              5
+            ]
+          },
+          {
+            "HoldInputForTimes": [
+              "Down",
+              5,
+              4
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              3
+            ]
+          },
+          {
+            "DumpFrame": "shifter_tests"
+          },
+          {
+            "HoldInputFor": [
+              "B",
+              5
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "Down",
+              5
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              3
+            ]
+          },
+          {
+            "DumpFrame": "carry_tests"
+          },
+          {
+            "HoldInputFor": [
+              "B",
+              5
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "Down",
+              5
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              3
+            ]
+          },
+          {
+            "DumpFrame": "multiply_long"
+          }
+        ],
+        "timing_tests": [
+          {
+            "HoldInputForTimes": [
+              "Down",
+              5,
+              2
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              5
+            ]
+          },
+          {
+            "AdvanceFrames": 265
+          },
+          {
+            "DumpFrame": "capture"
+          }
+        ]
+      }
+    },
     "brin_demo": {
       "num_frames": 5,
       "sequences": {
@@ -86,21 +204,10 @@
         ],
         "thumb": [
           {
-            "HoldInputFor": [
+            "HoldInputForTimes": [
               "Down",
-              2
-            ]
-          },
-          {
-            "HoldInputFor": [
-              "Down",
-              2
-            ]
-          },
-          {
-            "HoldInputFor": [
-              "Down",
-              2
+              2,
+              3
             ]
           },
           {

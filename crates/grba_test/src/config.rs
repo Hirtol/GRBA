@@ -39,6 +39,8 @@ pub enum TestSequenceInstructions {
     ///
     /// Will implicitly run `n + 1` frames as the input has to be released for at least one frame
     HoldInputFor(grba_core::InputKeys, u32),
+    /// HoldInputFor, but repeated `x` amount of times
+    HoldInputForTimes(grba_core::InputKeys, u32, u32),
 }
 
 impl Default for TestConfig {

@@ -116,11 +116,18 @@ fn handle_instruction(
         TestSequenceInstructions::Input(key) => {
             handle_instruction(&TestSequenceInstructions::HoldInputFor(*key, 1), emu, frame_buffer)
         }
-        TestSequenceInstructions::HoldInputFor(key, to_advance) => {
-            emu.key_down(*key);
-            handle_instruction(&TestSequenceInstructions::AdvanceFrames(*to_advance), emu, frame_buffer);
-            emu.key_up(*key);
-            emu.run_to_vblank();
+        TestSequenceInstructions::HoldInputFor(key, to_advance) => handle_instruction(
+            &TestSequenceInstructions::HoldInputForTimes(*key, *to_advance, 1),
+            emu,
+            frame_buffer,
+        ),
+        TestSequenceInstructions::HoldInputForTimes(key, to_advance, times) => {
+            for _ in 0..*times {
+                emu.key_down(*key);
+                handle_instruction(&TestSequenceInstructions::AdvanceFrames(*to_advance), emu, frame_buffer);
+                emu.key_up(*key);
+                emu.run_to_vblank();
+            }
         }
     }
 }
