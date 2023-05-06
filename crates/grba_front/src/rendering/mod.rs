@@ -115,11 +115,8 @@ impl Renderer {
     /// Lastly, it will request a redraw.
     pub fn after_window_update(&mut self, input: &winit_input_helper::WinitInputHelper, gui: &mut EguiFramework) {
         // Update the scale factor
-        match input.scale_factor() {
-            Some(scale_factor) if self.primary_window.scale_factor() != scale_factor => {
-                gui.scale_factor(scale_factor as f32 * SCALE_FACTOR_MULTIPLIER)
-            }
-            _ => {}
+        if let Some(scale_factor) = input.scale_factor_changed() {
+            gui.scale_factor(scale_factor as f32 * SCALE_FACTOR_MULTIPLIER)
         }
 
         // Resize the window
