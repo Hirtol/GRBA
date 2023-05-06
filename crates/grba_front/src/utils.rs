@@ -8,6 +8,7 @@ pub struct MainArgs {
     pub execute_path: Option<PathBuf>,
     pub start_paused: bool,
     pub bios: PathBuf,
+    pub start_bios: bool,
 }
 
 pub fn parse_main_args() -> Option<MainArgs> {
@@ -15,6 +16,7 @@ pub fn parse_main_args() -> Option<MainArgs> {
 
     Some(MainArgs {
         start_paused: parser.contains(["-p", "--paused"]),
+        start_bios: parser.contains(["-s", "--start-bios"]),
         bios: parser
             .opt_value_from_str("--bios")
             .ok()?

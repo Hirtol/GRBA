@@ -282,7 +282,14 @@ pub struct State {
     /// Whether the emulator is paused
     pub paused: bool,
     /// The location of the BIOS file.
+    pub bios: BiosState,
+}
+
+pub struct BiosState {
+    /// The location of the BIOS file.
     pub bios_location: PathBuf,
+    /// Whether the bios should be skipped or not.
+    pub should_skip: bool,
 }
 
 impl State {
@@ -314,7 +321,10 @@ impl State {
             current_header: None,
             run_state: RunningState::FrameLimited,
             paused: false,
-            bios_location: cli_options.bios,
+            bios: BiosState {
+                bios_location: cli_options.bios,
+                should_skip: !cli_options.start_bios,
+            },
         };
 
         // Set the initial state according to our CLI parameters
@@ -329,10 +339,10 @@ impl State {
 
     pub fn load_cartridge(&mut self, cartridge: Cartridge) {
         self.current_header = Some(cartridge.header().clone());
-        let bios = std::fs::read(&self.bios_location).unwrap();
+        let bios = std::fs::read(&self.bios.bios_location).unwrap();
 
         let runner = EmulatorRunner::new(cartridge, Some(bios));
-        self.current_emu = Some(runner.run(self.paused));
+        self.current_emu = Some(runner.run(self.paused, self.bios.should_skip));
     }
 
     pub fn pause(&mut self, pause: bool) {

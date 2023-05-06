@@ -17,6 +17,7 @@ use crate::emulator::cpu::CPU;
 use crate::emulator::ppu::{LCD_IO_END, PPU};
 use crate::emulator::MemoryAddress;
 use crate::scheduler::Scheduler;
+use crate::utils::BitOps;
 
 pub const IO_START: MemoryAddress = 0x0400_0000;
 
@@ -42,6 +43,7 @@ pub struct Bus {
     pub system_control: GbaSystemControl,
     pub ppu: PPU,
     pub scheduler: Scheduler,
+    pub sound_bias_stub: u16,
 }
 
 impl Bus {
@@ -57,6 +59,7 @@ impl Bus {
             timers: Timers::new(),
             keypad: Keypad::default(),
             system_control: GbaSystemControl::new(),
+            sound_bias_stub: 0,
         };
 
         result.ppu.initial_startup(&mut result.scheduler);
@@ -179,6 +182,7 @@ impl Bus {
     pub fn read_io(&mut self, addr: MemoryAddress, cpu: &CPU) -> u8 {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.read_io(addr),
+            0x4000088..=0x4000089 => self.sound_bias_stub.to_le_bytes()[addr as usize - 0x4000088],
             DMA_0_CONTROL_START..=DMA_0_CONTROL_END => {
                 self.dma.channel(0).control().to_le_bytes()[(addr - DMA_0_CONTROL_START) as usize]
             }
@@ -212,6 +216,7 @@ impl Bus {
     pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
+            0x4000088..=0x4000089 => self.sound_bias_stub.set_byte_le(addr as usize - 0x4000088, data),
             DMA_0_ADDR_START..=DMA_3_ADDR_END => self.dma.write_channel(addr, data, &mut self.scheduler),
             timers::TIMER_IO_START..=timers::TIMER_IO_END => {
                 self.timers.write_registers(addr, data, &mut self.scheduler)
@@ -232,7 +237,7 @@ impl Bus {
                 self.system_control.write_halt_control(data, &mut self.scheduler);
             }
             _ => {
-                // println!("IO WRITE: {:#X} - Character: {}", addr, data as char);
+                crate::cpu_log!("bus-logging"; "Unhandled IO write from {:#X} - {}({})", addr, data, data as char);
                 // todo!("IO Write {:#X}", addr)
             }
         }

@@ -27,7 +27,7 @@ impl EmulatorRunner {
         Self { rom, bios }
     }
 
-    pub fn run(self, start_paused: bool) -> RunnerHandle {
+    pub fn run(self, start_paused: bool, skip_bios: bool) -> RunnerHandle {
         let (request_sender, request_receiver) = unbounded::<EmulatorMessage>();
         let (response_sender, response_receiver) = unbounded::<EmulatorResponse>();
         let (frame_sender, frame_receiver) = frame_exchanger::exchangers(RgbaFrame::default());
@@ -41,6 +41,7 @@ impl EmulatorRunner {
 
             let emu_options = EmuOptions {
                 bios: self.bios,
+                skip_bios,
                 ..Default::default()
             };
 
