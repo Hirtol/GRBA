@@ -61,6 +61,7 @@ fn main() -> anyhow::Result<()> {
     });
 
     if output.is_err() {
+        println!("ERROR: {:#?}", output);
         std::process::exit(1);
     } else {
         Ok(())
@@ -89,8 +90,6 @@ pub fn run_sequence_test(
     for _ in 0..frames_to_run {
         emu.run_to_vblank();
     }
-
-    output_frames.push(capture_emulator_frame(None, &mut emu));
 
     for instruction in sequence {
         handle_instruction(instruction, &mut emu, &mut output_frames);

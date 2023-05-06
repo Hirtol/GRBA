@@ -14,10 +14,13 @@
       "sequences": {
         "memory_tests": [
           {
-            "Input": "A"
+            "HoldInputFor": [
+              "A",
+              2
+            ]
           },
           {
-            "AdvanceFrames": 60
+            "AdvanceFrames": 160
           },
           {
             "DumpFrame": "capture"
@@ -108,7 +111,7 @@
           {
             "HoldInputForTimes": [
               "Down",
-              5,
+              3,
               2
             ]
           },
@@ -120,6 +123,111 @@
           },
           {
             "AdvanceFrames": 265
+          },
+          {
+            "DumpFrame": "capture"
+          }
+        ],
+        "timer_count_up": [
+          {
+            "HoldInputForTimes": [
+              "Down",
+              3,
+              3
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              5
+            ]
+          },
+          {
+            "AdvanceFrames": 60
+          },
+          {
+            "DumpFrame": "capture"
+          }
+        ],
+        "timer_irq": [
+          {
+            "HoldInputForTimes": [
+              "Down",
+              3,
+              4
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              5
+            ]
+          },
+          {
+            "AdvanceFrames": 60
+          },
+          {
+            "DumpFrame": "capture"
+          }
+        ],
+        "bios_math": [
+          {
+            "HoldInputForTimes": [
+              "Down",
+              3,
+              8
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              5
+            ]
+          },
+          {
+            "AdvanceFrames": 50
+          },
+          {
+            "DumpFrame": "capture"
+          }
+        ],
+        "dma": [
+          {
+            "HoldInputForTimes": [
+              "Down",
+              3,
+              9
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              5
+            ]
+          },
+          {
+            "AdvanceFrames": 50
+          },
+          {
+            "DumpFrame": "capture"
+          }
+        ],
+        "misc_edge_cases": [
+          {
+            "HoldInputForTimes": [
+              "Down",
+              3,
+              10
+            ]
+          },
+          {
+            "HoldInputFor": [
+              "A",
+              5
+            ]
+          },
+          {
+            "AdvanceFrames": 50
           },
           {
             "DumpFrame": "capture"

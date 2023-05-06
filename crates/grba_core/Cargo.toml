@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = []
+default = ["dma-logging"]
 cpu-logging = []
 bus-logging = []
+dma-logging = []
 ppu-logging = []
 bin-logging = []
 debug-functionality = []

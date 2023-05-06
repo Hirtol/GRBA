@@ -207,7 +207,7 @@ impl DmaChannel {
                 self.control.update_byte_le(offset - DMA_CONTROL_OFFSET, value);
 
                 if self.control.dma_enable() && !old.dma_enable() {
-                    crate::cpu_log!("bus-logging"; "Enabling DMA: `{}` at clock cycle: `{:?}` with state {:#?}", channel_idx, scheduler.current_time, self);
+                    crate::cpu_log!("dma-logging"; "Enabling DMA: `{}` at clock cycle: `{:?}` with state {:#X?}", channel_idx, scheduler.current_time, self);
 
                     self.current_transfer = DmaTransferState {
                         source_address: self.masked_source(channel_idx),

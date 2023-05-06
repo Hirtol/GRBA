@@ -79,11 +79,14 @@ impl EmuState {
             ui.vertical(|ui| {
                 ui.style_mut().wrap = Some(false);
                 for event in &self.scheduler_events {
-                    ui.label(format!(
-                        "{:?}({})",
-                        event.tag,
-                        event.timestamp.0 - self.current_timestamp.0
-                    ));
+                    let text = if event.timestamp < self.current_timestamp {
+                        // Hard-coded event time such as Interrupt/Halt
+                        format!("{:?}({})", event.tag, event.timestamp.0)
+                    } else {
+                        format!("{:?}({})", event.tag, event.timestamp.0 - self.current_timestamp.0)
+                    };
+
+                    ui.label(text);
                 }
             });
         });
