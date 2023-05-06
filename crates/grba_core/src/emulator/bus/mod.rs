@@ -212,7 +212,7 @@ impl Bus {
     pub fn write_io(&mut self, addr: MemoryAddress, data: u8) {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.write_io(addr, data),
-            DMA_0_ADDR_START..=DMA_3_ADDR_END => self.dma.write_channel(addr, data),
+            DMA_0_ADDR_START..=DMA_3_ADDR_END => self.dma.write_channel(addr, data, &mut self.scheduler),
             timers::TIMER_IO_START..=timers::TIMER_IO_END => {
                 self.timers.write_registers(addr, data, &mut self.scheduler)
             }

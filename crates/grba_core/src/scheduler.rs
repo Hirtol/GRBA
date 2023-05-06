@@ -116,10 +116,7 @@ pub enum EventTag {
     Timer2Irq,
     Timer3Irq,
     //TODO: Implement DMA priority
-    Dma0End,
-    Dma1End,
-    Dma2End,
-    Dma3End,
+    DmaStart(usize),
 }
 
 #[derive(Debug, Copy, Clone, Eq)]

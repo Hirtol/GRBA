@@ -3,6 +3,7 @@ use cartridge::Cartridge;
 use cpu::CPU;
 use debug::EmuDebugState;
 
+use crate::emulator::bus::dma::DmaStartTiming;
 use crate::emulator::bus::BiosData;
 use crate::emulator::frame::RgbaFrame;
 use crate::scheduler::{EmuTime, Event, EventTag};
@@ -113,12 +114,17 @@ impl GBAEmulator {
             }
             EventTag::VBlank => {
                 self.bus.ppu.vblank(&mut self.bus.scheduler, &mut self.bus.interrupts);
+
+                self.bus.poll_dmas(&self.cpu, DmaStartTiming::VBlank);
+
                 return true;
             }
             EventTag::HBlank => {
                 self.bus
                     .ppu
                     .hblank_start(&mut self.bus.scheduler, &mut self.bus.interrupts);
+
+                self.bus.poll_dmas(&self.cpu, DmaStartTiming::HBlank)
             }
             EventTag::HBlankEnd => {
                 self.bus
@@ -156,6 +162,7 @@ impl GBAEmulator {
                     .timers
                     .timer_overflowed(3, &mut self.bus.scheduler, event.timestamp, &mut self.bus.interrupts);
             }
+            EventTag::DmaStart(channel) => self.bus.on_dma_start(&self.cpu, channel),
         }
 
         false
@@ -209,7 +216,7 @@ impl GBAEmulator {
     pub fn step_instruction_debug(&mut self) -> (bool, bool) {
         let vsync = self.step_instruction();
         let next_pc = self.cpu.registers.next_pc();
-        
+
         let breakpoint_hit = self.debug.breakpoints.binary_search(&next_pc).ok();
 
         if matches!(self.debug.break_at_cycle, Some(cycle) if cycle <= self.bus.scheduler.current_time.0) {

@@ -43,7 +43,7 @@ impl GbaBios {
             let read_byte = self.data[addr];
             // Reading from bios, so we should update the latest read opcode
             let mut current_opcode: [u8; 4] = self.latest_read_instr.to_le_bytes();
-            current_opcode[(addr % 4) as usize] = read_byte;
+            current_opcode[addr % 4] = read_byte;
 
             self.latest_read_instr = u32::from_le_bytes(current_opcode);
 
