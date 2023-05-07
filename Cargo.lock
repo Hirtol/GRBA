@@ -1089,7 +1089,7 @@ dependencies = [
 [[package]]
 name = "emu_test_runner"
 version = "0.1.0"
-source = "git+https://github.com/Hirtol/emu_test_runner#83e096d71b8e0b7e609d01ff37a6aff0bc13b55d"
+source = "git+https://github.com/Hirtol/emu_test_runner#85d26c287fb0742b75f8123685764f6870e4e66c"
 dependencies = [
  "anyhow",
  "fxhash",

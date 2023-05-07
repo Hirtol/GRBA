@@ -63,6 +63,7 @@ For generating comparison logs use: `trace 1000000 file.log` in the MGBA debug l
 
 ### TODO:
 
+* HLE Emulation of some common BIOS functions like DIV/Halt for better performance.
 * Timers
 * PPU Transforms
 * Flash/EPROM
