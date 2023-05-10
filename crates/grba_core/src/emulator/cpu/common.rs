@@ -100,7 +100,7 @@ impl CPU {
 pub mod common_behaviour {
     use crate::emulator::bus::Bus;
     use crate::emulator::cpu::registers::{State, PC_REG, PSR};
-    use crate::emulator::cpu::CPU;
+    use crate::emulator::cpu::{Exception, CPU};
     use crate::utils::{has_sign_overflowed, BitOps};
     use num_traits::FromPrimitive;
 
@@ -216,6 +216,15 @@ pub mod common_behaviour {
 
         // Write new PC value, definitely flushes the pipeline
         cpu.write_reg(PC_REG, address, bus);
+    }
+
+    #[inline]
+    pub fn raise_software_interrupt(cpu: &mut CPU, _comment: u32, bus: &mut Bus) {
+        #[cfg(feature = "cpu-logging")]
+        {
+            crate::cpu_log!("Raising SI with comment: {:#X}", _comment);
+        }
+        cpu.raise_exception(bus, Exception::SoftwareInterrupt);
     }
 }
 

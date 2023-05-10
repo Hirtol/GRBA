@@ -37,12 +37,8 @@ impl ArmV4 {
     }
 
     pub fn software_interrupt(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        #[cfg(feature = "cpu-logging")]
-        {
-            let comment = instruction.get_bits(0, 23) >> 16;
-            crate::cpu_log!("Raising SI with comment: {:#X}", comment);
-        }
-        cpu.raise_exception(bus, Exception::SoftwareInterrupt)
+        let comment = instruction.get_bits(0, 23) >> 16;
+        common_behaviour::raise_software_interrupt(cpu, comment, bus);
     }
 }
 

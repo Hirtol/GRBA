@@ -187,7 +187,10 @@ impl ArmV4 {
         // This test specifically: https://github.com/jsmolka/gba-tests/blob/a6447c5404c8fc2898ddc51f438271f832083b7e/arm/data_processing.asm#L498
         // Consider https://discord.com/channels/465585922579103744/465586361731121162/913580452395229186
         if r_d == 15 && set_flags {
-            cpu.registers.write_cpsr(cpu.registers.spsr, bus);
+            // Only overwrite if we actually change mode, otherwise we're erasing status flags for nothing.
+            if cpu.registers.cpsr.mode() != cpu.registers.spsr.mode() {
+                cpu.registers.write_cpsr(cpu.registers.spsr, bus);
+            }
         }
 
         match opcode {

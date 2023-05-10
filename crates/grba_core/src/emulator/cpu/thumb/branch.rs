@@ -49,18 +49,10 @@ impl ThumbV4 {
         let condition = instruction.get_bits(8, 11);
         let offset = sign_extend32((instruction.get_bits(0, 7) << 1) as u32, 9);
 
-        match condition {
-            // Software interrupt
-            0b1111 => {
-                cpu.raise_exception(bus, Exception::SoftwareInterrupt);
-            }
-            _ => {
-                if common_behaviour::check_condition(&cpu.registers.cpsr, condition as u8) {
-                    let pc = cpu.read_reg(PC_REG);
-                    cpu.write_reg(PC_REG, pc.wrapping_add(offset as u32), bus);
-                }
-            }
-        };
+        if common_behaviour::check_condition(&cpu.registers.cpsr, condition as u8) {
+            let pc = cpu.read_reg(PC_REG);
+            cpu.write_reg(PC_REG, pc.wrapping_add(offset as u32), bus);
+        }
     }
 
     pub fn unconditional_branch(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {

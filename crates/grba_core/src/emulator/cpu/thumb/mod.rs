@@ -1,4 +1,5 @@
 use crate::emulator::bus::Bus;
+use crate::emulator::cpu::common::common_behaviour;
 use crate::emulator::cpu::CPU;
 use crate::utils::BitOps;
 
@@ -18,6 +19,13 @@ mod multi_load_store;
 
 /// Contains all Thumb instructions for the ArmV4T.
 pub struct ThumbV4;
+
+impl ThumbV4 {
+    pub fn software_interrupt(cpu: &mut CPU, instruction: ThumbInstruction, bus: &mut Bus) {
+        let comment = instruction.get_bits(0, 7) as u32;
+        common_behaviour::raise_software_interrupt(cpu, comment, bus);
+    }
+}
 
 pub(crate) fn create_thumb_lut() -> ThumbLUT {
     fn dead_fn(_cpu: &mut CPU, instruction: ThumbInstruction, _bus: &mut Bus) {
@@ -144,7 +152,12 @@ pub(crate) fn create_thumb_lut() -> ThumbLUT {
         // Conditional Branch
         // 1101_XXXX
         if (i & 0xF0) == 0b1101_0000 {
-            result[i] = ThumbV4::conditional_branch;
+            // Check if it's a SWI
+            if i == 0b1101_1111 {
+                result[i] = ThumbV4::software_interrupt;
+            } else {
+                result[i] = ThumbV4::conditional_branch;
+            }
             continue;
         }
 
