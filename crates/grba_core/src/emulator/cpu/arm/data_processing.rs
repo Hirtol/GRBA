@@ -15,7 +15,7 @@ impl ArmV4 {
         instruction: ArmInstruction,
         bus: &mut Bus,
     ) {
-        let opcode = DataOperation::from_u8(OPCODE).unwrap();
+        let opcode = OpCode::from_u8(OPCODE).unwrap();
         let r_d = instruction.get_bits(12, 15) as usize;
 
         let r_op1 = instruction.get_bits(16, 19) as usize;
@@ -33,7 +33,7 @@ impl ArmV4 {
     }
 
     pub fn data_processing_register_immediate_shift(cpu: &mut CPU, instruction: ArmInstruction, bus: &mut Bus) {
-        let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
+        let opcode = OpCode::from_u32(instruction.get_bits(21, 24)).unwrap();
         let set_condition_code = instruction.check_bit(20);
         let r_d = instruction.get_bits(12, 15) as usize;
 
@@ -57,7 +57,7 @@ impl ArmV4 {
         //we'll need to increment PC by 4 for the duration of this function, refer to section 4.5.5 of the instruction manual.
         cpu.registers.general_purpose[PC_REG] += 4;
 
-        let opcode = DataOperation::from_u32(instruction.get_bits(21, 24)).unwrap();
+        let opcode = OpCode::from_u32(instruction.get_bits(21, 24)).unwrap();
         let set_condition_code = instruction.check_bit(20);
         let r_d = instruction.get_bits(12, 15) as usize;
 
@@ -90,7 +90,7 @@ impl ArmV4 {
     fn perform_data_operation(
         cpu: &mut CPU,
         bus: &mut Bus,
-        opcode: DataOperation,
+        opcode: OpCode,
         op1: u32,
         op2: u32,
         r_d: usize,
@@ -103,113 +103,100 @@ impl ArmV4 {
         //TODO: This r_d == 15 && set_flags check *may* have to be handled differently due to the fact that in arm.gba
         // we're currently failing the log diff on instruction 555 (cycle 1110), where the CMP result
         // Consider https://discord.com/channels/465585922579103744/465586361731121162/913580452395229186
-        if r_d == 15 && set_flags {
-            cpu.registers.write_cpsr(cpu.registers.spsr, bus);
-        }
-
-        match opcode {
-            DataOperation::And => {
+        let result = match opcode {
+            OpCode::And => {
                 let result = op1 & op2;
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
 
-                cpu.write_reg(r_d, result, bus);
+                result
             }
-            DataOperation::Eor => {
+            OpCode::Eor => {
                 let result = op1 ^ op2;
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
 
-                cpu.write_reg(r_d, result, bus);
+                result
             }
-            DataOperation::Sub => {
-                let result = common_behaviour::sub(cpu, op1, op2, set_flags);
-
-                cpu.write_reg(r_d, result, bus);
-            }
-            DataOperation::Rsb => {
-                let result = common_behaviour::sub(cpu, op2, op1, set_flags);
-
-                cpu.write_reg(r_d, result, bus);
-            }
-            DataOperation::Add => {
-                let result = common_behaviour::add(cpu, op1, op2, set_flags);
-
-                cpu.write_reg(r_d, result, bus);
-            }
-            DataOperation::Adc => {
-                let result = common_behaviour::adc(cpu, op1, op2, set_flags);
-
-                cpu.write_reg(r_d, result, bus);
-            }
-            DataOperation::Sbc => {
-                let result = common_behaviour::sbc(cpu, op1, op2, set_flags);
-
-                cpu.write_reg(r_d, result, bus);
-            }
-            DataOperation::Rsc => {
-                let result = common_behaviour::sbc(cpu, op2, op1, set_flags);
-
-                cpu.write_reg(r_d, result, bus);
-            }
-            DataOperation::Tst => {
-                let result = op1 & op2;
+            OpCode::Sub => common_behaviour::sub(cpu, op1, op2, set_flags),
+            OpCode::Rsb => common_behaviour::sub(cpu, op2, op1, set_flags),
+            OpCode::Add => common_behaviour::add(cpu, op1, op2, set_flags),
+            OpCode::Adc => common_behaviour::adc(cpu, op1, op2, set_flags),
+            OpCode::Sbc => common_behaviour::sbc(cpu, op1, op2, set_flags),
+            OpCode::Rsc => common_behaviour::sbc(cpu, op2, op1, set_flags),
+            OpCode::Tst => {
                 // Note, we're assuming that we can ignore the `set_flags` parameter here.
-                cpu.set_logical_flags(result, barrel_shift_carry);
+                cpu.set_logical_flags(op1 & op2, barrel_shift_carry);
+
+                0
             }
-            DataOperation::Teq => {
-                let result = op1 ^ op2;
+            OpCode::Teq => {
                 // Note, we're assuming that we can ignore the `set_flags` parameter here.
-                cpu.set_logical_flags(result, barrel_shift_carry);
+                cpu.set_logical_flags(op1 ^ op2, barrel_shift_carry);
+
+                0
             }
-            DataOperation::Cmp => {
+            OpCode::Cmp => {
                 // Normal sub, but we ignore the result
                 let _ = common_behaviour::sub(cpu, op1, op2, true);
+
+                0
             }
-            DataOperation::Cmn => {
+            OpCode::Cmn => {
                 // Normal add, but we ignore the result
                 let _ = common_behaviour::add(cpu, op1, op2, true);
+
+                0
             }
-            DataOperation::Orr => {
+            OpCode::Orr => {
                 let result = op1 | op2;
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
 
-                cpu.write_reg(r_d, result, bus);
+                result
             }
-            DataOperation::Mov => {
+            OpCode::Mov => {
                 let result = op2;
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
 
-                cpu.write_reg(r_d, result, bus);
+                result
             }
-            DataOperation::Bic => {
+            OpCode::Bic => {
                 let result = op1 & !op2;
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
 
-                cpu.write_reg(r_d, result, bus);
+                result
             }
-            DataOperation::Mvn => {
+            OpCode::Mvn => {
                 let result = !op2;
                 if set_flags {
                     cpu.set_logical_flags(result, barrel_shift_carry);
                 }
 
-                cpu.write_reg(r_d, result, bus);
+                result
             }
         };
+
+        if r_d == 15 && set_flags {
+            cpu.registers.write_cpsr(cpu.registers.spsr, bus);
+        }
+
+        match opcode {
+            OpCode::Teq | OpCode::Tst | OpCode::Cmn | OpCode::Cmp => {}
+            _ => cpu.write_reg(r_d, result, bus),
+        }
     }
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, num_derive::FromPrimitive)]
-enum DataOperation {
+enum OpCode {
     And = 0b0000,
     Eor = 0b0001,
     Sub = 0b0010,

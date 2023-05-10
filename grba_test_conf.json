@@ -9,6 +9,9 @@
       "num_frames": 10,
       "sequence": []
     },
+    "tte_demo": {
+      "num_frames": 10
+    },
     "mgba_suite": {
       "num_frames": 5,
       "sequences": {

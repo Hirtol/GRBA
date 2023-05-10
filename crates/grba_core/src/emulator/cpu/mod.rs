@@ -132,7 +132,7 @@ impl CPU {
         self.thumb_lut[lut_index](self, instruction, bus);
     }
 
-    fn switch_mode(&mut self, new_mode: registers::Mode, _bus: &mut Bus) {
+    pub fn switch_mode(&mut self, new_mode: registers::Mode, _bus: &mut Bus) {
         let old_mode = self.registers.cpsr.mode();
 
         // Try to swap, if we're already in the same mode this'll fail.
