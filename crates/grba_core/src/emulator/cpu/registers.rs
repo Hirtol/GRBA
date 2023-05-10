@@ -308,7 +308,7 @@ impl Default for PSR {
             irq_disable: false,
             fiq_disable: false,
             state: State::Arm,
-            mode: Mode::User,
+            mode: Mode::Supervisor,
             reserved: 0,
         }
     }
