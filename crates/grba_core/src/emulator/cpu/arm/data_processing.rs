@@ -97,12 +97,6 @@ impl ArmV4 {
         set_flags: bool,
         barrel_shift_carry: bool,
     ) {
-        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
-        // Primarily used for `MOVS` when returning from software interrupts.
-        // Important to do this before the data operations due to force-alignment of PC on write
-        //TODO: This r_d == 15 && set_flags check *may* have to be handled differently due to the fact that in arm.gba
-        // we're currently failing the log diff on instruction 555 (cycle 1110), where the CMP result
-        // Consider https://discord.com/channels/465585922579103744/465586361731121162/913580452395229186
         let result = match opcode {
             OpCode::And => {
                 let result = op1 & op2;
@@ -184,6 +178,14 @@ impl ArmV4 {
             }
         };
 
+        // If `r_d` is R15 and the S flag is set then the SPSR of the current mode is moved into the CPSR.
+        // Primarily used for `MOVS` when returning from software interrupts.
+        // Important to do this before the data operations due to force-alignment of PC on write
+        //TODO: This r_d == 15 && set_flags check *may* have to be handled differently due to the fact that in arm.gba
+        // we're currently failing the log diff on instruction 561 (cycle 1122), where the `CMP pc pc` sign flag is visible
+        // in the other emu's log, but not in ours due to the CPSR being overwritten.
+        // This test specifically: https://github.com/jsmolka/gba-tests/blob/a6447c5404c8fc2898ddc51f438271f832083b7e/arm/data_processing.asm#L498
+        // Consider https://discord.com/channels/465585922579103744/465586361731121162/913580452395229186
         if r_d == 15 && set_flags {
             cpu.registers.write_cpsr(cpu.registers.spsr, bus);
         }
