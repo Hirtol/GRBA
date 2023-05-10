@@ -51,8 +51,12 @@ impl Bus {
                     let value = self.read_16(transfer_state.source_address, cpu);
                     self.write_16(transfer_state.dest_address, value);
                     // Two's complement allows us to just cast i32 to u32 for this
-                    transfer_state.dest_address += channel.control.dest_addr_control().to_address_offset_u16() as u32;
-                    transfer_state.source_address += channel.control.src_addr_control().to_address_offset_u16() as u32;
+                    transfer_state.dest_address = transfer_state
+                        .dest_address
+                        .wrapping_add(channel.control.dest_addr_control().to_address_offset_u16() as u32);
+                    transfer_state.source_address = transfer_state
+                        .source_address
+                        .wrapping_add(channel.control.src_addr_control().to_address_offset_u16() as u32);
                 }
             }
             DmaTransferType::U32 => {
@@ -60,8 +64,12 @@ impl Bus {
                     let value = self.read_32(transfer_state.source_address, cpu);
                     self.write_32(transfer_state.dest_address, value);
                     // Two's complement allows us to just cast i32 to u32 for this
-                    transfer_state.dest_address += channel.control.dest_addr_control().to_address_offset_u32() as u32;
-                    transfer_state.source_address += channel.control.src_addr_control().to_address_offset_u32() as u32;
+                    transfer_state.dest_address = transfer_state
+                        .dest_address
+                        .wrapping_add(channel.control.dest_addr_control().to_address_offset_u16() as u32);
+                    transfer_state.source_address = transfer_state
+                        .source_address
+                        .wrapping_add(channel.control.src_addr_control().to_address_offset_u16() as u32);
                 }
             }
         }
