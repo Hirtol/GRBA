@@ -7,6 +7,7 @@ use once_cell::sync::Lazy;
 use grba_core::emulator::bus::IO_START;
 use grba_core::emulator::debug::{
     BgMode, BG_CONTROL_START, BG_SCROLL_START, LCD_CONTROL_END, LCD_CONTROL_START, LCD_STATUS_END, LCD_STATUS_START,
+    VCOUNT_END, VCOUNT_START,
 };
 use grba_core::emulator::MemoryAddress;
 
@@ -23,7 +24,7 @@ macro_rules! offset {
 
 /// Ideally this would just be `const`, however, until `&mut` in `fn` is stable we can't have `draw` calls in the
 /// [IoView] object const fn.
-pub static IO_REGISTER_VIEWS: Lazy<[IoView; 40]> = Lazy::new(|| {
+pub static IO_REGISTER_VIEWS: Lazy<[IoView; 41]> = Lazy::new(|| {
     [
         IoView::new_16("IEnable", offset!(IO_START, 0x200), draw_ie_if_view),
         IoView::new_16("IFlags", offset!(IO_START, 0x202), draw_ie_if_view),
@@ -31,6 +32,7 @@ pub static IO_REGISTER_VIEWS: Lazy<[IoView; 40]> = Lazy::new(|| {
         IoView::new_16("IKeyCnt", offset!(IO_START, 0x132), draw_keypad_int_view),
         IoView::new_16("DispCnt", LCD_CONTROL_START..=LCD_CONTROL_END, draw_disp_cnt),
         IoView::new_16("DispStat", LCD_STATUS_START..=LCD_STATUS_END, draw_disp_stat_view),
+        IoView::new_16("Vcount", VCOUNT_START..=VCOUNT_END, draw_v_count_view),
         IoView::new_16("Bg0Control", offset!(BG_CONTROL_START, 0), draw_bg_control_view),
         IoView::new_16("Bg1Control", offset!(BG_CONTROL_START, 2), draw_bg_control_view),
         IoView::new_16("Bg2Control", offset!(BG_CONTROL_START, 4), draw_bg_control_view),
@@ -171,6 +173,15 @@ fn draw_disp_stat_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
     changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x4, "H Blank IRQ Enable");
     changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x5, "V Counter IRQ Enable");
     changed |= io_utils::io_slider(ui, &mut reg_value, 0x8..=0xF, "V Count Setting LYC", 0..=255);
+
+    changed.then(|| reg_value.to_le_bytes().into())
+}
+
+fn draw_v_count_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
+    let mut changed = false;
+    let mut reg_value = u16::from_le_bytes(reg_value.try_into().unwrap()) as u32;
+
+    changed |= io_utils::io_slider(ui, &mut reg_value, 0x0..=0x7, "V Count", 0..=227);
 
     changed.then(|| reg_value.to_le_bytes().into())
 }
