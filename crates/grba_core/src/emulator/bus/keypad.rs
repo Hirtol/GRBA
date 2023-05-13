@@ -82,18 +82,18 @@ impl Keypad {
 #[repr(u16)]
 #[derive(Debug, Copy, Clone)]
 pub struct KeypadStatus {
-    button_a: bool,
-    button_b: bool,
-    select: bool,
-    start: bool,
-    right: bool,
-    left: bool,
-    up: bool,
-    down: bool,
-    shoulder_right: bool,
-    shoulder_left: bool,
+    pub button_a: bool,
+    pub button_b: bool,
+    pub select: bool,
+    pub start: bool,
+    pub right: bool,
+    pub left: bool,
+    pub up: bool,
+    pub down: bool,
+    pub shoulder_right: bool,
+    pub shoulder_left: bool,
     #[skip]
-    unused: modular_bitfield::prelude::B6,
+    pub unused: modular_bitfield::prelude::B6,
 }
 
 impl Default for KeypadStatus {

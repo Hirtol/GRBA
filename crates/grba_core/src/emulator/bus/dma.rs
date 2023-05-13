@@ -143,6 +143,7 @@ impl DmaChannels {
 
     #[inline]
     pub fn write_channel(&mut self, address: AlignedAddress, value: u8, scheduler: &mut Scheduler) {
+        // println!("Writing to DMA: {:#X} - {}", address, value);
         match address {
             DMA_0_ADDR_START..=DMA_0_ADDR_END => {
                 self.channels[0].write((address - DMA_0_ADDR_START) as usize, value, scheduler, 0)

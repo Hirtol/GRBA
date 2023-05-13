@@ -222,6 +222,7 @@ pub mod common_behaviour {
     pub fn raise_software_interrupt(cpu: &mut CPU, _comment: u32, bus: &mut Bus) {
         #[cfg(feature = "cpu-logging")]
         {
+            println!("Raising SI with comment: {:#X}", _comment);
             crate::cpu_log!("Raising SI with comment: {:#X}", _comment);
         }
         cpu.raise_exception(bus, Exception::SoftwareInterrupt);

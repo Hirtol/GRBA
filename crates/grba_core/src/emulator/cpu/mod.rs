@@ -1,9 +1,10 @@
+use registers::{Mode, State};
+
 use crate::emulator::bus::Bus;
 use crate::emulator::cpu::arm::{ArmInstruction, ArmLUT, ArmV4};
 use crate::emulator::cpu::registers::{Registers, LINK_REG, PC_REG};
 use crate::emulator::cpu::thumb::{ThumbInstruction, ThumbLUT};
 use crate::utils::BitOps;
-use registers::{Mode, State};
 
 mod arm;
 mod common;
@@ -217,6 +218,20 @@ impl CPU {
             if self.registers.cpsr.irq_disable() || !bus.interrupts.master_enable.interrupt_enable() {
                 return;
             }
+            // Since our PC is only incremented at the beginning of a step instruction we end up double executing instructions
+            // when we handle interrupts. This is especially problematic in certain circumstances with HALT, as one ends up in an infinite loop.
+            // This should be addressable by incrementing PC *after* executing an instruction, but that means BRANCH instructions
+            // become difficult. Practically, every instruction would need its own `advance_pipeline` call in that case.
+            // Advancing PC here fixes that issue (somewhat) elegantly. (See HALT rant below)
+            self.registers.advance_pc();
+            // So, the problem as follows: We pre-increment PC_REG (instead of post-increment) in our `step_instruction`
+            // But, when we execute a HALT instruction (such as in INSTR_WAIT at 0x330 in the BIOS, see irq_demo.gba or mgba_suite.gba -> DMA tests) we don't advance PC.
+            // So, lets imagine the following scenario:
+            // (HALT is at 0x0)
+            // Current PC = 0x8 (2 ahead of to-be-executed instr), we've just executed HALT (and thus PC hasn't moved on)
+            // Interrupt arrives, we store 0x4 in R14 as link
+            // Interrupt handler is ran and it (as it should) return to the previous instruction by storing R14-0x4 into PC.
+            // This puts us back at the HALT and we end up in an infinite loop!
 
             // Otherwise, raise the IRQ exception
             self.raise_exception(bus, Exception::Interrupt);
