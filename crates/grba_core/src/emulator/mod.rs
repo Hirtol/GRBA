@@ -5,6 +5,7 @@ use debug::EmuDebugState;
 
 use crate::emulator::bus::dma::DmaStartTiming;
 use crate::emulator::bus::BiosData;
+use crate::emulator::cpu::registers::PC_REG;
 use crate::emulator::frame::RgbaFrame;
 use crate::scheduler::{EmuTime, Event, EventTag};
 use crate::InputKeys;
@@ -135,12 +136,22 @@ impl GBAEmulator {
                 self.cpu.poll_interrupts(&mut self.bus);
             }
             EventTag::Halt => {
-                // println!("Halting!");
+                // So, the problem as follows: We pre-increment PC_REG (instead of post-increment) in our `step_instruction`
+                // But, when we execute a HALT instruction (such as in INSTR_WAIT at 0x330 in the BIOS, see irq_demo.gba or mgba_suite.gba -> DMA tests) we don't advance PC.
+                // So, lets imagine the following scenario:
+                // (HALT is at 0x0)
+                // Current PC = 0x8, we've just executed HALT (and thus PC hasn't moved on
+                // Interrupt arrives, we store 0x4 in R14 as link
+                // Interrupt handler is ran and it (as it should) return to the previous instruction by storing R14-0x4 into PC.
+                // This puts us back at the HALT and we end up in an infinite loop!
+                // This below *should* sort of fix it (and indeed DMA suite then runs!), but breaks a bunch of other stuff for some reason :/
+                self.cpu.registers.general_purpose[PC_REG] += 0x4;
 
                 // If this returns `true` then we've hit Vblank and should exit for now.
                 if self.handle_halt() {
                     return true;
                 }
+                self.cpu.registers.general_purpose[PC_REG] -= 0x4;
             }
             EventTag::Timer0Irq => {
                 self.bus
@@ -187,6 +198,7 @@ impl GBAEmulator {
                         break 'halt_loop true;
                     }
                     EventTag::PollInterrupt => {
+                        // So, when HALT is executed PC is not incremented
                         self.cpu.poll_interrupts(&mut self.bus);
 
                         // CPU can disable HALT mode if `if & ie != 0`

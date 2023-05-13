@@ -12,6 +12,12 @@
     "tte_demo": {
       "num_frames": 10
     },
+    "Discord_irqDemo": {
+      "num_frames": 20
+    },
+    "Discord_irqDemo_2": {
+      "num_frames": 20
+    },
     "mgba_suite": {
       "num_frames": 5,
       "sequences": {
