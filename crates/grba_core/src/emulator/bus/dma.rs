@@ -22,6 +22,11 @@ pub const DMA_2_ADDR_END: MemoryAddress = 0x0400_00D3;
 pub const DMA_3_ADDR_START: MemoryAddress = 0x0400_00D4;
 pub const DMA_3_ADDR_END: MemoryAddress = 0x0400_00DF;
 
+pub const DMA_0_WORD_COUNT: MemoryAddress = 0x0400_00B8;
+pub const DMA_1_WORD_COUNT: MemoryAddress = 0x0400_00C4;
+pub const DMA_2_WORD_COUNT: MemoryAddress = 0x0400_00D0;
+pub const DMA_3_WORD_COUNT: MemoryAddress = 0x0400_00DC;
+
 pub const DMA_0_CONTROL_START: MemoryAddress = 0x0400_00BA;
 pub const DMA_0_CONTROL_END: MemoryAddress = DMA_0_ADDR_END;
 pub const DMA_1_CONTROL_START: MemoryAddress = 0x0400_00C6;

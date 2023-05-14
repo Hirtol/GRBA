@@ -2,8 +2,9 @@ pub use bios::BiosData;
 
 use crate::emulator::bus::bios::GbaBios;
 use crate::emulator::bus::dma::{
-    DmaChannels, DMA_0_ADDR_START, DMA_0_CONTROL_END, DMA_0_CONTROL_START, DMA_1_CONTROL_END, DMA_1_CONTROL_START,
-    DMA_2_CONTROL_END, DMA_2_CONTROL_START, DMA_3_ADDR_END, DMA_3_CONTROL_END, DMA_3_CONTROL_START,
+    DmaChannels, DMA_0_ADDR_START, DMA_0_CONTROL_END, DMA_0_CONTROL_START, DMA_0_WORD_COUNT, DMA_1_CONTROL_END,
+    DMA_1_CONTROL_START, DMA_1_WORD_COUNT, DMA_2_CONTROL_END, DMA_2_CONTROL_START, DMA_2_WORD_COUNT, DMA_3_ADDR_END,
+    DMA_3_CONTROL_END, DMA_3_CONTROL_START, DMA_3_WORD_COUNT,
 };
 use crate::emulator::bus::helpers::ReadType;
 use crate::emulator::bus::interrupts::{InterruptManager, IE_END, IE_START, IF_END, IF_START, IME_END, IME_START};
@@ -183,6 +184,9 @@ impl Bus {
         match addr {
             IO_START..=LCD_IO_END => self.ppu.read_io(addr),
             0x4000088..=0x4000089 => self.sound_bias_stub.to_le_bytes()[addr as usize - 0x4000088],
+            // In this special case we return 0 since it's a write only register, and overlaps with a 16 bit
+            // value which *is* readable (CONTROL regs), thus returning 0
+            DMA_0_WORD_COUNT | DMA_1_WORD_COUNT | DMA_2_WORD_COUNT | DMA_3_WORD_COUNT => 0,
             DMA_0_CONTROL_START..=DMA_0_CONTROL_END => {
                 self.dma.channel(0).control().to_le_bytes()[(addr - DMA_0_CONTROL_START) as usize]
             }
