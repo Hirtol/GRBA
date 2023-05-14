@@ -24,7 +24,7 @@ macro_rules! offset {
 
 /// Ideally this would just be `const`, however, until `&mut` in `fn` is stable we can't have `draw` calls in the
 /// [IoView] object const fn.
-pub static IO_REGISTER_VIEWS: Lazy<[IoView; 41]> = Lazy::new(|| {
+pub static IO_REGISTER_VIEWS: Lazy<[IoView; 45]> = Lazy::new(|| {
     [
         IoView::new_16("IEnable", offset!(IO_START, 0x200), draw_ie_if_view),
         IoView::new_16("IFlags", offset!(IO_START, 0x202), draw_ie_if_view),
@@ -67,6 +67,10 @@ pub static IO_REGISTER_VIEWS: Lazy<[IoView; 41]> = Lazy::new(|| {
         IoView::new_16("BldCnt", offset!(IO_START, 0x50), draw_bldcnt_view),
         IoView::new_16("BldAlpha", offset!(IO_START, 0x52), draw_bldalpha_view),
         IoView::new_16("BldY", offset!(IO_START, 0x54), draw_bldy_view),
+        IoView::new_16("DMA0Control", offset!(IO_START, 0xBA), draw_dma_control_view),
+        IoView::new_16("DMA1Control", offset!(IO_START, 0xC6), draw_dma_control_view),
+        IoView::new_16("DMA2Control", offset!(IO_START, 0xD2), draw_dma_control_view),
+        IoView::new_16("DMA3Control", offset!(IO_START, 0xDE), draw_dma_control_view),
     ]
 });
 
@@ -435,6 +439,55 @@ fn draw_bldy_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
 pub fn unimplemented_view(ui: &mut Ui, _reg_value: &[u8]) -> Option<Vec<u8>> {
     ui.label("Unimplemented");
     None
+}
+
+fn draw_dma_control_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
+    let mut changed = false;
+    let mut reg_value = u16::from_le_bytes(reg_value.try_into().unwrap()) as u32;
+
+    changed |= io_utils::io_list(
+        ui,
+        &mut reg_value,
+        0x5..=0x6,
+        "Destination Address Control",
+        &["Increment", "Decrement", "Fixed", "Increment/Reload"],
+    );
+    changed |= io_utils::io_list(
+        ui,
+        &mut reg_value,
+        0x5..=0x6,
+        "Source Address Control",
+        &["Increment", "Decrement", "Fixed", "Prohibited"],
+    );
+
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0x9, "DMA Repeat");
+    changed |= io_utils::io_list(
+        ui,
+        &mut reg_value,
+        0xA..=0xA,
+        "DMA Transfer Type",
+        &["16 Bit", "32 Bit"],
+    );
+    changed |= io_utils::io_list(
+        ui,
+        &mut reg_value,
+        0xA..=0xA,
+        "Game Pak DRQ (DMA 3 only)",
+        &["Normal", "DRQ <from> Game Pak, DMA3"],
+    );
+
+    changed |= io_utils::io_list(
+        ui,
+        &mut reg_value,
+        0xC..=0xD,
+        "DMA Start Timing",
+        &["Immediately", "VBlank", "HBlank", "Special"],
+    );
+
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0xE, "IRQ upon end of Word Count");
+    changed |= io_utils::io_checkbox(ui, &mut reg_value, 0xF, "DMA Enable");
+
+    changed.then(|| reg_value.to_le_bytes().into())
 }
 
 fn format_u16(reg_value: &[u8]) -> String {

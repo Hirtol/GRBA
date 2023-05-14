@@ -21,6 +21,8 @@
 
 ## Tests
 * [GameTech](https://emulation.gametechwiki.com/index.php/GBA_Tests)
+* [Marie Tests](https://github.com/ladystarbreeze/GBA-Test-Collection)
+* [Peterlemon](https://github.com/PeterLemon/GBA)
 
 ## Demo Links
 * [GBADev](https://www.gbadev.org/demos.php?showinfo=527)

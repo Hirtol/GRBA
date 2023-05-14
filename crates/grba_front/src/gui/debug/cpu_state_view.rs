@@ -1,4 +1,4 @@
-use egui::{Context, RichText, Separator, TextStyle, Ui};
+use egui::{Context, CursorIcon, RichText, Separator, TextStyle, Ui};
 
 use itertools::Itertools;
 
@@ -90,7 +90,11 @@ impl CpuState {
 
                                 let value = RichText::new(format!("{:08X}", reg)).background_color(colors::LIGHT_GREY);
 
-                                ui.label(value);
+                                if ui.label(value).on_hover_cursor(CursorIcon::Copy).clicked() {
+                                    ui.output_mut(|o| {
+                                        o.copied_text = format!("0x{:08X}", reg);
+                                    })
+                                };
                             });
                         }
                     });
