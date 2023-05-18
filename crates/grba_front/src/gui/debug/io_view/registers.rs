@@ -471,7 +471,7 @@ fn draw_dma_control_view(ui: &mut Ui, reg_value: &[u8]) -> Option<Vec<u8>> {
     changed |= io_utils::io_list(
         ui,
         &mut reg_value,
-        0xA..=0xA,
+        0xB..=0xB,
         "Game Pak DRQ (DMA 3 only)",
         &["Normal", "DRQ <from> Game Pak, DMA3"],
     );
